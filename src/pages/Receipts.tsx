@@ -44,43 +44,43 @@ export default function Receipts() {
   const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+    <div className="p-5 md:p-8 space-y-5 md:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          <span className="text-terminal-green">&gt;</span> Receipts
+        <h1 className="text-3xl font-bold">
+          Receipts
         </h1>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           Official receipts issued for payments
         </p>
       </div>
 
       {/* Receipt table */}
-      <Card className="border-border/60 shadow-none">
+      <Card className="border-border/60 shadow-sm">
         <CardContent className="p-0">
           <ScrollableTable>
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="text-[10px] uppercase tracking-wider font-mono">
+                <TableHead className="text-[13px] uppercase tracking-wider font-medium">
                   Receipt #
                 </TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider font-mono">
+                <TableHead className="text-[13px] uppercase tracking-wider font-medium">
                   Date
                 </TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider font-mono">
+                <TableHead className="text-[13px] uppercase tracking-wider font-medium">
                   Issued To
                 </TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider font-mono">
+                <TableHead className="text-[13px] uppercase tracking-wider font-medium">
                   Plan
                 </TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider font-mono">
+                <TableHead className="text-[13px] uppercase tracking-wider font-medium">
                   Channel
                 </TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider font-mono">
+                <TableHead className="text-[13px] uppercase tracking-wider font-medium">
                   Status
                 </TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider font-mono text-right">
+                <TableHead className="text-[13px] uppercase tracking-wider font-medium text-right">
                   Amount
                 </TableHead>
               </TableRow>
@@ -88,15 +88,15 @@ export default function Receipts() {
             <TableBody>
               {!receipts ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-sm font-mono">
+                  <TableCell colSpan={7} className="text-center py-10 text-muted-foreground text-base">
                     Loading receipts...
                   </TableCell>
                 </TableRow>
               ) : receipts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    <ReceiptIcon className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-                    <p className="text-sm text-muted-foreground font-mono">
+                  <TableCell colSpan={7} className="text-center py-10">
+                    <ReceiptIcon className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+                    <p className="text-base text-muted-foreground">
                       No receipts issued yet
                     </p>
                   </TableCell>
@@ -108,27 +108,27 @@ export default function Receipts() {
                     className="cursor-pointer hover:bg-muted/50"
                     onClick={() => setSelectedReceipt(r)}
                   >
-                    <TableCell className="font-mono text-xs font-medium">
+                    <TableCell className="text-[14px] font-medium">
                       {r.receiptNumber}
                     </TableCell>
-                    <TableCell className="font-mono text-xs">
+                    <TableCell className="text-[14px]">
                       {format(new Date(r.paymentDate), "MMM d, yyyy")}
                     </TableCell>
                     <TableCell>
-                      <p className="text-sm">{r.issuedTo}</p>
+                      <p className="text-[15px]">{r.issuedTo}</p>
                     </TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell className="text-[14px]">
                       {r.planType}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="text-[10px] font-mono">
+                      <Badge variant="outline" className="text-[12px]">
                         {CHANNEL_LABELS[r.paymentChannel] || r.paymentChannel}
                       </Badge>
                     </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={`text-[10px] font-mono ${
+                        className={`text-[12px] ${
                           r.status === "active"
                             ? "terminal-status-current"
                             : r.status === "cancelled"
@@ -140,7 +140,7 @@ export default function Receipts() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <span className="font-mono font-bold text-terminal-green">
+                      <span className="font-bold text-green-600 text-[15px]">
                         {formatPHP(r.amount)}
                       </span>
                     </TableCell>
@@ -160,7 +160,7 @@ export default function Receipts() {
       >
         <DialogContent className="max-w-md mx-2 sm:mx-0 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="font-mono text-sm">
+            <DialogTitle className="text-xl font-bold">
               Official Receipt
             </DialogTitle>
           </DialogHeader>
@@ -168,11 +168,11 @@ export default function Receipts() {
             <div className="border border-border rounded-lg p-6 space-y-4 bg-white">
               {/* Receipt header */}
               <div className="text-center border-b border-border pb-4">
-                <h3 className="font-bold text-lg tracking-tight">Evangelist Funeral Services</h3>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
+                <h3 className="font-bold text-xl tracking-tight">Evangelist Funeral Services</h3>
+                <p className="text-[12px] text-muted-foreground uppercase tracking-wider mt-1">
                   Pre-Need Funeral &amp; Deathcare Services
                 </p>
-                <p className="text-[10px] text-muted-foreground mt-1">
+                <p className="text-[12px] text-muted-foreground mt-1">
                   Official Receipt
                 </p>
               </div>
@@ -180,18 +180,18 @@ export default function Receipts() {
               {/* Receipt number */}
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-[10px] text-muted-foreground uppercase">
+                  <p className="text-[12px] text-muted-foreground uppercase">
                     Receipt No.
                   </p>
-                  <p className="font-mono text-sm font-bold">
+                  <p className="text-[15px] font-bold">
                     {selectedReceipt.receiptNumber}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[10px] text-muted-foreground uppercase">
+                  <p className="text-[12px] text-muted-foreground uppercase">
                     Date
                   </p>
-                  <p className="font-mono text-sm">
+                  <p className="text-[15px]">
                     {format(
                       new Date(selectedReceipt.paymentDate),
                       "MMMM d, yyyy"
@@ -202,21 +202,21 @@ export default function Receipts() {
 
               {/* Client info */}
               <div className="space-y-1 border-t border-border pt-3">
-                <p className="text-[10px] text-muted-foreground uppercase">
+                <p className="text-[12px] text-muted-foreground uppercase">
                   Received From
                 </p>
-                <p className="text-sm font-medium">{selectedReceipt.issuedTo}</p>
+                <p className="text-[15px] font-medium">{selectedReceipt.issuedTo}</p>
               </div>
 
               {/* Plan info */}
               <div className="space-y-1">
-                <p className="text-[10px] text-muted-foreground uppercase">
+                <p className="text-[12px] text-muted-foreground uppercase">
                   Contract
                 </p>
-                <p className="text-sm font-mono">
+                <p className="text-[15px]">
                   {selectedReceipt.contractNumber}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[13px] text-muted-foreground">
                   {selectedReceipt.planType}
                 </p>
               </div>
@@ -224,14 +224,14 @@ export default function Receipts() {
               {/* Amount */}
               <div className="border-t border-border pt-3">
                 <div className="flex justify-between items-baseline">
-                  <p className="text-[10px] text-muted-foreground uppercase">
+                  <p className="text-[12px] text-muted-foreground uppercase">
                     Amount Paid
                   </p>
-                  <p className="font-mono text-xl font-bold text-terminal-green">
+                  <p className="text-2xl font-bold text-green-600">
                     {formatPHP(selectedReceipt.amount)}
                   </p>
                 </div>
-                <p className="text-[10px] text-muted-foreground text-right mt-1">
+                <p className="text-[12px] text-muted-foreground text-right mt-1">
                   via {CHANNEL_LABELS[selectedReceipt.paymentChannel] || selectedReceipt.paymentChannel}
                 </p>
               </div>
@@ -239,8 +239,8 @@ export default function Receipts() {
               {/* Thermal Print Button */}
               <Button
                 variant="outline"
-                size="sm"
-                className="w-full gap-2 font-mono text-xs"
+                size="default"
+                className="w-full gap-2 h-11 text-[14px]"
                 onClick={() =>
                   printThermalReceipt({
                     receiptNumber: selectedReceipt.receiptNumber,
@@ -255,14 +255,14 @@ export default function Receipts() {
                   })
                 }
               >
-                <Printer className="h-3.5 w-3.5" /> Print Thermal Receipt
+                <Printer className="h-4 w-4" /> Print Thermal Receipt
               </Button>
 
               {/* Status */}
               <div className="text-center pt-2">
                 <Badge
                   variant="outline"
-                  className={`text-[10px] font-mono ${
+                  className={`text-[12px] ${
                     selectedReceipt.status === "active"
                       ? "terminal-status-current"
                       : "terminal-status-claim"

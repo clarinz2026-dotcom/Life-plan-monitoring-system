@@ -78,14 +78,14 @@ export default function RoleManagement() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-5 md:p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center">
           <UserCog className="h-5 w-5 text-purple-600" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Role Management</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Role Management</h1>
           <p className="text-xs text-muted-foreground">
             {isViewerSuperAdmin
               ? "Assign and manage all user roles."

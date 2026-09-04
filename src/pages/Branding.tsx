@@ -115,7 +115,7 @@ export default function Branding() {
   };
 
   if (!roleData) {
-    return <div className="p-6 text-sm text-muted-foreground font-mono">Loading...</div>;
+    return <div className="p-6 text-sm text-muted-foreground">Loading...</div>;
   }
 
   if (!canManage) {
@@ -135,14 +135,14 @@ export default function Branding() {
   const hasCustomLogo = Boolean(settings?.logoUrl);
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6 max-w-2xl">
+    <div className="p-5 md:p-8 space-y-4 md:space-y-6 max-w-2xl">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="h-10 w-10 rounded-lg bg-terminal-green/10 flex items-center justify-center">
           <Palette className="h-5 w-5 text-terminal-green" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Branding</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Branding</h1>
           <p className="text-xs text-muted-foreground">
             Change the app logo anytime — it updates everywhere instantly.
           </p>
@@ -151,7 +151,7 @@ export default function Branding() {
 
       {/* Preview */}
       <div className="rounded-lg border border-border bg-card p-6 flex flex-col items-center gap-3">
-        <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
+        <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
           Current Logo
         </p>
         <div className="h-24 w-24 rounded-xl border border-border bg-background flex items-center justify-center p-3 overflow-hidden">
@@ -190,10 +190,10 @@ export default function Branding() {
               type="file"
               accept={ACCEPTED_TYPES.join(",")}
               onChange={(e) => handleFilePick(e.target.files?.[0])}
-              className="font-mono text-sm max-w-sm"
+              className="text-sm max-w-sm"
             />
           </div>
-          <p className="text-[10px] text-muted-foreground mt-1.5 font-mono">
+          <p className="text-[10px] text-muted-foreground mt-1.5">
             PNG, JPG, WebP, GIF, or SVG · max {MAX_SIZE_MB}MB
           </p>
         </div>
@@ -218,7 +218,7 @@ export default function Branding() {
               }
             }}
             placeholder="https://your-site.com/logo.png"
-            className="font-mono text-sm mt-2"
+            className="text-sm mt-2"
           />
         </div>
 
@@ -273,7 +273,7 @@ export default function Branding() {
         </div>
       )}
 
-      <p className="text-[10px] text-muted-foreground font-mono">
+      <p className="text-[10px] text-muted-foreground">
         {isViewerSuperAdmin
           ? "Managed by the Super Admin."
           : "Logo changes are available to the CEO and Super Admin."}

@@ -14,38 +14,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Package,
-  Shield,
-  Plus,
-  Pencil,
-  Trash2,
-  Loader2,
-  Info,
-} from "lucide-react";
+import { Package, Shield, Plus, Pencil, Trash2, Loader2, Info } from "lucide-react";
 import { toast } from "sonner";
 
 interface PlanFormState {
   name: string;
-  price: string; // monthly payment in ₱ — full plan price = monthly × 60
+  price: string;
 }
 
 const EMPTY_FORM: PlanFormState = { name: "", price: "" };
-
 const peso = (n: number) => `₱${n.toLocaleString()}`;
-
-/** Full plan term used everywhere: monthly payment × 60 months. */
 const PLAN_TERM_MONTHS = 60;
+const fullPlanPrice = (monthly: number): number => Math.round(monthly * PLAN_TERM_MONTHS);
 
-const fullPlanPrice = (monthly: number): number =>
-  Math.round(monthly * PLAN_TERM_MONTHS);
-
-/**
- * Resolve a plan's actual MONTHLY payment (mirrors resolveMonthlyPrice in
- * src/convex/plans.ts, keep in sync). Plans managed here store the monthly
- * payment in `price`; legacy plans that stored the FULL price in `price`
- * (monthly in `monthlyRate`) are recovered so existing rows stay correct.
- */
 const planMonthly = (plan: { price: number; monthlyRate?: number }): number => {
   if (plan.monthlyRate && plan.monthlyRate > 0) return plan.monthlyRate;
   if (plan.price > 0 && plan.price % PLAN_TERM_MONTHS === 0) {
@@ -59,7 +40,6 @@ export default function Plans() {
   const roleData = useQuery(api.users.hasRole);
   const plans = useQuery(api.plans.list) ?? [];
   const contracts = useQuery(api.contracts.list, {}) ?? [];
-
   const createPlan = useMutation(api.plans.create);
   const updatePlan = useMutation(api.plans.update);
   const removePlan = useMutation(api.plans.remove);
@@ -73,17 +53,10 @@ export default function Plans() {
 
   const canManage = roleData?.role === "super_admin" || roleData?.role === "ceo";
 
-  // Contract usage per plan (case-insensitive name match, like bulk import).
   const contractCountByPlan = (planName: string) =>
-    contracts.filter(
-      (c) => c.planType.toLowerCase().trim() === planName.toLowerCase().trim(),
-    ).length;
+    contracts.filter((c) => c.planType.toLowerCase().trim() === planName.toLowerCase().trim()).length;
 
-  const openCreate = () => {
-    setEditingPlan(null);
-    setForm(EMPTY_FORM);
-    setDialogOpen(true);
-  };
+  const openCreate = () => { setEditingPlan(null); setForm(EMPTY_FORM); setDialogOpen(true); };
 
   const openEdit = (plan: (typeof plans)[number]) => {
     const monthly = planMonthly(plan);
@@ -95,222 +68,114 @@ export default function Plans() {
   const handleSave = async () => {
     const name = form.name.trim();
     const monthly = parseFloat(form.price.replace(/,/g, ""));
-
-    if (!name) {
-      toast.error("Plan name is required.");
-      return;
-    }
-    if (isNaN(monthly) || monthly <= 0) {
-      toast.error("Enter a valid monthly payment greater than 0.");
-      return;
-    }
-
+    if (!name) { toast.error("Plan name is required."); return; }
+    if (isNaN(monthly) || monthly <= 0) { toast.error("Enter a valid monthly payment greater than 0."); return; }
     setIsSaving(true);
     try {
       if (editingPlan) {
-        // Keep any legacy old-price rate intact when editing pricing.
         const original = plans.find((p) => String(p._id) === editingPlan._id);
-        await updatePlan({
-          planId: editingPlan._id as any,
-          name,
-          price: monthly,
-          monthlyRate: monthly,
-          oldPrice: original?.oldPrice,
-        });
+        await updatePlan({ planId: editingPlan._id as any, name, price: monthly, monthlyRate: monthly, oldPrice: original?.oldPrice });
         toast.success(`Plan "${name}" updated.`);
       } else {
         await createPlan({ name, price: monthly, monthlyRate: monthly });
         toast.success(`Plan "${name}" created.`);
       }
       setDialogOpen(false);
-    } catch (error: any) {
-      toast.error(error?.message || "Could not save the plan.");
-    } finally {
-      setIsSaving(false);
-    }
+    } catch (error: any) { toast.error(error?.message || "Could not save the plan."); }
+    finally { setIsSaving(false); }
   };
 
   const handleDelete = async (plan: (typeof plans)[number]) => {
     setIsDeleting(true);
-    try {
-      await removePlan({ planId: plan._id as any });
-      toast.success(`Plan "${plan.name}" removed.`);
-      setDeletingId(null);
-    } catch (error: any) {
-      toast.error(error?.message || "Could not remove the plan.");
-    } finally {
-      setIsDeleting(false);
-    }
+    try { await removePlan({ planId: plan._id as any }); toast.success(`Plan "${plan.name}" removed.`); setDeletingId(null); }
+    catch (error: any) { toast.error(error?.message || "Could not remove the plan."); }
+    finally { setIsDeleting(false); }
   };
 
-  if (!roleData) {
-    return <div className="p-6 text-sm text-muted-foreground font-mono">Loading...</div>;
-  }
-
-  if (!canManage) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Shield className="h-12 w-12 text-muted-foreground" />
-        <h2 className="text-lg font-semibold">Access Denied</h2>
-        <p className="text-sm text-muted-foreground">
-          Only the Super Admin or CEO can manage plans.
-        </p>
-      </div>
-    );
-  }
+  if (!roleData) return <div className="p-6 text-base text-muted-foreground">Loading...</div>;
+  if (!canManage) return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+      <Shield className="h-12 w-12 text-muted-foreground" />
+      <h2 className="text-lg font-semibold">Access Denied</h2>
+      <p className="text-base text-muted-foreground">Only the Super Admin or CEO can manage plans.</p>
+    </div>
+  );
 
   const activePlans = plans.filter((p) => p.isActive !== false).length;
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-lg bg-terminal-green/10 flex items-center justify-center">
-          <Package className="h-5 w-5 text-terminal-green" />
+    <div className="p-5 md:p-8 space-y-5 md:space-y-6">
+      <div className="flex items-center gap-4">
+        <div className="h-12 w-12 rounded-lg bg-green-50 flex items-center justify-center">
+          <Package className="h-6 w-6 text-green-600" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Plans</h1>
-          <p className="text-xs text-muted-foreground">
-            Plan types (e.g. Isidore, Gabriel, Raphael, Michael). Plans are
-            priced by their <span className="font-medium text-foreground">monthly payment</span> —
-            the full price is monthly × 60. When a bulk upload row has a
-            matching plan type, a contract is created automatically.
+          <h1 className="text-3xl font-bold">Plans</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Plan types priced by <span className="font-semibold text-foreground">monthly payment</span> — full price = monthly × 60.
           </p>
         </div>
-        <Button onClick={openCreate} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Add Plan
+        <Button onClick={openCreate} className="gap-2 h-11 px-5 text-[15px]">
+          <Plus className="h-5 w-5" /> Add Plan
         </Button>
       </div>
 
-      {/* Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
-        <Card className="border-border/60 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
-              Total Plans
-            </p>
-            <p className="text-2xl font-bold mt-1">{plans.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
-              Active Plans
-            </p>
-            <p className="text-2xl font-bold mt-1 text-terminal-green">
-              {activePlans}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 shadow-none">
-          <CardContent className="p-4">
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono">
-              Contracts on Plans
-            </p>
-            <p className="text-2xl font-bold mt-1">{contracts.length}</p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="border-border/60 shadow-sm"><CardContent className="p-5">
+          <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">Total Plans</p>
+          <p className="text-2xl font-bold mt-1">{plans.length}</p>
+        </CardContent></Card>
+        <Card className="border-border/60 shadow-sm"><CardContent className="p-5">
+          <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">Active Plans</p>
+          <p className="text-2xl font-bold mt-1 text-green-600">{activePlans}</p>
+        </CardContent></Card>
+        <Card className="border-border/60 shadow-sm"><CardContent className="p-5">
+          <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">Contracts on Plans</p>
+          <p className="text-2xl font-bold mt-1">{contracts.length}</p>
+        </CardContent></Card>
       </div>
 
-      {/* Info note */}
-      <div className="flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-        <Info className="h-4 w-4 shrink-0 mt-0.5 text-terminal-green" />
-        <p>
-          Bulk upload matches the "Plan Type" column against plan names{" "}
-          <span className="font-medium text-foreground">case-insensitively</span> and
-          auto-creates a contract billed at the row's{" "}
-          <span className="font-medium text-foreground">Amount ÷ months paid</span>, or at
-          this plan's monthly payment when the row has no Amount — you can
-          still override it per row in the upload preview (e.g. 250 vs 500 for
-          old-price clients).
-        </p>
+      <div className="flex items-start gap-2.5 rounded-lg border border-border bg-muted/40 p-4 text-[14px] text-muted-foreground">
+        <Info className="h-5 w-5 shrink-0 mt-0.5 text-green-600" />
+        <p>Bulk upload matches the "Plan Type" column against plan names <span className="font-semibold text-foreground">case-insensitively</span> and auto-creates a contract.</p>
       </div>
 
-      {/* Plans table */}
-      <Card className="border-border/60 shadow-none">
+      <Card className="border-border/60 shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium">
-            Plan Catalog ({plans.length})
-          </CardTitle>
+          <CardTitle className="text-lg font-semibold">Plan Catalog ({plans.length})</CardTitle>
         </CardHeader>
         <CardContent className="p-0 overflow-x-auto">
           {plans.length === 0 ? (
-            <div className="py-10 text-center">
-              <Package className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-              <p className="text-sm text-muted-foreground font-mono">
-                No plans yet — add your first plan to start auto-creating
-                contracts on bulk upload.
-              </p>
+            <div className="py-12 text-center">
+              <Package className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+              <p className="text-base text-muted-foreground">No plans yet — add your first plan to start auto-creating contracts.</p>
             </div>
           ) : (
-            <table className="w-full text-sm min-w-[700px]">
-              <thead>
-                <tr className="border-b border-border">
-                  {["Plan Name", "Monthly Payment", "Full Price", "Contracts", "Status", "Actions"].map((h) => (
-                    <th
-                      key={h}
-                      className="text-left py-2 px-4 text-[10px] uppercase tracking-wider text-muted-foreground font-mono"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
+            <table className="w-full min-w-[700px]">
+              <thead><tr className="border-b border-border">
+                {["Plan Name", "Monthly Payment", "Full Price", "Contracts", "Status", "Actions"].map((h) => (
+                  <th key={h} className="text-left py-3 px-5 text-[13px] uppercase tracking-wider text-muted-foreground font-medium">{h}</th>
+                ))}
+              </tr></thead>
               <tbody>
                 {plans.map((plan) => {
                   const usage = contractCountByPlan(plan.name);
                   const isActive = plan.isActive !== false;
                   return (
                     <tr key={plan._id} className="border-b border-border/30 last:border-0">
-                      <td className="py-2.5 px-4 font-medium whitespace-nowrap">
-                        {plan.name}
+                      <td className="py-3 px-5 font-medium text-[15px] whitespace-nowrap">{plan.name}</td>
+                      <td className="py-3 px-5 text-[14px]">{peso(planMonthly(plan))}<span className="text-muted-foreground"> /mo</span></td>
+                      <td className="py-3 px-5 text-[14px] text-muted-foreground">{peso(fullPlanPrice(planMonthly(plan)))}</td>
+                      <td className="py-3 px-5">
+                        {usage > 0 ? <Badge variant="outline" className="text-[12px] terminal-status-current">{usage}</Badge> : <span className="text-[14px] text-muted-foreground">0</span>}
                       </td>
-                      <td className="py-2.5 px-4 font-mono text-xs">
-                        {peso(planMonthly(plan))}
-                        <span className="text-muted-foreground"> /mo</span>
+                      <td className="py-3 px-5">
+                        {isActive ? <Badge variant="outline" className="text-[12px] terminal-status-current">active</Badge> : <Badge variant="outline" className="text-[12px] terminal-status-claim">inactive</Badge>}
                       </td>
-                      <td className="py-2.5 px-4 font-mono text-xs text-muted-foreground">
-                        {peso(fullPlanPrice(planMonthly(plan)))}
-                      </td>
-                      <td className="py-2.5 px-4 font-mono text-xs">
-                        {usage > 0 ? (
-                          <Badge variant="outline" className="text-[10px] font-mono terminal-status-current">
-                            {usage}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">0</span>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-4">
-                        {isActive ? (
-                          <Badge variant="outline" className="text-[10px] font-mono terminal-status-current">
-                            active
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px] font-mono terminal-status-claim">
-                            inactive
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-4">
+                      <td className="py-3 px-5">
                         <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0"
-                            onClick={() => openEdit(plan)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => setDeletingId(plan._id as any)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(plan)}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive" onClick={() => setDeletingId(plan._id as any)}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </td>
                     </tr>
@@ -322,100 +187,36 @@ export default function Plans() {
         </CardContent>
       </Card>
 
-      {/* Add / Edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-mono">
-              <span className="text-terminal-green">$</span>{" "}
-              {editingPlan ? "Edit Plan" : "New Plan"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingPlan
-                ? "Update the plan name or pricing."
-                : "Create a plan type that bulk upload can match against."}
-            </DialogDescription>
+            <DialogTitle className="text-xl font-bold">{editingPlan ? "Edit Plan" : "New Plan"}</DialogTitle>
+            <DialogDescription>{editingPlan ? "Update the plan name or pricing." : "Create a plan type that bulk upload can match against."}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div>
-              <Label className="text-xs">Plan Name *</Label>
-              <Input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                placeholder="e.g. Isidore"
-                className="font-mono text-sm mt-1"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Monthly Payment (₱) *</Label>
-              <Input
-                type="number"
-                value={form.price}
-                onChange={(e) => setForm({ ...form, price: e.target.value })}
-                placeholder="e.g. 650"
-                className="font-mono text-sm mt-1"
-              />
-            </div>
-            <div className="rounded-md bg-muted/50 border border-border px-3 py-2 font-mono text-xs flex items-center justify-between gap-3">
-              <span className="text-muted-foreground">
-                full price (monthly × {PLAN_TERM_MONTHS})
-              </span>
-              <span className="font-bold text-terminal-green whitespace-nowrap">
-                {(() => {
-                  const monthly = parseFloat(form.price.replace(/,/g, ""));
-                  return !isNaN(monthly) && monthly > 0
-                    ? peso(fullPlanPrice(monthly))
-                    : "—";
-                })()}
-              </span>
+          <div className="space-y-4">
+            <div><Label className="text-[14px]">Plan Name *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Isidore" className="text-base h-11 mt-1.5" /></div>
+            <div><Label className="text-[14px]">Monthly Payment (₱) *</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="e.g. 650" className="text-base h-11 mt-1.5" /></div>
+            <div className="rounded-lg bg-muted/50 border border-border px-4 py-3 text-[14px] flex items-center justify-between gap-3">
+              <span className="text-muted-foreground">Full price (monthly × {PLAN_TERM_MONTHS})</span>
+              <span className="font-bold text-green-600 whitespace-nowrap">{(() => { const monthly = parseFloat(form.price.replace(/,/g, "")); return !isNaN(monthly) && monthly > 0 ? peso(fullPlanPrice(monthly)) : "—"; })()}</span>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving}>
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={isSaving} className="gap-2">
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {editingPlan ? "Save Changes" : "Create Plan"}
-            </Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving} className="h-11 text-[14px]">Cancel</Button>
+            <Button onClick={handleSave} disabled={isSaving} className="gap-2 h-11 text-[14px]">{isSaving && <Loader2 className="h-4 w-4 animate-spin" />}{editingPlan ? "Save Changes" : "Create Plan"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete confirm dialog */}
       <Dialog open={deletingId !== null} onOpenChange={(open) => !open && setDeletingId(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-mono">
-              <span className="text-terminal-amber">$</span> Remove Plan?
-            </DialogTitle>
-            <DialogDescription>
-              {(() => {
-                const plan = plans.find((p) => String(p._id) === deletingId);
-                if (!plan) return null;
-                const usage = contractCountByPlan(plan.name);
-                return usage > 0
-                  ? `"${plan.name}" is used by ${usage} contract${usage !== 1 ? "s" : ""} and cannot be removed. You can deactivate it instead.`
-                  : `This permanently removes "${plan.name}" from the plan catalog. Existing contracts are not affected.`;
-              })()}
-            </DialogDescription>
+            <DialogTitle className="text-xl font-bold">Remove Plan?</DialogTitle>
+            <DialogDescription>{(() => { const plan = plans.find((p) => String(p._id) === deletingId); if (!plan) return null; const usage = contractCountByPlan(plan.name); return usage > 0 ? `"${plan.name}" is used by ${usage} contract${usage !== 1 ? "s" : ""} and cannot be removed.` : `This permanently removes "${plan.name}" from the plan catalog.`; })()}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeletingId(null)} disabled={isDeleting}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                const plan = plans.find((p) => String(p._id) === deletingId);
-                if (plan) handleDelete(plan);
-              }}
-              disabled={isDeleting || contractCountByPlan(plans.find((p) => String(p._id) === deletingId)?.name ?? "") > 0}
-              className="gap-2"
-            >
-              {isDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-              Remove Plan
-            </Button>
+            <Button variant="outline" onClick={() => setDeletingId(null)} disabled={isDeleting} className="h-11 text-[14px]">Cancel</Button>
+            <Button variant="destructive" onClick={() => { const plan = plans.find((p) => String(p._id) === deletingId); if (plan) handleDelete(plan); }} disabled={isDeleting || contractCountByPlan(plans.find((p) => String(p._id) === deletingId)?.name ?? "") > 0} className="gap-2 h-11 text-[14px]">{isDeleting && <Loader2 className="h-4 w-4 animate-spin" />}{!isDeleting && <Trash2 className="h-4 w-4" />}Remove Plan</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

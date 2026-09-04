@@ -61,15 +61,15 @@ export default function Commissions() {
   });
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-5 md:p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="h-9 w-9 rounded bg-terminal-green/10 flex items-center justify-center">
           <DollarSign className="h-4.5 w-4.5 text-terminal-green" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Commissions</h1>
-          <p className="text-xs text-muted-foreground font-mono">
+          <h1 className="text-3xl font-bold tracking-tight">Commissions</h1>
+          <p className="text-xs text-muted-foreground">
             Agent commission tracking and payouts
           </p>
         </div>
@@ -81,7 +81,7 @@ export default function Commissions() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground font-mono">Pending</p>
+                <p className="text-xs text-muted-foreground">Pending</p>
                 <p className="text-xl font-bold text-terminal-amber">
                   {formatPHP(summary?.totalPending ?? 0)}
                 </p>
@@ -94,7 +94,7 @@ export default function Commissions() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground font-mono">Approved</p>
+                <p className="text-xs text-muted-foreground">Approved</p>
                 <p className="text-xl font-bold text-terminal-green">
                   {formatPHP(summary?.totalApproved ?? 0)}
                 </p>
@@ -107,7 +107,7 @@ export default function Commissions() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground font-mono">Paid</p>
+                <p className="text-xs text-muted-foreground">Paid</p>
                 <p className="text-xl font-bold text-blue-600">
                   {formatPHP(summary?.totalPaid ?? 0)}
                 </p>
@@ -120,7 +120,7 @@ export default function Commissions() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-muted-foreground font-mono">Total</p>
+                <p className="text-xs text-muted-foreground">Total</p>
                 <p className="text-xl font-bold">{summary?.totalCount ?? 0}</p>
               </div>
               <DollarSign className="h-5 w-5 text-muted-foreground/40" />
@@ -136,7 +136,7 @@ export default function Commissions() {
             key={f}
             variant={filter === f ? "default" : "outline"}
             size="sm"
-            className="font-mono text-xs capitalize"
+            className="text-xs capitalize"
             onClick={() => setFilter(f)}
           >
             {f}
@@ -147,32 +147,32 @@ export default function Commissions() {
       {/* Commissions Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-mono">All Commissions</CardTitle>
+          <CardTitle className="text-sm">All Commissions</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <ScrollableTable>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs font-mono">Agent</TableHead>
-                  <TableHead className="text-xs font-mono">Client</TableHead>
-                  <TableHead className="text-xs font-mono">Payment</TableHead>
-                  <TableHead className="text-xs font-mono">Rate</TableHead>
-                  <TableHead className="text-xs font-mono">Commission</TableHead>
-                  <TableHead className="text-xs font-mono">Status</TableHead>
-                  <TableHead className="text-xs font-mono">Actions</TableHead>
+                  <TableHead className="text-xs">Agent</TableHead>
+                  <TableHead className="text-xs">Client</TableHead>
+                  <TableHead className="text-xs">Payment</TableHead>
+                  <TableHead className="text-xs">Rate</TableHead>
+                  <TableHead className="text-xs">Commission</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered?.map((c) => (
                   <TableRow key={c._id}>
-                    <TableCell className="text-xs font-mono">{c.agentName}</TableCell>
-                    <TableCell className="text-xs font-mono">{c.clientName}</TableCell>
-                    <TableCell className="text-xs font-mono">{formatPHP(c.paymentAmount)}</TableCell>
-                    <TableCell className="text-xs font-mono">{c.commissionRate}%</TableCell>
-                    <TableCell className="text-xs font-bold font-mono">{formatPHP(c.commissionAmount)}</TableCell>
+                    <TableCell className="text-xs">{c.agentName}</TableCell>
+                    <TableCell className="text-xs">{c.clientName}</TableCell>
+                    <TableCell className="text-xs">{formatPHP(c.paymentAmount)}</TableCell>
+                    <TableCell className="text-xs">{c.commissionRate}%</TableCell>
+                    <TableCell className="text-xs font-bold">{formatPHP(c.commissionAmount)}</TableCell>
                     <TableCell>
-                      <Badge className={`text-[10px] font-mono ${STATUS_STYLES[c.status] || ""}`}>
+                      <Badge className={`text-[10px] ${STATUS_STYLES[c.status] || ""}`}>
                         {c.status}
                       </Badge>
                     </TableCell>
@@ -214,7 +214,7 @@ export default function Commissions() {
                 ))}
                 {filtered?.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-xs font-mono">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-xs">
                       No commissions found
                     </TableCell>
                   </TableRow>

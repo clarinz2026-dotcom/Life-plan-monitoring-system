@@ -82,7 +82,6 @@ function formatPHP(amount: number) {
 
 const PAGE_SIZE = 15;
 
-/** Build a compact page-number list: first, last, and pages around the current one. */
 function getPageItems(
   current: number,
   total: number,
@@ -109,22 +108,18 @@ export default function Clients() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Multi-select / bulk delete state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Pagination state (15 per page)
   const [page, setPage] = useState(0);
 
-  // Go back to page 1 whenever the search or status tab changes
   useEffect(() => {
     setPage(0);
   }, [search, statusFilter]);
 
   const bulkDelete = useMutation(api.clients.bulkDelete);
 
-  // Form state
   const [form, setForm] = useState({
     firstName: "",
     lastName: "",
@@ -173,9 +168,7 @@ export default function Clients() {
     }
   };
 
-  // Filter clients by search and computed status
   const filteredClients = clientsWithStatus?.filter((item) => {
-    // Search filter
     if (search) {
       const q = search.toLowerCase();
       const matchesSearch =
@@ -184,14 +177,12 @@ export default function Clients() {
         item.client.contactNumber.includes(q);
       if (!matchesSearch) return false;
     }
-    // Status filter
     if (statusFilter !== "all") {
       if (item.computedStatus !== statusFilter) return false;
     }
     return true;
   });
 
-  // Count clients per computed status for badge counts
   const statusCounts: Record<string, number> = {};
   if (clientsWithStatus) {
     for (const item of clientsWithStatus) {
@@ -204,7 +195,6 @@ export default function Clients() {
     .filter((item) => selectedIds.has(String(item.client._id)))
     .map((item) => `${item.client.lastName}, ${item.client.firstName}`);
 
-  // Pagination over the filtered list (15 per page)
   const totalFiltered = filteredClients?.length ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages - 1);
@@ -212,7 +202,6 @@ export default function Clients() {
   const pageClients = filteredClients?.slice(pageStart, pageStart + PAGE_SIZE);
   const pageItems = getPageItems(currentPage, totalPages);
 
-  // Selection helpers against the rows on the current page
   const pageClientIds = (pageClients ?? []).map((item) => String(item.client._id));
   const allVisibleSelected =
     pageClientIds.length > 0 && pageClientIds.every((id) => selectedIds.has(id));
@@ -263,43 +252,43 @@ export default function Clients() {
   };
 
   const inputClass =
-    "font-mono text-sm bg-background border-border h-9 focus-visible:ring-terminal-green";
+    "text-base bg-background border-border h-11 focus-visible:ring-ring";
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+    <div className="p-5 md:p-8 space-y-5 md:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            <span className="text-terminal-green">&gt;</span> Clients
+          <h1 className="text-3xl font-bold">
+            Clients
           </h1>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground mt-1">
             {clientCount} total client{clientCount !== 1 && "s"}
           </p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="gap-2">
-              <Plus className="h-4 w-4" />
+            <Button size="default" className="gap-2 h-11 px-5 text-[15px]">
+              <Plus className="h-5 w-5" />
               <span className="hidden sm:inline">New Client</span>
               <span className="sm:hidden">New</span>
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto mx-2 sm:mx-0">
             <DialogHeader>
-              <DialogTitle className="font-mono">
-                <span className="text-terminal-green">$</span> Add New Client
+              <DialogTitle className="text-xl font-bold">
+                Add New Client
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+            <form onSubmit={handleSubmit} className="space-y-5 mt-3">
               {/* Personal Info */}
-              <div className="space-y-3">
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              <div className="space-y-4">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
                   Personal Information
                 </p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs">First Name *</Label>
+                    <Label className="text-[14px]">First Name *</Label>
                     <Input
                       value={form.firstName}
                       onChange={(e) => setForm({ ...form, firstName: e.target.value })}
@@ -308,7 +297,7 @@ export default function Clients() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Last Name *</Label>
+                    <Label className="text-[14px]">Last Name *</Label>
                     <Input
                       value={form.lastName}
                       onChange={(e) => setForm({ ...form, lastName: e.target.value })}
@@ -317,9 +306,9 @@ export default function Clients() {
                     />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <Label className="text-xs">Middle Name</Label>
+                    <Label className="text-[14px]">Middle Name</Label>
                     <Input
                       value={form.middleName}
                       onChange={(e) => setForm({ ...form, middleName: e.target.value })}
@@ -327,7 +316,7 @@ export default function Clients() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Date of Birth *</Label>
+                    <Label className="text-[14px]">Date of Birth *</Label>
                     <Input
                       type="date"
                       value={form.dateOfBirth}
@@ -337,13 +326,13 @@ export default function Clients() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Gender *</Label>
+                    <Label className="text-[14px]">Gender *</Label>
                     <select
                       value={form.gender}
                       onChange={(e) =>
                         setForm({ ...form, gender: e.target.value as typeof form.gender })
                       }
-                      className="font-mono text-sm bg-background border border-border rounded-md h-9 px-2 w-full"
+                      className="text-base bg-background border border-border rounded-md h-11 px-3 w-full"
                     >
                       <option value="male">Male</option>
                       <option value="female">Female</option>
@@ -354,13 +343,13 @@ export default function Clients() {
               </div>
 
               {/* Contact */}
-              <div className="space-y-3">
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              <div className="space-y-4">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
                   Contact Details
                 </p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs">Contact Number *</Label>
+                    <Label className="text-[14px]">Contact Number</Label>
                     <Input
                       value={form.contactNumber}
                       onChange={(e) =>
@@ -368,11 +357,10 @@ export default function Clients() {
                       }
                       placeholder="09XX-XXX-XXXX"
                       className={inputClass}
-                      required
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Email</Label>
+                    <Label className="text-[14px]">Email</Label>
                     <Input
                       type="email"
                       value={form.email}
@@ -382,53 +370,49 @@ export default function Clients() {
                   </div>
                 </div>
                 <div>
-                  <Label className="text-xs">Address *</Label>
+                  <Label className="text-[14px]">Address</Label>
                   <Input
                     value={form.address}
                     onChange={(e) => setForm({ ...form, address: e.target.value })}
                     className={inputClass}
-                    required
                   />
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <Label className="text-xs">City *</Label>
+                    <Label className="text-[14px]">City</Label>
                     <Input
                       value={form.city}
                       onChange={(e) => setForm({ ...form, city: e.target.value })}
                       className={inputClass}
-                      required
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Province *</Label>
+                    <Label className="text-[14px]">Province</Label>
                     <Input
                       value={form.province}
                       onChange={(e) => setForm({ ...form, province: e.target.value })}
                       className={inputClass}
-                      required
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">ZIP Code *</Label>
+                    <Label className="text-[14px]">ZIP Code</Label>
                     <Input
                       value={form.zipCode}
                       onChange={(e) => setForm({ ...form, zipCode: e.target.value })}
                       className={inputClass}
-                      required
                     />
                   </div>
                 </div>
               </div>
 
               {/* Beneficiary */}
-              <div className="space-y-3">
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              <div className="space-y-4">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
                   Beneficiary
                 </p>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-xs">Beneficiary Name *</Label>
+                    <Label className="text-[14px]">Beneficiary Name *</Label>
                     <Input
                       value={form.beneficiaryName}
                       onChange={(e) =>
@@ -439,7 +423,7 @@ export default function Clients() {
                     />
                   </div>
                   <div>
-                    <Label className="text-xs">Relationship *</Label>
+                    <Label className="text-[14px]">Relationship *</Label>
                     <Input
                       value={form.beneficiaryRelationship}
                       onChange={(e) =>
@@ -455,7 +439,7 @@ export default function Clients() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full h-12 text-[15px] font-semibold">
                 Create Client
               </Button>
             </form>
@@ -464,19 +448,18 @@ export default function Clients() {
       </div>
 
       {/* Search + Status filters */}
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             placeholder="Search by name or contact..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 font-mono text-sm"
+            className="pl-10 text-base h-11"
           />
         </div>
 
-        {/* Status filter tabs */}
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {FILTER_TABS.map((tab) => {
             const count =
               tab.key === "all"
@@ -487,14 +470,14 @@ export default function Clients() {
                 key={tab.key}
                 variant={statusFilter === tab.key ? "default" : "outline"}
                 size="sm"
-                className="h-7 text-xs font-mono gap-1.5"
+                className="h-9 text-[13px] gap-2"
                 onClick={() => setStatusFilter(tab.key)}
               >
                 {tab.label}
                 {count > 0 && (
                   <Badge
                     variant="secondary"
-                    className="ml-0.5 h-4 min-w-4 px-1 text-[9px] font-mono"
+                    className="ml-0.5 h-5 min-w-5 px-1.5 text-[11px]"
                   >
                     {count}
                   </Badge>
@@ -507,40 +490,40 @@ export default function Clients() {
 
       {/* Bulk selection bar */}
       {selectedIds.size > 0 && (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-2.5">
-          <div className="flex items-center gap-2 text-sm font-medium text-destructive">
-            <AlertTriangle className="h-4 w-4" />
+        <div className="flex flex-wrap items-center gap-4 rounded-lg border border-destructive/30 bg-destructive/5 px-5 py-3">
+          <div className="flex items-center gap-2 text-[15px] font-medium text-destructive">
+            <AlertTriangle className="h-5 w-5" />
             {selectedIds.size} client{selectedIds.size !== 1 ? "s" : ""} selected
           </div>
           <div className="flex-1" />
           <Button
             variant="outline"
-            size="sm"
+            size="default"
             onClick={() => setSelectedIds(new Set())}
-            className="h-7 text-xs"
+            className="h-10 text-[14px]"
           >
             Clear
           </Button>
           <Button
             variant="destructive"
-            size="sm"
-            className="h-7 text-xs gap-1.5"
+            size="default"
+            className="h-10 gap-2 text-[14px]"
             onClick={() => setDeleteDialogOpen(true)}
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-4 w-4" />
             Delete ({selectedIds.size})
           </Button>
         </div>
       )}
 
       {/* Client table */}
-      <Card className="border-border/60 shadow-none">
+      <Card className="border-border/60 shadow-sm">
         <CardContent className="p-0">
           <ScrollableTable>
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-10">
+                <TableHead className="w-12">
                   <Checkbox
                     checked={
                       allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false
@@ -549,19 +532,19 @@ export default function Clients() {
                     aria-label="Select all visible clients"
                   />
                 </TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider font-mono">
+                <TableHead className="text-[13px] uppercase tracking-wider font-medium">
                   Client
                 </TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider font-mono">
+                <TableHead className="text-[13px] uppercase tracking-wider font-medium">
                   Contact
                 </TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider font-mono">
+                <TableHead className="text-[13px] uppercase tracking-wider font-medium">
                   Status
                 </TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider font-mono">
+                <TableHead className="text-[13px] uppercase tracking-wider font-medium">
                   Plan
                 </TableHead>
-                <TableHead className="text-[10px] uppercase tracking-wider font-mono text-right">
+                <TableHead className="text-[13px] uppercase tracking-wider font-medium text-right">
                   Action
                 </TableHead>
               </TableRow>
@@ -569,15 +552,15 @@ export default function Clients() {
             <TableBody>
               {!filteredClients ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-sm font-mono">
+                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground text-base">
                     Loading clients...
                   </TableCell>
                 </TableRow>
               ) : filteredClients.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <Users className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-                    <p className="text-sm text-muted-foreground font-mono">
+                  <TableCell colSpan={6} className="text-center py-10">
+                    <Users className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+                    <p className="text-base text-muted-foreground">
                       {search || statusFilter !== "all"
                         ? "No clients match your filters"
                         : "No clients yet. Add one to get started."}
@@ -591,12 +574,12 @@ export default function Clients() {
                     <TableRow
                       key={client._id}
                       className={`cursor-pointer hover:bg-muted/50 ${
-                        isSelected ? "bg-terminal-green/5" : ""
+                        isSelected ? "bg-green-50 dark:bg-green-950/20" : ""
                       }`}
                       onClick={() => navigate(`/clients/${client._id}`)}
                     >
                       <TableCell
-                        className="w-10"
+                        className="w-12"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <Checkbox
@@ -606,20 +589,20 @@ export default function Clients() {
                         />
                       </TableCell>
                       <TableCell>
-                        <p className="font-medium text-sm">
+                        <p className="font-medium text-[15px]">
                           {client.lastName}, {client.firstName}
                         </p>
                         {client.middleName && (
-                          <p className="text-[11px] text-muted-foreground">
+                          <p className="text-[13px] text-muted-foreground">
                             {client.middleName}
                           </p>
                         )}
                       </TableCell>
                       <TableCell>
-                        <p className="text-xs font-mono">
+                        <p className="text-[14px]">
                           {client.contactNumber || "—"}
                         </p>
-                        <p className="text-[11px] text-muted-foreground">
+                        <p className="text-[13px] text-muted-foreground">
                           {[client.city, client.province].filter(Boolean).join(", ") || "—"}
                         </p>
                       </TableCell>
@@ -627,14 +610,14 @@ export default function Clients() {
                         <div className="space-y-1">
                           <Badge
                             variant="outline"
-                            className={`text-[10px] font-mono ${
+                            className={`text-[12px] ${
                               STATUS_COLORS[computedStatus] || ""
                             }`}
                           >
                             {STATUS_LABELS[computedStatus] || computedStatus.replace(/_/g, " ")}
                           </Badge>
                           {daysSincePayment !== null && computedStatus !== "no_contract" && (
-                            <p className="text-[10px] text-muted-foreground">
+                            <p className="text-[12px] text-muted-foreground">
                               {daysSincePayment}d since last payment
                             </p>
                           )}
@@ -643,8 +626,8 @@ export default function Clients() {
                       <TableCell>
                         {contract ? (
                           <div>
-                            <p className="text-xs">{contract.planType}</p>
-                            <p className="text-[11px] text-muted-foreground font-mono">
+                            <p className="text-[14px]">{contract.planType}</p>
+                            <p className="text-[13px] text-muted-foreground">
                               {formatPHP(contract.monthlyAmortization)}/mo
                             </p>
                           </div>
@@ -653,8 +636,8 @@ export default function Clients() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="h-7 px-2 gap-1">
-                          View <ArrowRight className="h-3 w-3" />
+                        <Button variant="ghost" size="sm" className="h-9 px-3 gap-1.5 text-[14px]">
+                          View <ArrowRight className="h-4 w-4" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -667,25 +650,25 @@ export default function Clients() {
 
           {/* Pagination footer */}
           {totalPages > 1 && (
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-4 py-3">
-              <p className="text-xs text-muted-foreground font-mono">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-4">
+              <p className="text-[13px] text-muted-foreground">
                 Showing {pageStart + 1}–{Math.min(pageStart + PAGE_SIZE, totalFiltered)} of{" "}
                 {totalFiltered}
               </p>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1.5">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 w-7 p-0"
+                  className="h-9 w-9 p-0"
                   disabled={currentPage === 0}
                   onClick={() => setPage(currentPage - 1)}
                   aria-label="Previous page"
                 >
-                  <ChevronLeft className="h-3.5 w-3.5" />
+                  <ChevronLeft className="h-4 w-4" />
                 </Button>
                 {pageItems.map((item, idx) =>
                   item === "gap" ? (
-                    <span key={`gap-${idx}`} className="px-1 text-xs text-muted-foreground">
+                    <span key={`gap-${idx}`} className="px-1 text-[13px] text-muted-foreground">
                       …
                     </span>
                   ) : (
@@ -693,7 +676,7 @@ export default function Clients() {
                       key={item}
                       variant={item === currentPage ? "default" : "outline"}
                       size="sm"
-                      className="h-7 min-w-7 px-2 text-xs font-mono"
+                      className="h-9 min-w-9 px-2 text-[13px]"
                       onClick={() => setPage(item)}
                     >
                       {item + 1}
@@ -703,12 +686,12 @@ export default function Clients() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-7 w-7 p-0"
+                  className="h-9 w-9 p-0"
                   disabled={currentPage >= totalPages - 1}
                   onClick={() => setPage(currentPage + 1)}
                   aria-label="Next page"
                 >
-                  <ChevronRight className="h-3.5 w-3.5" />
+                  <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -720,24 +703,24 @@ export default function Clients() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="font-mono">
-              <span className="text-terminal-amber">$</span> Delete {selectedIds.size} Client{selectedIds.size !== 1 ? "s" : ""}?
+            <DialogTitle className="text-xl font-bold">
+              Delete {selectedIds.size} Client{selectedIds.size !== 1 ? "s" : ""}?
             </DialogTitle>
-            <DialogDescription className="space-y-2">
-              <p>
+            <DialogDescription className="space-y-3">
+              <p className="text-[15px]">
                 This permanently deletes the selected client records and their
                 attached data:
               </p>
-              <p className="font-mono text-xs">
+              <p className="text-[13px]">
                 contracts · payments · receipts · payment schedules ·
                 commissions · death claims · route stops
               </p>
               {selectedNames.length > 0 && (
                 <div className="pt-1">
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground font-mono mb-1">
+                  <p className="text-[12px] uppercase tracking-wider text-muted-foreground mb-2">
                     Selected
                   </p>
-                  <div className="max-h-24 overflow-y-auto space-y-0.5 font-mono text-xs">
+                  <div className="max-h-24 overflow-y-auto space-y-1 text-[13px]">
                     {selectedNames.slice(0, 8).map((name) => (
                       <div key={name}>• {name}</div>
                     ))}
@@ -759,6 +742,7 @@ export default function Clients() {
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
               disabled={isDeleting}
+              className="h-11 text-[14px]"
             >
               Cancel
             </Button>
@@ -766,7 +750,7 @@ export default function Clients() {
               variant="destructive"
               onClick={handleBulkDelete}
               disabled={isDeleting}
-              className="gap-2"
+              className="gap-2 h-11 text-[14px]"
             >
               {isDeleting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

@@ -10,9 +10,9 @@ import { format } from "date-fns";
 
 const STATUS_LABELS: Record<string, string> = {
   current: "Current",
-  delinquent_30: "30d Late",
-  delinquent_60: "60d Late",
-  delinquent_90: "90d Late",
+  delinquent_30: "30 Days Late",
+  delinquent_60: "60 Days Late",
+  delinquent_90: "90 Days Late",
   lapsed: "Lapsed",
   fully_paid: "Fully Paid",
   assigned_death_claim: "Death Claim",
@@ -58,25 +58,25 @@ export default function Contracts() {
   });
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+    <div className="p-5 md:p-8 space-y-5 md:space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          <span className="text-terminal-green">&gt;</span> Contracts
+        <h1 className="text-3xl font-bold">
+          Contracts
         </h1>
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-sm text-muted-foreground mt-1">
           {contracts?.length || 0} total contract{(contracts?.length || 0) !== 1 && "s"}
         </p>
       </div>
 
       {/* Status tabs */}
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-2">
         {TABS.map((tab) => (
           <Button
             key={tab.key}
             variant={filter === tab.key ? "default" : "outline"}
             size="sm"
-            className="h-7 text-xs font-mono"
+            className="h-9 text-[13px]"
             onClick={() => setFilter(tab.key)}
           >
             {tab.label}
@@ -85,15 +85,15 @@ export default function Contracts() {
       </div>
 
       {/* Contract cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {!filtered ? (
-          <p className="text-sm text-muted-foreground font-mono col-span-full py-8 text-center">
+          <p className="text-base text-muted-foreground col-span-full py-10 text-center">
             Loading contracts...
           </p>
         ) : filtered.length === 0 ? (
-          <div className="col-span-full text-center py-12">
-            <FileText className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-            <p className="text-sm text-muted-foreground font-mono">
+          <div className="col-span-full text-center py-14">
+            <FileText className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+            <p className="text-base text-muted-foreground">
               No contracts match this filter
             </p>
           </div>
@@ -105,17 +105,17 @@ export default function Contracts() {
             return (
               <Card
                 key={c._id}
-                className="border-border/60 shadow-none cursor-pointer hover:border-border transition-colors"
+                className="border-border/60 shadow-sm cursor-pointer hover:border-border transition-colors"
                 onClick={() => navigate(`/clients/${c.clientId}`)}
               >
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-mono">
+                    <CardTitle className="text-[15px] font-semibold">
                       {c.contractNumber}
                     </CardTitle>
                     <Badge
                       variant="outline"
-                      className={`text-[10px] font-mono ${
+                      className={`text-[12px] ${
                         STATUS_COLORS[c.contractStatus] || ""
                       }`}
                     >
@@ -123,55 +123,55 @@ export default function Contracts() {
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-4">
                   {/* Client */}
                   <div className="flex items-center justify-between">
-                    <p className="text-sm">
+                    <p className="text-[15px]">
                       {c.client
                         ? `${c.client.lastName}, ${c.client.firstName}`
                         : "Unknown"}
                     </p>
-                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground" />
                   </div>
 
                   {/* Plan details */}
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-2 gap-3 text-[14px]">
                     <div>
-                      <p className="text-muted-foreground uppercase text-[10px]">
+                      <p className="text-muted-foreground uppercase text-[12px] font-medium">
                         Plan
                       </p>
                       <p className="font-medium">{c.planType}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground uppercase text-[10px]">
+                      <p className="text-muted-foreground uppercase text-[12px] font-medium">
                         Monthly
                       </p>
-                      <p className="font-mono">
+                      <p className="font-medium">
                         {formatPHP(c.monthlyAmortization)}
                       </p>
                     </div>
                   </div>
 
                   {/* Progress */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[10px] font-mono">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-[13px]">
                       <span className="text-muted-foreground">
                         {formatPHP(c.totalPaid)} / {formatPHP(c.planAmount)}
                       </span>
-                      <span className="text-terminal-green font-medium">
+                      <span className="text-green-600 font-semibold">
                         {progress.toFixed(0)}%
                       </span>
                     </div>
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-terminal-green rounded-full transition-all"
+                        className="h-full bg-green-600 rounded-full transition-all"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
                   </div>
 
                   {/* Dates */}
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-[13px] text-muted-foreground">
                     Started: {format(new Date(c.startDate), "MMM d, yyyy")}
                     {c.maturityDate &&
                       ` · Matures: ${format(new Date(c.maturityDate), "MMM d, yyyy")}`}

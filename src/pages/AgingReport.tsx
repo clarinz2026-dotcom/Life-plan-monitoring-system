@@ -101,7 +101,7 @@ export default function AgingReport() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-5 md:p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -109,8 +109,8 @@ export default function AgingReport() {
             <AlertTriangle className="h-4.5 w-4.5 text-terminal-amber" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Aging Report</h1>
-            <p className="text-xs text-muted-foreground font-mono">
+            <h1 className="text-3xl font-bold tracking-tight">Aging Report</h1>
+            <p className="text-xs text-muted-foreground">
               Outstanding receivables by delinquency age
             </p>
           </div>
@@ -118,7 +118,7 @@ export default function AgingReport() {
         <Button
           size="sm"
           variant="outline"
-          className="gap-1 font-mono text-xs"
+          className="gap-1 text-xs"
           onClick={handleExportXLSX}
         >
           <Download className="h-3.5 w-3.5" /> Export XLSX
@@ -136,8 +136,8 @@ export default function AgingReport() {
         ].map((g) => (
           <Card key={g.label}>
             <CardContent className="p-3 text-center">
-              <p className={`text-2xl font-bold ${g.color}`}>{g.count}</p>
-              <p className="text-[10px] text-muted-foreground font-mono">{g.label}</p>
+              <p className={`text-3xl font-bold ${g.color}`}>{g.count}</p>
+              <p className="text-[10px] text-muted-foreground">{g.label}</p>
             </CardContent>
           </Card>
         ))}
@@ -148,12 +148,12 @@ export default function AgingReport() {
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xs text-muted-foreground font-mono">Total Outstanding Balance</p>
-              <p className="text-2xl font-bold text-terminal-red">{formatPHP(totalOutstanding)}</p>
+              <p className="text-xs text-muted-foreground">Total Outstanding Balance</p>
+              <p className="text-3xl font-bold text-terminal-red">{formatPHP(totalOutstanding)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground font-mono">Total Accounts</p>
-              <p className="text-2xl font-bold">
+              <p className="text-xs text-muted-foreground">Total Accounts</p>
+              <p className="text-3xl font-bold">
                 {groups.current.length + groups.delinquent_30.length + groups.delinquent_60.length + groups.delinquent_90.length + groups.lapsed.length}
               </p>
             </div>
@@ -164,21 +164,21 @@ export default function AgingReport() {
       {/* Detailed Table */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-mono">Detailed Aging Breakdown</CardTitle>
+          <CardTitle className="text-sm">Detailed Aging Breakdown</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <ScrollableTable>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs font-mono">Client</TableHead>
-                  <TableHead className="text-xs font-mono">Contract #</TableHead>
-                  <TableHead className="text-xs font-mono">Plan Type</TableHead>
-                  <TableHead className="text-xs font-mono">Plan Amount</TableHead>
-                  <TableHead className="text-xs font-mono">Total Paid</TableHead>
-                  <TableHead className="text-xs font-mono">Balance</TableHead>
-                  <TableHead className="text-xs font-mono">Status</TableHead>
-                  <TableHead className="text-xs font-mono">Days</TableHead>
+                  <TableHead className="text-xs">Client</TableHead>
+                  <TableHead className="text-xs">Contract #</TableHead>
+                  <TableHead className="text-xs">Plan Type</TableHead>
+                  <TableHead className="text-xs">Plan Amount</TableHead>
+                  <TableHead className="text-xs">Total Paid</TableHead>
+                  <TableHead className="text-xs">Balance</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Days</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -192,7 +192,7 @@ export default function AgingReport() {
                   group.items.length > 0 ? (
                     <>
                       <TableRow key={`header-${group.label}`}>
-                        <TableCell colSpan={8} className={`text-xs font-bold font-mono ${group.style} bg-muted/30`}>
+                        <TableCell colSpan={8} className={`text-xs font-bold ${group.style} bg-muted/30`}>
                           {group.label} ({group.items.length})
                         </TableCell>
                       </TableRow>
@@ -202,20 +202,20 @@ export default function AgingReport() {
                         const balance = c.planAmount - c.totalPaid;
                         return (
                           <TableRow key={item.client._id}>
-                            <TableCell className="text-xs font-mono">
+                            <TableCell className="text-xs">
                               {item.client.firstName} {item.client.lastName}
                             </TableCell>
-                            <TableCell className="text-xs font-mono">{c.contractNumber}</TableCell>
-                            <TableCell className="text-xs font-mono">{c.planType}</TableCell>
-                            <TableCell className="text-xs font-mono">{formatPHP(c.planAmount)}</TableCell>
-                            <TableCell className="text-xs font-mono">{formatPHP(c.totalPaid)}</TableCell>
-                            <TableCell className="text-xs font-bold font-mono text-terminal-red">{formatPHP(balance)}</TableCell>
+                            <TableCell className="text-xs">{c.contractNumber}</TableCell>
+                            <TableCell className="text-xs">{c.planType}</TableCell>
+                            <TableCell className="text-xs">{formatPHP(c.planAmount)}</TableCell>
+                            <TableCell className="text-xs">{formatPHP(c.totalPaid)}</TableCell>
+                            <TableCell className="text-xs font-bold text-terminal-red">{formatPHP(balance)}</TableCell>
                             <TableCell>
-                              <Badge className={`text-[10px] font-mono ${group.style} bg-transparent border-current`}>
+                              <Badge className={`text-[10px] ${group.style} bg-transparent border-current`}>
                                 {group.label}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-xs font-mono">
+                            <TableCell className="text-xs">
                               {item.daysSincePayment ?? "—"}
                             </TableCell>
                           </TableRow>

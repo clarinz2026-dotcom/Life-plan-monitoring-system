@@ -80,7 +80,7 @@ export default function Reconciliation() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-5 md:p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -88,30 +88,30 @@ export default function Reconciliation() {
             <Calculator className="h-4.5 w-4.5 text-terminal-green" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Reconciliation</h1>
-            <p className="text-xs text-muted-foreground font-mono">
+            <h1 className="text-3xl font-bold tracking-tight">Reconciliation</h1>
+            <p className="text-xs text-muted-foreground">
               End-of-day cash register balancing
             </p>
           </div>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="gap-1 font-mono text-xs">
+            <Button size="sm" className="gap-1 text-xs">
               <Plus className="h-3.5 w-3.5" /> Close Register
             </Button>
           </DialogTrigger>
           <DialogContent className="mx-2 sm:mx-0 max-w-lg">
             <DialogHeader>
-              <DialogTitle className="font-mono text-sm">
+              <DialogTitle className="text-sm">
                 &gt; End-of-Day Reconciliation
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="bg-muted/50 rounded p-3">
-                <p className="text-xs font-mono text-muted-foreground mb-2">
+                <p className="text-xs text-muted-foreground mb-2">
                   Today&apos;s Recorded Payments: {formatPHP(todaySummary?.total ?? 0)} ({todaySummary?.count ?? 0} txns)
                 </p>
-                <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                <div className="grid grid-cols-2 gap-2 text-xs">
                   <div>Cash: {formatPHP(todaySummary?.byChannel?.cash ?? 0)}</div>
                   <div>GCash: {formatPHP(todaySummary?.byChannel?.gcash ?? 0)}</div>
                   <div>Maya: {formatPHP(todaySummary?.byChannel?.maya ?? 0)}</div>
@@ -122,79 +122,79 @@ export default function Reconciliation() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs font-mono">Physical Cash Count</Label>
+                  <Label className="text-xs">Physical Cash Count</Label>
                   <Input
                     type="number"
                     value={form.totalCash || ""}
                     onChange={(e) => setForm({ ...form, totalCash: Number(e.target.value) })}
-                    className="font-mono text-sm mt-1"
+                    className="text-sm mt-1"
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs font-mono">GCash Total</Label>
+                  <Label className="text-xs">GCash Total</Label>
                   <Input
                     type="number"
                     value={form.totalGCash || ""}
                     onChange={(e) => setForm({ ...form, totalGCash: Number(e.target.value) })}
-                    className="font-mono text-sm mt-1"
+                    className="text-sm mt-1"
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs font-mono">Maya Total</Label>
+                  <Label className="text-xs">Maya Total</Label>
                   <Input
                     type="number"
                     value={form.totalMaya || ""}
                     onChange={(e) => setForm({ ...form, totalMaya: Number(e.target.value) })}
-                    className="font-mono text-sm mt-1"
+                    className="text-sm mt-1"
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs font-mono">Bank Transfer Total</Label>
+                  <Label className="text-xs">Bank Transfer Total</Label>
                   <Input
                     type="number"
                     value={form.totalBankTransfer || ""}
                     onChange={(e) => setForm({ ...form, totalBankTransfer: Number(e.target.value) })}
-                    className="font-mono text-sm mt-1"
+                    className="text-sm mt-1"
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs font-mono">Check Total</Label>
+                  <Label className="text-xs">Check Total</Label>
                   <Input
                     type="number"
                     value={form.totalCheck || ""}
                     onChange={(e) => setForm({ ...form, totalCheck: Number(e.target.value) })}
-                    className="font-mono text-sm mt-1"
+                    className="text-sm mt-1"
                     placeholder="0"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs font-mono">Total Actual (All)</Label>
+                  <Label className="text-xs">Total Actual (All)</Label>
                   <Input
                     type="number"
                     value={form.totalActual || ""}
                     onChange={(e) => setForm({ ...form, totalActual: Number(e.target.value) })}
-                    className="font-mono text-sm mt-1"
+                    className="text-sm mt-1"
                     placeholder="0"
                   />
                 </div>
               </div>
 
               <div>
-                <Label className="text-xs font-mono">Notes</Label>
+                <Label className="text-xs">Notes</Label>
                 <Textarea
                   value={form.notes}
                   onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                  className="font-mono text-sm mt-1"
+                  className="text-sm mt-1"
                   placeholder="Any discrepancies or notes..."
                 />
               </div>
 
               <div className="flex justify-end">
-                <Button onClick={handleSubmit} className="font-mono text-xs">
+                <Button onClick={handleSubmit} className="text-xs">
                   Close Register
                 </Button>
               </div>
@@ -207,14 +207,14 @@ export default function Reconciliation() {
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground font-mono">Today&apos;s Collections</p>
+            <p className="text-xs text-muted-foreground">Today&apos;s Collections</p>
             <p className="text-xl font-bold">{formatPHP(todaySummary?.total ?? 0)}</p>
-            <p className="text-[10px] text-muted-foreground font-mono">{todaySummary?.count ?? 0} transactions</p>
+            <p className="text-[10px] text-muted-foreground">{todaySummary?.count ?? 0} transactions</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground font-mono">Cash</p>
+            <p className="text-xs text-muted-foreground">Cash</p>
             <p className="text-xl font-bold text-terminal-green">
               {formatPHP(todaySummary?.byChannel?.cash ?? 0)}
             </p>
@@ -222,7 +222,7 @@ export default function Reconciliation() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground font-mono">Digital</p>
+            <p className="text-xs text-muted-foreground">Digital</p>
             <p className="text-xl font-bold text-blue-600">
               {formatPHP(
                 (todaySummary?.byChannel?.gcash ?? 0) +
@@ -236,34 +236,34 @@ export default function Reconciliation() {
       {/* Reconciliation History */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-mono">Reconciliation History</CardTitle>
+          <CardTitle className="text-sm">Reconciliation History</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <ScrollableTable>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs font-mono">Date</TableHead>
-                  <TableHead className="text-xs font-mono">Cashier</TableHead>
-                  <TableHead className="text-xs font-mono">Recorded</TableHead>
-                  <TableHead className="text-xs font-mono">Actual</TableHead>
-                  <TableHead className="text-xs font-mono">Variance</TableHead>
-                  <TableHead className="text-xs font-mono">Status</TableHead>
-                  <TableHead className="text-xs font-mono">Actions</TableHead>
+                  <TableHead className="text-xs">Date</TableHead>
+                  <TableHead className="text-xs">Cashier</TableHead>
+                  <TableHead className="text-xs">Recorded</TableHead>
+                  <TableHead className="text-xs">Actual</TableHead>
+                  <TableHead className="text-xs">Variance</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {records?.map((r) => (
                   <TableRow key={r._id}>
-                    <TableCell className="text-xs font-mono">
+                    <TableCell className="text-xs">
                       {new Date(r.reconciliationDate).toLocaleDateString()}
                     </TableCell>
-                    <TableCell className="text-xs font-mono">{r.cashierName}</TableCell>
-                    <TableCell className="text-xs font-mono">{formatPHP(r.totalRecorded)}</TableCell>
-                    <TableCell className="text-xs font-mono">{formatPHP(r.totalActual)}</TableCell>
+                    <TableCell className="text-xs">{r.cashierName}</TableCell>
+                    <TableCell className="text-xs">{formatPHP(r.totalRecorded)}</TableCell>
+                    <TableCell className="text-xs">{formatPHP(r.totalActual)}</TableCell>
                     <TableCell>
                       <span
-                        className={`text-xs font-mono font-bold ${
+                        className={`text-xs font-bold ${
                           r.variance === 0
                             ? "text-terminal-green"
                             : r.variance > 0
@@ -277,7 +277,7 @@ export default function Reconciliation() {
                     </TableCell>
                     <TableCell>
                       <Badge
-                        className={`text-[10px] font-mono ${
+                        className={`text-[10px] ${
                           r.status === "reviewed"
                             ? "bg-terminal-green/10 text-terminal-green border border-terminal-green/20"
                             : r.status === "closed"
@@ -304,7 +304,7 @@ export default function Reconciliation() {
                 ))}
                 {records?.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-xs font-mono">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-xs">
                       No reconciliation records yet
                     </TableCell>
                   </TableRow>

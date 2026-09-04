@@ -112,7 +112,7 @@ export default function DeathClaims() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-5 md:p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -120,25 +120,25 @@ export default function DeathClaims() {
             <FileX className="h-4.5 w-4.5 text-terminal-red" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Death Claims</h1>
-            <p className="text-xs text-muted-foreground font-mono">
+            <h1 className="text-3xl font-bold tracking-tight">Death Claims</h1>
+            <p className="text-xs text-muted-foreground">
               Claim processing and payout workflow
             </p>
           </div>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button size="sm" className="gap-1 font-mono text-xs">
+            <Button size="sm" className="gap-1 text-xs">
               <Plus className="h-3.5 w-3.5" /> File Claim
             </Button>
           </DialogTrigger>
           <DialogContent className="mx-2 sm:mx-0 max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="font-mono text-sm">&gt; File Death Claim</DialogTitle>
+              <DialogTitle className="text-sm">&gt; File Death Claim</DialogTitle>
             </DialogHeader>
             <div className="space-y-3 py-2">
               <div>
-                <Label className="text-xs font-mono">Client</Label>
+                <Label className="text-xs">Client</Label>
                 <select
                   value={form.clientId}
                   onChange={(e) => {
@@ -146,7 +146,7 @@ export default function DeathClaims() {
                     const contract = contracts?.find((c) => c.clientId === cid && c.contractStatus !== "assigned_death_claim");
                     setForm({ ...form, clientId: cid, contractId: contract?._id || "" });
                   }}
-                  className="w-full border border-input rounded-md px-3 py-2 text-xs font-mono mt-1"
+                  className="w-full border border-input rounded-md px-3 py-2 text-xs mt-1"
                 >
                   <option value="">Select client...</option>
                   {clients?.map((c) => (
@@ -157,70 +157,70 @@ export default function DeathClaims() {
                 </select>
               </div>
               <div>
-                <Label className="text-xs font-mono">Contract</Label>
+                <Label className="text-xs">Contract</Label>
                 <Input
                   value={form.contractId}
                   disabled
-                  className="font-mono text-xs mt-1"
+                  className="text-xs mt-1"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs font-mono">Claimant Name</Label>
+                  <Label className="text-xs">Claimant Name</Label>
                   <Input
                     value={form.claimantName}
                     onChange={(e) => setForm({ ...form, claimantName: e.target.value })}
-                    className="font-mono text-xs mt-1"
+                    className="text-xs mt-1"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs font-mono">Relationship</Label>
+                  <Label className="text-xs">Relationship</Label>
                   <Input
                     value={form.claimantRelationship}
                     onChange={(e) => setForm({ ...form, claimantRelationship: e.target.value })}
-                    className="font-mono text-xs mt-1"
+                    className="text-xs mt-1"
                   />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-xs font-mono">Contact</Label>
+                  <Label className="text-xs">Contact</Label>
                   <Input
                     value={form.claimantContact}
                     onChange={(e) => setForm({ ...form, claimantContact: e.target.value })}
-                    className="font-mono text-xs mt-1"
+                    className="text-xs mt-1"
                   />
                 </div>
                 <div>
-                  <Label className="text-xs font-mono">Date of Death</Label>
+                  <Label className="text-xs">Date of Death</Label>
                   <Input
                     type="date"
                     value={form.dateOfDeath}
                     onChange={(e) => setForm({ ...form, dateOfDeath: e.target.value })}
-                    className="font-mono text-xs mt-1"
+                    className="text-xs mt-1"
                   />
                 </div>
               </div>
               <div>
-                <Label className="text-xs font-mono">Death Certificate No.</Label>
+                <Label className="text-xs">Death Certificate No.</Label>
                 <Input
                   value={form.deathCertificateNo}
                   onChange={(e) => setForm({ ...form, deathCertificateNo: e.target.value })}
-                  className="font-mono text-xs mt-1"
+                  className="text-xs mt-1"
                 />
               </div>
               <div>
-                <Label className="text-xs font-mono">Cause of Death</Label>
+                <Label className="text-xs">Cause of Death</Label>
                 <Input
                   value={form.causeOfDeath}
                   onChange={(e) => setForm({ ...form, causeOfDeath: e.target.value })}
-                  className="font-mono text-xs mt-1"
+                  className="text-xs mt-1"
                 />
               </div>
               <div className="flex justify-end">
                 <Button
                   onClick={handleFile}
-                  className="font-mono text-xs"
+                  className="text-xs"
                   disabled={!form.clientId || !form.claimantName}
                 >
                   File Claim
@@ -238,7 +238,7 @@ export default function DeathClaims() {
             key={f}
             variant={filter === f ? "default" : "outline"}
             size="sm"
-            className="font-mono text-xs"
+            className="text-xs"
             onClick={() => setFilter(f)}
           >
             {f === "all" ? "All" : STATUS_LABELS[f]}
@@ -253,28 +253,28 @@ export default function DeathClaims() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-xs font-mono">Client</TableHead>
-                  <TableHead className="text-xs font-mono">Contract</TableHead>
-                  <TableHead className="text-xs font-mono">Claimant</TableHead>
-                  <TableHead className="text-xs font-mono">Payout</TableHead>
-                  <TableHead className="text-xs font-mono">Status</TableHead>
-                  <TableHead className="text-xs font-mono">Filed</TableHead>
-                  <TableHead className="text-xs font-mono">Actions</TableHead>
+                  <TableHead className="text-xs">Client</TableHead>
+                  <TableHead className="text-xs">Contract</TableHead>
+                  <TableHead className="text-xs">Claimant</TableHead>
+                  <TableHead className="text-xs">Payout</TableHead>
+                  <TableHead className="text-xs">Status</TableHead>
+                  <TableHead className="text-xs">Filed</TableHead>
+                  <TableHead className="text-xs">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered?.map((c) => (
                   <TableRow key={c._id}>
-                    <TableCell className="text-xs font-mono">{c.clientName}</TableCell>
-                    <TableCell className="text-xs font-mono">{c.contractNumber}</TableCell>
-                    <TableCell className="text-xs font-mono">{c.claimantName}</TableCell>
-                    <TableCell className="text-xs font-bold font-mono">{formatPHP(c.payoutAmount)}</TableCell>
+                    <TableCell className="text-xs">{c.clientName}</TableCell>
+                    <TableCell className="text-xs">{c.contractNumber}</TableCell>
+                    <TableCell className="text-xs">{c.claimantName}</TableCell>
+                    <TableCell className="text-xs font-bold">{formatPHP(c.payoutAmount)}</TableCell>
                     <TableCell>
-                      <Badge className={`text-[10px] font-mono ${STATUS_STYLES[c.status] || ""}`}>
+                      <Badge className={`text-[10px] ${STATUS_STYLES[c.status] || ""}`}>
                         {STATUS_LABELS[c.status]}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-xs font-mono">
+                    <TableCell className="text-xs">
                       {new Date(c.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
@@ -323,7 +323,7 @@ export default function DeathClaims() {
                 ))}
                 {filtered?.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-xs font-mono">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-xs">
                       No death claims found
                     </TableCell>
                   </TableRow>
@@ -339,37 +339,37 @@ export default function DeathClaims() {
         <Dialog open={!!selectedClaim} onOpenChange={() => setSelectedClaim(null)}>
           <DialogContent className="mx-2 sm:mx-0 max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle className="font-mono text-sm">
+              <DialogTitle className="text-sm">
                 &gt; Death Claim — {claimDetail.contract?.contractNumber}
               </DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="text-[10px] text-muted-foreground font-mono">Client</p>
-                  <p className="text-sm font-mono">{claimDetail.client ? `${claimDetail.client.firstName} ${claimDetail.client.lastName}` : "Unknown"}</p>
+                  <p className="text-[10px] text-muted-foreground">Client</p>
+                  <p className="text-sm">{claimDetail.client ? `${claimDetail.client.firstName} ${claimDetail.client.lastName}` : "Unknown"}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-muted-foreground font-mono">Claimant</p>
-                  <p className="text-sm font-mono">{claimDetail.claimantName} ({claimDetail.claimantRelationship})</p>
+                  <p className="text-[10px] text-muted-foreground">Claimant</p>
+                  <p className="text-sm">{claimDetail.claimantName} ({claimDetail.claimantRelationship})</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-muted-foreground font-mono">Date of Death</p>
-                  <p className="text-sm font-mono">{new Date(claimDetail.dateOfDeath).toLocaleDateString()}</p>
+                  <p className="text-[10px] text-muted-foreground">Date of Death</p>
+                  <p className="text-sm">{new Date(claimDetail.dateOfDeath).toLocaleDateString()}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-muted-foreground font-mono">Payout Amount</p>
-                  <p className="text-sm font-bold font-mono text-terminal-green">{formatPHP(claimDetail.payoutAmount)}</p>
+                  <p className="text-[10px] text-muted-foreground">Payout Amount</p>
+                  <p className="text-sm font-bold text-terminal-green">{formatPHP(claimDetail.payoutAmount)}</p>
                 </div>
               </div>
 
               <div>
-                <p className="text-[10px] text-muted-foreground font-mono mb-2">Document Checklist</p>
+                <p className="text-[10px] text-muted-foreground mb-2">Document Checklist</p>
                 <div className="space-y-1">
                   {claimDetail.documentsRequired.map((doc) => {
                     const submitted = claimDetail.documentsSubmitted.includes(doc);
                     return (
-                      <div key={doc} className="flex items-center gap-2 text-xs font-mono">
+                      <div key={doc} className="flex items-center gap-2 text-xs">
                         {submitted ? (
                           <CheckCircle className="h-3.5 w-3.5 text-terminal-green" />
                         ) : (
@@ -384,8 +384,8 @@ export default function DeathClaims() {
 
               {claimDetail.notes && (
                 <div>
-                  <p className="text-[10px] text-muted-foreground font-mono mb-1">Notes</p>
-                  <p className="text-xs font-mono bg-muted/50 rounded p-2">{claimDetail.notes}</p>
+                  <p className="text-[10px] text-muted-foreground mb-1">Notes</p>
+                  <p className="text-xs bg-muted/50 rounded p-2">{claimDetail.notes}</p>
                 </div>
               )}
             </div>

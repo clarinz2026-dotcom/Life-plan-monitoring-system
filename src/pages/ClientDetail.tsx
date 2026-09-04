@@ -225,13 +225,13 @@ export default function ClientDetail() {
   if (!client) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-sm text-muted-foreground font-mono">Loading client...</p>
+        <p className="text-sm text-muted-foreground">Loading client...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+    <div className="p-5 md:p-8 space-y-4 md:space-y-6">
       {/* Header */}
       <div className="flex items-center gap-2 md:gap-4">
         <Button
@@ -242,14 +242,14 @@ export default function ClientDetail() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">{fullName}</h1>
-          <p className="text-xs text-muted-foreground font-mono">
+          <h1 className="text-3xl font-bold tracking-tight">{fullName}</h1>
+          <p className="text-xs text-muted-foreground">
             {[client.contactNumber, [client.city, client.province].filter(Boolean).join(", ")]
               .filter(Boolean)
               .join(" · ") || "—"}
           </p>
           {client.notes && (
-            <p className="text-[10px] text-muted-foreground/80 font-mono break-words">
+            <p className="text-[10px] text-muted-foreground/80 break-words">
               {client.notes}
             </p>
           )}
@@ -258,7 +258,7 @@ export default function ClientDetail() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-2 font-mono"
+            className="gap-2"
             onClick={openEditDialog}
           >
             <Pencil className="h-4 w-4" />
@@ -267,7 +267,7 @@ export default function ClientDetail() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-2 font-mono"
+            className="gap-2"
             onClick={handleDownloadSOA}
             disabled={downloadingSOA}
           >
@@ -281,10 +281,10 @@ export default function ClientDetail() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto mx-2 sm:mx-0">
           <DialogHeader>
-            <DialogTitle className="font-mono">
+            <DialogTitle className="">
               <span className="text-terminal-green">$</span> Edit Client
             </DialogTitle>
-            <p className="text-xs text-muted-foreground font-mono">
+            <p className="text-xs text-muted-foreground">
               Update personal details for {fullName || "this client"}
             </p>
           </DialogHeader>
@@ -297,7 +297,7 @@ export default function ClientDetail() {
                   onChange={(e) =>
                     setEditForm({ ...editForm, firstName: e.target.value })
                   }
-                  className="font-mono text-sm"
+                  className="text-sm"
                   required
                 />
               </div>
@@ -308,7 +308,7 @@ export default function ClientDetail() {
                   onChange={(e) =>
                     setEditForm({ ...editForm, middleName: e.target.value })
                   }
-                  className="font-mono text-sm"
+                  className="text-sm"
                 />
               </div>
               <div>
@@ -318,7 +318,7 @@ export default function ClientDetail() {
                   onChange={(e) =>
                     setEditForm({ ...editForm, lastName: e.target.value })
                   }
-                  className="font-mono text-sm"
+                  className="text-sm"
                   required
                 />
               </div>
@@ -333,7 +333,7 @@ export default function ClientDetail() {
                   onChange={(e) =>
                     setEditForm({ ...editForm, dateOfBirth: e.target.value })
                   }
-                  className="font-mono text-sm"
+                  className="text-sm"
                   required
                 />
               </div>
@@ -347,7 +347,7 @@ export default function ClientDetail() {
                       gender: e.target.value as typeof editForm.gender,
                     })
                   }
-                  className="font-mono text-sm bg-background border border-border rounded-md h-9 px-2 w-full"
+                  className="text-sm bg-background border border-border rounded-md h-9 px-2 w-full"
                 >
                   <option value="male">Male</option>
                   <option value="female">Female</option>
@@ -363,7 +363,7 @@ export default function ClientDetail() {
                 onChange={(e) =>
                   setEditForm({ ...editForm, address: e.target.value })
                 }
-                className="font-mono text-sm"
+                className="text-sm"
               />
             </div>
 
@@ -399,7 +399,7 @@ export default function ClientDetail() {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Date of Birth</span>
-              <span className="font-mono text-xs">
+              <span className="text-xs">
                 {format(new Date(client.dateOfBirth), "MMM d, yyyy")}
               </span>
             </div>
@@ -426,7 +426,7 @@ export default function ClientDetail() {
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Phone</span>
-              <span className="font-mono text-xs">{client.contactNumber || "—"}</span>
+              <span className="text-xs">{client.contactNumber || "—"}</span>
             </div>
             {client.email && (
               <div className="flex justify-between">
@@ -468,7 +468,7 @@ export default function ClientDetail() {
             {client.beneficiaryContact && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Contact</span>
-                <span className="font-mono text-xs">
+                <span className="text-xs">
                   {client.beneficiaryContact}
                 </span>
               </div>
@@ -492,7 +492,7 @@ export default function ClientDetail() {
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle className="font-mono">
+              <DialogTitle className="">
                 <span className="text-terminal-green">$</span> New Contract
               </DialogTitle>
             </DialogHeader>
@@ -505,7 +505,7 @@ export default function ClientDetail() {
                     setContractForm({ ...contractForm, contractNumber: e.target.value })
                   }
                   placeholder="e.g. CTR-2024-0001"
-                  className="font-mono text-sm"
+                  className="text-sm"
                   required
                 />
               </div>
@@ -517,7 +517,7 @@ export default function ClientDetail() {
                     setContractForm({ ...contractForm, planType: e.target.value })
                   }
                   placeholder="e.g. Memorial Plan A"
-                  className="font-mono text-sm"
+                  className="text-sm"
                   required
                 />
               </div>
@@ -530,7 +530,7 @@ export default function ClientDetail() {
                     onChange={(e) =>
                       setContractForm({ ...contractForm, planAmount: e.target.value })
                     }
-                    className="font-mono text-sm"
+                    className="text-sm"
                     required
                   />
                 </div>
@@ -545,7 +545,7 @@ export default function ClientDetail() {
                         monthlyAmortization: e.target.value,
                       })
                     }
-                    className="font-mono text-sm"
+                    className="text-sm"
                     required
                   />
                 </div>
@@ -558,7 +558,7 @@ export default function ClientDetail() {
                   onChange={(e) =>
                     setContractForm({ ...contractForm, startDate: e.target.value })
                   }
-                  className="font-mono text-sm"
+                  className="text-sm"
                   required
                 />
               </div>
@@ -574,7 +574,7 @@ export default function ClientDetail() {
         <Card className="border-border/60 shadow-none">
           <CardContent className="py-8 text-center">
             <FileText className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-            <p className="text-sm text-muted-foreground font-mono">
+            <p className="text-sm text-muted-foreground">
               No contracts yet
             </p>
           </CardContent>
@@ -589,12 +589,12 @@ export default function ClientDetail() {
               <Card key={contract._id} className="border-border/60 shadow-none">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-mono">
+                    <CardTitle className="text-sm">
                       {contract.contractNumber}
                     </CardTitle>
                     <Badge
                       variant="outline"
-                      className={`text-[10px] font-mono ${
+                      className={`text-[10px] ${
                         STATUS_COLORS[contract.contractStatus] || ""
                       }`}
                     >
@@ -614,7 +614,7 @@ export default function ClientDetail() {
                       <p className="text-[10px] text-muted-foreground uppercase">
                         Monthly
                       </p>
-                      <p className="font-mono text-sm">
+                      <p className="text-sm">
                         {formatPHP(contract.monthlyAmortization)}
                       </p>
                     </div>
@@ -622,7 +622,7 @@ export default function ClientDetail() {
                       <p className="text-[10px] text-muted-foreground uppercase">
                         Total
                       </p>
-                      <p className="font-mono text-sm">
+                      <p className="text-sm">
                         {formatPHP(contract.planAmount)}
                       </p>
                     </div>
@@ -630,7 +630,7 @@ export default function ClientDetail() {
                       <p className="text-[10px] text-muted-foreground uppercase">
                         Paid
                       </p>
-                      <p className="font-mono text-sm text-terminal-green font-bold">
+                      <p className="text-sm text-terminal-green font-bold">
                         {formatPHP(contract.totalPaid)}
                       </p>
                     </div>
@@ -643,7 +643,7 @@ export default function ClientDetail() {
                         style={{ width: `${progress}%` }}
                       />
                     </div>
-                    <p className="text-[10px] text-muted-foreground text-right font-mono">
+                    <p className="text-[10px] text-muted-foreground text-right">
                       {progress.toFixed(0)}%
                     </p>
                   </div>
@@ -670,7 +670,7 @@ export default function ClientDetail() {
         <Card className="border-border/60 shadow-none">
           <CardContent className="py-8 text-center">
             <CreditCard className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-            <p className="text-sm text-muted-foreground font-mono">
+            <p className="text-sm text-muted-foreground">
               No payments recorded
             </p>
           </CardContent>
@@ -681,19 +681,19 @@ export default function ClientDetail() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground">
                     Date
                   </th>
-                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground">
                     Contract
                   </th>
-                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground">
                     Channel
                   </th>
-                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground">
                     OR #
                   </th>
-                  <th className="text-right py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+                  <th className="text-right py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground">
                     Amount
                   </th>
                 </tr>
@@ -701,7 +701,7 @@ export default function ClientDetail() {
               <tbody>
                 {clientPayments.map((p) => (
                   <tr key={p._id} className="border-b border-border/30 last:border-0">
-                    <td className="py-2.5 px-4 font-mono text-xs">
+                    <td className="py-2.5 px-4 text-xs">
                       {format(new Date(p.paymentDate), "MMM d, yyyy")}
                     </td>
                     <td className="py-2.5 px-4 text-xs">
@@ -710,10 +710,10 @@ export default function ClientDetail() {
                     <td className="py-2.5 px-4 text-xs">
                       {p.paymentChannel.toUpperCase().replace("_", " ")}
                     </td>
-                    <td className="py-2.5 px-4 font-mono text-xs text-muted-foreground">
+                    <td className="py-2.5 px-4 text-xs text-muted-foreground">
                       {p.orNumber || "—"}
                     </td>
-                    <td className="py-2.5 px-4 text-right font-mono font-bold text-terminal-green">
+                    <td className="py-2.5 px-4 text-right font-bold text-terminal-green">
                       {formatPHP(p.amount)}
                     </td>
                   </tr>

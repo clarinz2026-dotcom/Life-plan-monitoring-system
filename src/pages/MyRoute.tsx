@@ -27,7 +27,7 @@ export default function MyRoutePage() {
 
   if (!myRoutes) {
     return (
-      <div className="p-4 md:p-6 space-y-4">
+      <div className="p-5 md:p-8 space-y-4">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-48" />
           <div className="h-48 bg-muted rounded" />
@@ -65,11 +65,11 @@ export default function MyRoutePage() {
   const progress = totalStops > 0 ? Math.round((completedStops / totalStops) * 100) : 0;
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-5 md:p-8 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">&gt; My Route</h1>
-        <p className="text-xs text-muted-foreground font-mono mt-1">
+        <h1 className="text-3xl font-bold tracking-tight">&gt; My Route</h1>
+        <p className="text-sm text-muted-foreground mt-1">
           Your assigned collection routes and stops for today
         </p>
       </div>
@@ -81,7 +81,7 @@ export default function MyRoutePage() {
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-lg font-bold font-mono">{completedStops}/{totalStops}</p>
+                <p className="text-lg font-bold">{completedStops}/{totalStops}</p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Stops Done</p>
               </div>
             </div>
@@ -92,7 +92,7 @@ export default function MyRoutePage() {
             <div className="flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-terminal-green" />
               <div>
-                <p className="text-lg font-bold font-mono text-terminal-green">
+                <p className="text-lg font-bold text-terminal-green">
                   ₱{totalCollected.toLocaleString()}
                 </p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Collected</p>
@@ -105,7 +105,7 @@ export default function MyRoutePage() {
             <div className="flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-terminal-amber" />
               <div>
-                <p className="text-lg font-bold font-mono">₱{totalDue.toLocaleString()}</p>
+                <p className="text-lg font-bold">₱{totalDue.toLocaleString()}</p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Due</p>
               </div>
             </div>
@@ -116,7 +116,7 @@ export default function MyRoutePage() {
             <div className="flex items-center gap-2">
               <FileText className="h-4 w-4 text-muted-foreground" />
               <div>
-                <p className="text-lg font-bold font-mono">{myRoutes.length}</p>
+                <p className="text-lg font-bold">{myRoutes.length}</p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Routes</p>
               </div>
             </div>
@@ -128,8 +128,8 @@ export default function MyRoutePage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-mono text-muted-foreground">Overall Progress</span>
-            <span className="text-xs font-mono font-bold">{progress}%</span>
+            <span className="text-xs text-muted-foreground">Overall Progress</span>
+            <span className="text-xs font-bold">{progress}%</span>
           </div>
           <div className="h-3 bg-muted rounded-full overflow-hidden">
             <div
@@ -144,8 +144,8 @@ export default function MyRoutePage() {
       {myRoutes.length === 0 ? (
         <div className="text-center py-12">
           <MapPin className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-sm font-mono text-muted-foreground">No routes assigned to you</p>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">No routes assigned to you</p>
+          <p className="text-sm text-muted-foreground mt-1">
             Ask your manager to assign you to a collector route.
           </p>
         </div>
@@ -169,16 +169,16 @@ export default function MyRoutePage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3 min-w-0">
                       <div>
-                        <CardTitle className="text-sm font-mono">{route.routeName}</CardTitle>
-                        <p className="text-xs text-muted-foreground font-mono flex items-center gap-1 mt-0.5">
+                        <CardTitle className="text-sm">{route.routeName}</CardTitle>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                           <MapPin className="h-3 w-3" /> {route.area}
                         </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
                       <div className="text-right hidden sm:block">
-                        <p className="text-xs font-mono font-bold">{route.completedCount}/{route.clients.length}</p>
-                        <p className="text-[10px] text-muted-foreground font-mono">{routeProgress}%</p>
+                        <p className="text-xs font-bold">{route.completedCount}/{route.clients.length}</p>
+                        <p className="text-[10px] text-muted-foreground">{routeProgress}%</p>
                       </div>
                       {isExpanded ? (
                         <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -203,7 +203,7 @@ export default function MyRoutePage() {
                     {/* Pending stops first */}
                     {pendingClients.length > 0 && (
                       <div className="mt-4">
-                        <h3 className="text-[10px] font-mono text-muted-foreground uppercase tracking-wider mb-2">
+                        <h3 className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">
                           &gt; Pending Stops ({pendingClients.length})
                         </h3>
                         <div className="space-y-2">
@@ -223,7 +223,7 @@ export default function MyRoutePage() {
                     {/* Completed stops */}
                     {completedClients.length > 0 && (
                       <div className="mt-4">
-                        <h3 className="text-[10px] font-mono text-terminal-green uppercase tracking-wider mb-2">
+                        <h3 className="text-[10px] text-terminal-green uppercase tracking-wider mb-2">
                           ✓ Completed ({completedClients.length})
                         </h3>
                         <div className="space-y-2">
@@ -284,7 +284,7 @@ function StopCard({
             #{stop.stopOrder} — {stop.client?.firstName} {stop.client?.lastName}
           </span>
           {stop.hasDelinquent && (
-            <Badge variant="outline" className="text-[9px] font-mono text-terminal-amber border-terminal-amber/30">
+            <Badge variant="outline" className="text-[9px] text-terminal-amber border-terminal-amber/30">
               DELINQUENT
             </Badge>
           )}
@@ -292,7 +292,7 @@ function StopCard({
 
         {/* Address */}
         {stop.client && (
-          <p className="text-[10px] text-muted-foreground font-mono mt-0.5 flex items-center gap-1">
+          <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1">
             <MapPin className="h-2.5 w-2.5" />
             {[stop.client.address, stop.client.city].filter(Boolean).join(", ") || "—"}
           </p>
@@ -301,16 +301,16 @@ function StopCard({
         {/* Details row */}
         <div className="flex items-center gap-3 mt-1 flex-wrap">
           {stop.estimatedTime && (
-            <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-0.5">
+            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
               <Clock className="h-2.5 w-2.5" /> {stop.estimatedTime}
             </span>
           )}
           {stop.client?.contactNumber && (
-            <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-0.5">
+            <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
               <Phone className="h-2.5 w-2.5" /> {stop.client.contactNumber}
             </span>
           )}
-          <span className="text-[10px] font-mono flex items-center gap-0.5">
+          <span className="text-[10px] flex items-center gap-0.5">
             <CreditCard className="h-2.5 w-2.5 text-terminal-amber" />
             <span className={stop.totalDue > 0 ? "text-terminal-amber" : "text-terminal-green"}>
               ₱{stop.totalDue.toLocaleString()} due
@@ -320,7 +320,7 @@ function StopCard({
 
         {/* Last payment info */}
         {stop.lastPaymentDate && (
-          <p className="text-[10px] text-muted-foreground font-mono mt-0.5">
+          <p className="text-[10px] text-muted-foreground mt-0.5">
             Last payment: {new Date(stop.lastPaymentDate).toLocaleDateString()} — ₱{(stop.lastPaymentAmount || 0).toLocaleString()}
           </p>
         )}

@@ -103,13 +103,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Redirect to super admin setup if no super admin exists and user isn't one
   const needsSetup = useMemo(() => {
-    if (superAdminData === undefined) return false; // still loading
-    if (hasSuperAdmin) return false; // already has one
-    if (userRole === "super_admin") return false; // already claimed
+    if (superAdminData === undefined) return false;
+    if (hasSuperAdmin) return false;
+    if (userRole === "super_admin") return false;
     return true;
   }, [superAdminData, hasSuperAdmin, userRole]);
 
-  // Redirect to setup if needed (but not already on setup page)
   useEffect(() => {
     if (needsSetup && location.pathname !== "/super-admin-setup") {
       navigate("/super-admin-setup");
@@ -118,37 +117,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const visibleNav = NAV_ITEMS.filter((item) => {
     if (!item.roles.includes(userRole)) return false;
-    // Hide "Setup" once a super admin has been claimed
     if (item.to === "/super-admin-setup" && hasSuperAdmin) return false;
     return true;
   });
 
-  // Bottom nav items (always show first 5 for mobile)
   const bottomNavItems = visibleNav.slice(0, 5);
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background overflow-visible">
       {/* Desktop sidebar */}
       <aside
-        className={`hidden md:flex flex-col border-r border-border bg-sidebar transition-all duration-200 ${
-          collapsed ? "w-16" : "w-56"
+        className={`hidden md:flex flex-col border-r border-sidebar-border bg-sidebar transition-all duration-200 ${
+          collapsed ? "w-[72px]" : "w-[260px]"
         }`}
       >
         {/* Header */}
-        <div className="flex items-center gap-2 border-b border-border px-4 py-4">
+        <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
           <div
-            className={`flex items-center gap-2 min-w-0 ${
+            className={`flex items-center gap-3 min-w-0 ${
               collapsed ? "flex-1 justify-center px-1" : ""
             }`}
           >
-            <BrandLogo className="h-7 w-7 shrink-0 rounded-md" />
+            <BrandLogo className="h-9 w-9 shrink-0 rounded-lg" />
             {!collapsed && (
               <div className="flex flex-col min-w-0">
-                <span className="font-bold text-sm tracking-tight text-foreground truncate">
+                <span className="font-bold text-[15px] text-white truncate">
                   Evangelist Funeral Services
                 </span>
-                <span className="text-[10px] text-muted-foreground tracking-wider uppercase">
-                  v1.0
+                <span className="text-[11px] text-white/50">
+                  Management System
                 </span>
               </div>
             )}
@@ -156,45 +153,45 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <Button
             variant="ghost"
             size="icon"
-            className="ml-auto h-6 w-6 shrink-0"
+            className="ml-auto h-8 w-8 shrink-0 text-white/60 hover:text-white hover:bg-white/10"
             onClick={() => setCollapsed(!collapsed)}
           >
             {collapsed ? (
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-4 w-4" />
             ) : (
-              <ChevronLeft className="h-3.5 w-3.5" />
+              <ChevronLeft className="h-4 w-4" />
             )}
           </Button>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 py-2 px-2 space-y-0.5">
+        <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
           {visibleNav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
+                `flex items-center gap-3 rounded-lg px-4 py-2.5 text-[15px] font-medium transition-colors ${
                   isActive
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    ? "bg-white/15 text-white"
+                    : "text-white/70 hover:bg-white/10 hover:text-white"
                 } ${collapsed ? "justify-center" : ""}`
               }
             >
-              <item.icon className="h-4 w-4 shrink-0" />
+              <item.icon className="h-5 w-5 shrink-0" />
               {!collapsed && <span>{item.label}</span>}
             </NavLink>
           ))}
         </nav>
 
         {/* User section */}
-        <div className="border-t border-border px-3 py-3">
+        <div className="border-t border-sidebar-border px-4 py-4">
           {!collapsed && (
-            <div className="mb-2 min-w-0">
-              <p className="text-xs font-medium text-foreground truncate">
+            <div className="mb-3 min-w-0">
+              <p className="text-[14px] font-semibold text-white truncate">
                 {user?.name || user?.email || "User"}
               </p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+              <p className="text-[12px] text-white/50">
                 {ROLE_LABELS[userRole] || userRole}
               </p>
             </div>
@@ -202,96 +199,96 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <Button
             variant="ghost"
             size="sm"
-            className="w-full text-muted-foreground hover:text-foreground justify-start gap-2"
+            className="w-full text-white/60 hover:text-white hover:bg-white/10 justify-start gap-3 py-2.5"
             onClick={() => setDarkMode(!darkMode)}
           >
-            <Moon className="h-4 w-4" />
-            {!collapsed && <span className="text-xs">{darkMode ? "Light" : "Dark"} Mode</span>}
+            <Moon className="h-5 w-5" />
+            {!collapsed && <span className="text-[14px]">{darkMode ? "Light" : "Dark"} Mode</span>}
           </Button>
           <Button
             variant="ghost"
             size="sm"
-            className={`w-full text-muted-foreground hover:text-foreground ${collapsed ? "px-0" : ""}`}
+            className={`w-full text-white/60 hover:text-white hover:bg-white/10 justify-start gap-3 py-2.5 ${
+              collapsed ? "px-0 justify-center" : ""
+            }`}
             onClick={handleSignOut}
           >
-            <LogOut className="h-4 w-4" />
-            {!collapsed && <span className="ml-2 text-xs">Sign out</span>}
+            <LogOut className="h-5 w-5" />
+            {!collapsed && <span className="text-[14px]">Sign out</span>}
           </Button>
         </div>
       </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-[99999] flex items-center justify-between border-b border-border bg-sidebar px-4 py-3">
-        <div className="flex items-center gap-2">
-          <BrandLogo className="h-7 w-7 rounded-md" />
+      <div className="md:hidden fixed top-0 left-0 right-0 z-[99999] flex items-center justify-between border-b border-border bg-sidebar px-4 py-3.5">
+        <div className="flex items-center gap-3">
+          <BrandLogo className="h-8 w-8 rounded-lg" />
           <div>
-            <span className="font-bold text-sm tracking-tight">Evangelist</span>
+            <span className="font-bold text-[15px] text-white">Evangelist</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-muted-foreground font-mono">
+        <div className="flex items-center gap-3">
+          <span className="text-[12px] text-white/60">
             {ROLE_LABELS[userRole] || userRole}
           </span>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-10 w-10 text-white/70 hover:text-white"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            {mobileMenuOpen ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
       </div>
 
-      {/* Mobile slide-out menu — conditional render at root level */}
+      {/* Mobile slide-out menu */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-[99990]">
-          {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/30"
+            className="absolute inset-0 bg-black/40"
             onClick={() => setMobileMenuOpen(false)}
           />
-          {/* Menu panel */}
-          <div className="absolute top-[52px] left-0 right-0 bg-sidebar border-b border-border shadow-xl overflow-y-auto max-h-[calc(100vh-52px-56px)]">
-            <nav className="py-2 px-2">
+          <div className="absolute top-[60px] left-0 right-0 bg-sidebar border-b border-sidebar-border shadow-xl overflow-y-auto max-h-[calc(100vh-60px-64px)]">
+            <nav className="py-3 px-3">
               {visibleNav.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
                   onClick={() => setMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
+                    `flex items-center gap-3 rounded-lg px-4 py-3 text-[15px] font-medium transition-colors ${
                       isActive
-                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent/50"
+                        ? "bg-white/15 text-white"
+                        : "text-white/70 hover:bg-white/10"
                     }`
                   }
                 >
-                  <item.icon className="h-4 w-4 shrink-0" />
+                  <item.icon className="h-5 w-5 shrink-0" />
                   <span>{item.label}</span>
                 </NavLink>
               ))}
-              <div className="border-t border-border mt-1 pt-1">
-                <div className="px-3 py-2">
-                  <p className="text-xs font-medium text-foreground truncate">
+              <div className="border-t border-sidebar-border mt-2 pt-2">
+                <div className="px-4 py-3">
+                  <p className="text-[14px] font-semibold text-white truncate">
                     {user?.name || user?.email || "User"}
                   </p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  <p className="text-[12px] text-white/50">
                     {ROLE_LABELS[userRole] || userRole}
                   </p>
                 </div>
                 <button
                   onClick={() => setDarkMode(!darkMode)}
-                  className="flex items-center gap-3 w-full rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground transition-colors"
+                  className="flex items-center gap-3 w-full rounded-lg px-4 py-3 text-[15px] font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors"
                 >
-                  <Moon className="h-4 w-4" />
+                  <Moon className="h-5 w-5" />
                   <span>{darkMode ? "Light" : "Dark"} Mode</span>
                 </button>
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center gap-3 w-full rounded-md px-3 py-2.5 text-sm font-medium text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground transition-colors"
+                  className="flex items-center gap-3 w-full rounded-lg px-4 py-3 text-[15px] font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors"
                 >
-                  <LogOut className="h-4 w-4" />
+                  <LogOut className="h-5 w-5" />
                   <span>Sign out</span>
                 </button>
               </div>
@@ -302,30 +299,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Spacer for mobile top bar */}
-        <div className="md:hidden h-[52px]" />
-
-        {/* Page content */}
+        <div className="md:hidden h-[60px]" />
         <main className="flex-1 pb-20 md:pb-0">{children}</main>
       </div>
 
       {/* Mobile bottom nav */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-sidebar">
-        <div className="flex items-center justify-around py-1.5 px-1">
+        <div className="flex items-center justify-around py-2 px-1">
           {bottomNavItems.map((item) => {
             const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
             return (
               <NavLink
                 key={item.to}
                 to={item.to}
-                className={`flex flex-col items-center gap-0.5 px-2 py-1 rounded-md min-w-0 transition-colors ${
+                className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg min-w-0 transition-colors ${
                   isActive
-                    ? "text-terminal-green"
-                    : "text-muted-foreground"
+                    ? "text-green-400"
+                    : "text-white/60"
                 }`}
               >
-                <item.icon className="h-4.5 w-4.5" />
-                <span className="text-[9px] font-medium truncate">{item.label}</span>
+                <item.icon className="h-5 w-5" />
+                <span className="text-[11px] font-medium truncate">{item.label}</span>
               </NavLink>
             );
           })}

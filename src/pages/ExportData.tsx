@@ -216,15 +216,15 @@ export default function ExportData() {
   ];
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-5 md:p-8 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="h-9 w-9 rounded bg-terminal-green/10 flex items-center justify-center">
           <Download className="h-5 w-5 text-terminal-green" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Export Data</h1>
-          <p className="text-xs text-muted-foreground font-mono">
+          <h1 className="text-3xl font-bold tracking-tight">Export Data</h1>
+          <p className="text-xs text-muted-foreground">
             Download your entire database as Excel
           </p>
         </div>
@@ -236,8 +236,8 @@ export default function ExportData() {
           <Card key={d.label}>
             <CardContent className="p-4 text-center">
               <d.icon className={`h-6 w-6 mx-auto mb-2 ${d.color}`} />
-              <p className={`text-2xl font-bold ${d.color}`}>{d.count}</p>
-              <p className="text-xs text-muted-foreground font-mono">{d.label}</p>
+              <p className={`text-3xl font-bold ${d.color}`}>{d.count}</p>
+              <p className="text-xs text-muted-foreground">{d.label}</p>
             </CardContent>
           </Card>
         ))}
@@ -248,15 +248,15 @@ export default function ExportData() {
         <CardContent className="p-6 text-center space-y-4">
           <Download className="h-12 w-12 mx-auto text-muted-foreground/40" />
           <div>
-            <p className="text-sm font-mono font-medium">Export All Data</p>
-            <p className="text-xs text-muted-foreground font-mono mt-1">
+            <p className="text-sm font-medium">Export All Data</p>
+            <p className="text-sm text-muted-foreground mt-1">
               Downloads an Excel file with separate sheets for Clients, Contracts, Payments, and Receipts
             </p>
           </div>
           <Button
             onClick={handleExportAll}
             disabled={exporting}
-            className="gap-2 font-mono min-w-44"
+            className="gap-2 min-w-44"
           >
             {exporting ? (
               <>
@@ -269,7 +269,7 @@ export default function ExportData() {
             )}
           </Button>
           {exporting && (
-            <p className="text-xs text-muted-foreground font-mono">
+            <p className="text-xs text-muted-foreground">
               Building workbook from {datasets.reduce((s, d) => s + d.count, 0).toLocaleString()} records…
             </p>
           )}

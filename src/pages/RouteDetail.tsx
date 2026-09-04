@@ -26,7 +26,7 @@ export default function RouteDetailPage() {
 
   if (!route) {
     return (
-      <div className="p-4 md:p-6 space-y-4">
+      <div className="p-5 md:p-8 space-y-4">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-muted rounded w-48" />
           <div className="h-64 bg-muted rounded" />
@@ -44,7 +44,7 @@ export default function RouteDetailPage() {
     : 0;
 
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-5 md:p-8 space-y-6">
       {/* Header */}
       <div className="flex items-start gap-3">
         <Button
@@ -56,19 +56,19 @@ export default function RouteDetailPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight font-mono truncate">
+          <h1 className="text-3xl font-bold tracking-tight truncate">
             &gt; {route.routeName}
           </h1>
-          <p className="text-xs text-muted-foreground font-mono mt-1 flex items-center gap-1">
+          <p className="text-sm text-muted-foreground mt-1 flex items-center gap-1">
             <MapPin className="h-3 w-3" /> {route.area}
             {route.city && ` · ${route.city}`}
             {route.province && `, ${route.province}`}
           </p>
           <div className="flex items-center gap-3 mt-2">
-            <Badge variant="outline" className="text-[10px] font-mono">
+            <Badge variant="outline" className="text-[10px]">
               {route.frequency}
             </Badge>
-            <span className="text-xs text-muted-foreground font-mono">
+            <span className="text-xs text-muted-foreground">
               Collector: {route.collectorName}
             </span>
           </div>
@@ -79,25 +79,25 @@ export default function RouteDetailPage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card>
           <CardContent className="p-3 text-center">
-            <p className="text-2xl font-bold font-mono">{route.clients.length}</p>
+            <p className="text-3xl font-bold">{route.clients.length}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Stops</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3 text-center">
-            <p className="text-2xl font-bold font-mono text-terminal-green">{completedStops.length}</p>
+            <p className="text-3xl font-bold text-terminal-green">{completedStops.length}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Completed</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3 text-center">
-            <p className="text-2xl font-bold font-mono text-terminal-amber">{pendingStops.length}</p>
+            <p className="text-3xl font-bold text-terminal-amber">{pendingStops.length}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Pending</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-3 text-center">
-            <p className="text-2xl font-bold font-mono">₱{totalDue.toLocaleString()}</p>
+            <p className="text-3xl font-bold">₱{totalDue.toLocaleString()}</p>
             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Total Due</p>
           </CardContent>
         </Card>
@@ -107,8 +107,8 @@ export default function RouteDetailPage() {
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-mono text-muted-foreground">Route Progress</span>
-            <span className="text-xs font-mono font-bold">{progress}%</span>
+            <span className="text-xs text-muted-foreground">Route Progress</span>
+            <span className="text-xs font-bold">{progress}%</span>
           </div>
           <div className="h-3 bg-muted rounded-full overflow-hidden">
             <div
@@ -117,11 +117,11 @@ export default function RouteDetailPage() {
             />
           </div>
           <div className="flex justify-between mt-1">
-            <span className="text-[10px] font-mono text-muted-foreground">
+            <span className="text-[10px] text-muted-foreground">
               {completedStops.length} of {route.clients.length} stops
             </span>
             {delinquentCount > 0 && (
-              <span className="text-[10px] font-mono text-terminal-amber flex items-center gap-0.5">
+              <span className="text-[10px] text-terminal-amber flex items-center gap-0.5">
                 <AlertTriangle className="h-3 w-3" />
                 {delinquentCount} delinquent
               </span>
@@ -151,7 +151,7 @@ export default function RouteDetailPage() {
                   <div className="flex items-center gap-3">
                     {/* Stop number + status icon */}
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-mono text-muted-foreground w-5 text-right">
+                      <span className="text-xs text-muted-foreground w-5 text-right">
                         #{stop.stopOrder}
                       </span>
                       {stop.isCompleted ? (
@@ -168,22 +168,22 @@ export default function RouteDetailPage() {
                           {stop.client?.firstName} {stop.client?.lastName}
                         </span>
                         {stop.hasDelinquent && (
-                          <Badge variant="outline" className="text-[9px] font-mono text-terminal-amber border-terminal-amber/30 shrink-0">
+                          <Badge variant="outline" className="text-[9px] text-terminal-amber border-terminal-amber/30 shrink-0">
                             DELINQUENT
                           </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-3 mt-0.5">
                         {stop.estimatedTime && (
-                          <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-0.5">
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                             <Clock className="h-2.5 w-2.5" /> {stop.estimatedTime}
                           </span>
                         )}
-                        <span className="text-[10px] text-muted-foreground font-mono">
+                        <span className="text-[10px] text-muted-foreground">
                           ₱{stop.totalDue.toLocaleString()} due
                         </span>
                         {stop.contractCount > 0 && (
-                          <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-0.5">
+                          <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                             <FileText className="h-2.5 w-2.5" /> {stop.contractCount} contract(s)
                           </span>
                         )}
@@ -195,7 +195,7 @@ export default function RouteDetailPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-[10px] font-mono"
+                        className="text-[10px]"
                         onClick={() => navigate(`/clients/${stop.clientId}`)}
                       >
                         View
@@ -205,7 +205,7 @@ export default function RouteDetailPage() {
 
                   {/* Address */}
                   {stop.client && (
-                    <p className="text-[10px] text-muted-foreground font-mono mt-1 ml-9">
+                    <p className="text-[10px] text-muted-foreground mt-1 ml-9">
                       {[stop.client.address, stop.client.city, stop.client.province]
                         .filter(Boolean)
                         .join(", ") || "—"}
@@ -219,8 +219,8 @@ export default function RouteDetailPage() {
         {route.clients.length === 0 && (
           <div className="text-center py-8">
             <MapPin className="h-10 w-10 text-muted-foreground/30 mx-auto mb-2" />
-            <p className="text-sm font-mono text-muted-foreground">No stops on this route</p>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground">No stops on this route</p>
+            <p className="text-sm text-muted-foreground mt-1">
               Add clients manually or use auto-assign from the routes page.
             </p>
           </div>

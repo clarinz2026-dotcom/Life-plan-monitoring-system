@@ -43,90 +43,89 @@ export default function AuditLog() {
   if (!logs) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-sm text-muted-foreground font-mono">Loading audit log...</p>
+        <p className="text-base text-muted-foreground">Loading audit log...</p>
       </div>
     );
   }
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+    <div className="p-5 md:p-8 space-y-5 md:space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Audit Log</h1>
-          <p className="text-xs text-muted-foreground font-mono">
-            &gt; system.audit.trail — {logs.length} entries
+          <h1 className="text-3xl font-bold">Audit Log</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {logs.length} entries
           </p>
         </div>
         <Button
           variant="outline"
-          size="sm"
-          className="gap-2 font-mono"
+          size="default"
+          className="gap-2 h-11 px-5 text-[15px]"
           onClick={() => setLimit(limit + 50)}
         >
-          <RefreshCw className="h-4 w-4" />
+          <RefreshCw className="h-5 w-5" />
           Load More
         </Button>
       </div>
 
       {/* Log Entries */}
       {logs.length === 0 ? (
-        <Card className="border-border/60 shadow-none">
-          <CardContent className="py-8 text-center">
-            <History className="h-8 w-8 mx-auto text-muted-foreground/40 mb-2" />
-            <p className="text-sm text-muted-foreground font-mono">
+        <Card className="border-border/60 shadow-sm">
+          <CardContent className="py-10 text-center">
+            <History className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+            <p className="text-base text-muted-foreground">
               No audit entries yet
             </p>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {logs.map((log) => {
             const Icon = ENTITY_ICONS[log.entityType] || FileText;
             return (
-              <Card key={log._id} className="border-border/60 shadow-none">
-                <CardContent className="py-3 px-4">
-                  <div className="flex items-start gap-3">
+              <Card key={log._id} className="border-border/60 shadow-sm">
+                <CardContent className="py-4 px-5">
+                  <div className="flex items-start gap-4">
                     {/* Icon */}
                     <div className="mt-0.5">
-                      <div className="h-8 w-8 rounded bg-muted flex items-center justify-center">
-                        <Icon className="h-4 w-4 text-muted-foreground" />
+                      <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center">
+                        <Icon className="h-5 w-5 text-muted-foreground" />
                       </div>
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
+                      <div className="flex items-center gap-2.5 flex-wrap">
                         <Badge
                           variant="outline"
-                          className={`text-[10px] font-mono ${ACTION_COLORS[log.action] || ""}`}
+                          className={`text-[12px] ${ACTION_COLORS[log.action] || ""}`}
                         >
                           {ACTION_LABELS[log.action] || log.action}
                         </Badge>
-                        <span className="text-xs text-muted-foreground capitalize">
+                        <span className="text-[13px] text-muted-foreground capitalize">
                           {log.entityType}
                         </span>
                       </div>
-                      <p className="text-sm mt-1">{log.description}</p>
-                      <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
+                      <p className="text-[15px] mt-1.5">{log.description}</p>
+                      <div className="flex items-center gap-3 mt-2 text-[13px] text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <User className="h-3.5 w-3.5" />
                           {log.userName}
                         </span>
-                        <span className="font-mono">
+                        <span>
                           {format(new Date(log.timestamp), "MMM d, yyyy h:mm a")}
                         </span>
                       </div>
 
-                      {/* Show old/new values if available */}
                       {log.oldValues && log.newValues && (
-                        <div className="mt-2 p-2 bg-muted/50 rounded text-xs font-mono">
+                        <div className="mt-2 p-2.5 bg-muted/50 rounded-lg text-[13px]">
                           <div className="flex gap-4">
                             {log.oldValues.contractStatus && (
                               <span className="text-muted-foreground">
                                 <span className="line-through">{log.oldValues.contractStatus}</span>
                                 {" → "}
-                                <span className="text-terminal-green font-medium">
+                                <span className="text-green-600 font-medium">
                                   {log.newValues.contractStatus}
                                 </span>
                               </span>
