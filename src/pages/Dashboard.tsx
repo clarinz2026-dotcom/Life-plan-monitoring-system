@@ -3,16 +3,23 @@ import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import {
   Users,
   FileText,
-  CreditCard,
   TrendingUp,
   AlertTriangle,
   Clock,
   Banknote,
   RefreshCw,
+  ArrowUpRight,
+  ArrowDownRight,
+  Wallet,
+  Target,
+  CheckCircle2,
+  UserPlus,
 } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format } from "date-fns";
 import { useState } from "react";
 
@@ -36,6 +43,22 @@ const STATUS_COLORS: Record<string, string> = {
   assigned_death_claim: "terminal-status-claim",
 };
 
+const CHANNEL_LABELS: Record<string, string> = {
+  cash: "Cash",
+  gcash: "GCash",
+  maya: "Maya",
+  bank_transfer: "Bank Transfer",
+  check: "Check",
+};
+
+const CHANNEL_COLORS: Record<string, string> = {
+  cash: "#1b4332",
+  gcash: "#007dfe",
+  maya: "#00c4b4",
+  bank_transfer: "#b45309",
+  check: "#6b6b6b",
+};
+
 function formatPHP(amount: number) {
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
@@ -44,8 +67,16 @@ function formatPHP(amount: number) {
   }).format(amount);
 }
 
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function Dashboard() {
   const summary = useQuery(api.dashboard.summary);
+  const weeklyTrend = useQuery(api.dashboard.weeklyTrend);
   const recentPayments = useQuery(api.dashboard.recentPayments);
   const delinquent = useQuery(api.dashboard.delinquentContracts);
   const updateDelinquency = useMutation(api.delinquency.updateAllContractStatuses);
@@ -70,76 +101,304 @@ export default function Dashboard() {
     );
   }
 
-  const stats = [
-    {
-      label: "Total Clients",
-      value: summary.totalClients,
-      icon: Users,
-      color: "text-green-600",
-    },
-    {
-      label: "Active Contracts",
-      value: summary.totalContracts,
-      icon: FileText,
-      color: "text-foreground",
-    },
-    {
-      label: "Today's Collections",
-      value: formatPHP(summary.todayAmount),
-      sub: `${summary.todayPayments} payment${summary.todayPayments !== 1 ? "s" : ""}`,
-      icon: Banknote,
-      color: "text-green-600",
-    },
-    {
-      label: "Monthly Collections",
-      value: formatPHP(summary.monthAmount),
-      sub: `${summary.monthPayments} payment${summary.monthPayments !== 1 ? "s" : ""}`,
-      icon: TrendingUp,
-      color: "text-amber-600",
-    },
-    {
-      label: "Total Collected",
-      value: formatPHP(summary.totalCollected),
-      sub: `of ${formatPHP(summary.totalContractValue)} total`,
-      icon: CreditCard,
-      color: "text-green-600",
-    },
-  ];
+  const dayChange =
+    summary.todayAmount - summary.yesterdayAmount;
+  const dayChangePct =
+    summary.yesterdayAmount > 0
+      ? Math.round((dayChange / summary.yesterdayAmount) * 100)
+      : null;
+  const isUp = dayChange >= 0;
+
+  // Channel breakdown sorted by amount
+  const channels = Object.entries(summary.byChannel)
+    .map(([name, data]) => ({ name, ...data }))
+    .sort((a, b) => b.amount - a.amount);
+  const maxChannelAmount = Math.max(...channels.map((c) => c.amount), 1);
+
+  const delinquentCount =
+    (summary.contractsByStatus.delinquent_30 || 0) +
+    (summary.contractsByStatus.delinquent_60 || 0) +
+    (summary.contractsByStatus.delinquent_90 || 0) +
+    (summary.contractsByStatus.lapsed || 0);
+
+  const trendData = weeklyTrend ?? [];
 
   return (
     <div className="p-5 md:p-8 space-y-6">
       {/* Header */}
-      <div>
-        <p className="text-sm text-muted-foreground uppercase tracking-wider">
-          {format(new Date(), "EEEE, MMMM d, yyyy")}
-        </p>
-        <h1 className="text-3xl font-bold mt-1">
-          Dashboard
-        </h1>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold">{greeting()}</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            {format(new Date(), "EEEE, MMMM d, yyyy")} — here's how the business is doing
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 gap-1.5 text-[13px] shrink-0"
+          onClick={handleUpdateDelinquency}
+          disabled={updatingDelinquency}
+        >
+          <RefreshCw className={`h-4 w-4 ${updatingDelinquency ? "animate-spin" : ""}`} />
+          {updatingDelinquency ? "Checking..." : "Check Late Accounts"}
+        </Button>
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {stats.map((stat) => (
-          <Card key={stat.label} className="border-border/60 shadow-sm">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-2.5 mb-3">
-                <stat.icon className={`h-5 w-5 ${stat.color}`} />
-                <span className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
-                  {stat.label}
+      {/* Hero: Today's collections + day comparison */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <Card className="lg:col-span-2 border-border/60 shadow-sm bg-gradient-to-br from-[#1b4332] to-[#2d6a4f] text-white border-0">
+          <CardContent className="p-6 md:p-7">
+            <div className="flex items-center gap-2.5 mb-3">
+              <Banknote className="h-5 w-5 text-white/70" />
+              <span className="text-[13px] uppercase tracking-wider text-white/70 font-medium">
+                Collected Today
+              </span>
+            </div>
+            <div className="flex flex-wrap items-end gap-4">
+              <p className="text-4xl md:text-5xl font-bold tracking-tight">
+                {formatPHP(summary.todayAmount)}
+              </p>
+              {dayChangePct !== null && (
+                <span
+                  className={`flex items-center gap-1 text-[14px] font-semibold px-2.5 py-1 rounded-full ${
+                    isUp ? "bg-white/15 text-green-100" : "bg-white/15 text-red-100"
+                  }`}
+                >
+                  {isUp ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+                  {Math.abs(dayChangePct)}% vs yesterday
+                </span>
+              )}
+            </div>
+            <p className="text-[14px] text-white/70 mt-2">
+              {summary.todayPayments} payment{summary.todayPayments !== 1 ? "s" : ""} recorded today
+              {summary.yesterdayAmount > 0 && ` · yesterday: ${formatPHP(summary.yesterdayAmount)}`}
+            </p>
+
+            {/* Quick month context */}
+            <div className="grid grid-cols-2 gap-4 mt-6 pt-5 border-t border-white/15">
+              <div>
+                <p className="text-[12px] uppercase tracking-wider text-white/60">This Month</p>
+                <p className="text-xl font-bold mt-0.5">{formatPHP(summary.monthAmount)}</p>
+              </div>
+              <div>
+                <p className="text-[12px] uppercase tracking-wider text-white/60">Month Payments</p>
+                <p className="text-xl font-bold mt-0.5">{summary.monthPayments}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Collection progress */}
+        <Card className="border-border/60 shadow-sm">
+          <CardContent className="p-6 flex flex-col">
+            <div className="flex items-center gap-2.5 mb-4">
+              <Target className="h-5 w-5 text-green-600" />
+              <span className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
+                Collection Progress
+              </span>
+            </div>
+            <p className="text-4xl font-bold text-green-600">
+              {summary.collectionRate}%
+            </p>
+            <p className="text-[13px] text-muted-foreground mt-1">
+              of all contract value collected
+            </p>
+            <Progress value={summary.collectionRate} className="h-2.5 mt-4" />
+            <div className="mt-4 pt-4 border-t border-border space-y-2">
+              <div className="flex justify-between text-[14px]">
+                <span className="text-muted-foreground">Collected</span>
+                <span className="font-semibold text-green-600">{formatPHP(summary.totalCollected)}</span>
+              </div>
+              <div className="flex justify-between text-[14px]">
+                <span className="text-muted-foreground">Total Contract Value</span>
+                <span className="font-semibold">{formatPHP(summary.totalContractValue)}</span>
+              </div>
+              <div className="flex justify-between text-[14px]">
+                <span className="text-muted-foreground">Remaining</span>
+                <span className="font-semibold text-amber-600">
+                  {formatPHP(Math.max(summary.totalContractValue - summary.totalCollected, 0))}
                 </span>
               </div>
-              <p className="text-2xl font-bold">{stat.value}</p>
-              {stat.sub && (
-                <p className="text-[13px] text-muted-foreground mt-1">
-                  {stat.sub}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
+      {/* Stats row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-border/60 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
+                  Total Clients
+                </p>
+                <p className="text-2xl font-bold mt-1">{summary.totalClients}</p>
+              </div>
+              <div className="h-11 w-11 rounded-lg bg-green-50 flex items-center justify-center">
+                <Users className="h-5 w-5 text-green-600" />
+              </div>
+            </div>
+            <p className="text-[12px] text-muted-foreground mt-2 flex items-center gap-1">
+              <UserPlus className="h-3.5 w-3.5" />
+              +{summary.newClientsThisMonth} new this month
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
+                  Active Contracts
+                </p>
+                <p className="text-2xl font-bold mt-1">{summary.totalContracts}</p>
+              </div>
+              <div className="h-11 w-11 rounded-lg bg-blue-50 flex items-center justify-center">
+                <FileText className="h-5 w-5 text-blue-600" />
+              </div>
+            </div>
+            <p className="text-[12px] text-muted-foreground mt-2 flex items-center gap-1">
+              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+              {summary.fullyPaidCount} fully paid
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
+                  Late Accounts
+                </p>
+                <p className={`text-2xl font-bold mt-1 ${delinquentCount > 0 ? "text-amber-600" : ""}`}>
+                  {delinquentCount}
+                </p>
+              </div>
+              <div className="h-11 w-11 rounded-lg bg-amber-50 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+              </div>
+            </div>
+            <p className="text-[12px] text-muted-foreground mt-2">
+              need follow-up
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 shadow-sm">
+          <CardContent className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
+                  Lifetime Collections
+                </p>
+                <p className="text-2xl font-bold mt-1">{formatPHP(summary.totalCollected)}</p>
+              </div>
+              <div className="h-11 w-11 rounded-lg bg-emerald-50 flex items-center justify-center">
+                <Wallet className="h-5 w-5 text-emerald-600" />
+              </div>
+            </div>
+            <p className="text-[12px] text-muted-foreground mt-2">
+              {summary.totalPayments} total payments
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Trend chart + payment methods */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <Card className="lg:col-span-2 border-border/60 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[15px] font-semibold flex items-center gap-2.5">
+              <TrendingUp className="h-5 w-5 text-muted-foreground" />
+              Collections This Week
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {trendData.some((d) => d.amount > 0) ? (
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#d4d2cb" vertical={false} />
+                  <XAxis
+                    dataKey="label"
+                    tick={{ fontSize: 13 }}
+                    stroke="#6b6b6b"
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 12 }}
+                    stroke="#6b6b6b"
+                    tickLine={false}
+                    tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`}
+                  />
+                  <Tooltip
+                    formatter={(value: number) => [formatPHP(value), "Collected"]}
+                    labelStyle={{ fontSize: 14, fontWeight: 600 }}
+                    contentStyle={{
+                      background: "#ffffff",
+                      border: "1px solid #d4d2cb",
+                      borderRadius: "8px",
+                      fontSize: "14px",
+                    }}
+                  />
+                  <Bar dataKey="amount" fill="#1b4332" radius={[6, 6, 0, 0]} maxBarSize={48} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-[240px] flex flex-col items-center justify-center text-muted-foreground">
+                <TrendingUp className="h-10 w-10 mb-3 opacity-30" />
+                <p className="text-base">No collections in the last 7 days</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Payment methods */}
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-[15px] font-semibold flex items-center gap-2.5">
+              <Wallet className="h-5 w-5 text-muted-foreground" />
+              Payment Methods (This Month)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {channels.length === 0 ? (
+              <p className="text-base text-muted-foreground py-8 text-center">
+                No payments this month
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {channels.map((ch) => (
+                  <div key={ch.name}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[14px] font-medium">
+                        {CHANNEL_LABELS[ch.name] || ch.name}
+                      </span>
+                      <span className="text-[13px] text-muted-foreground">
+                        {formatPHP(ch.amount)} · {ch.count}
+                      </span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${Math.max((ch.amount / maxChannelAmount) * 100, 4)}%`,
+                          backgroundColor: CHANNEL_COLORS[ch.name] || "#6b6b6b",
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent payments + status breakdown + delinquents */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Recent payments */}
         <Card className="lg:col-span-2 border-border/60 shadow-sm">
@@ -169,7 +428,7 @@ export default function Dashboard() {
                       </p>
                       <p className="text-[13px] text-muted-foreground">
                         {p.contract?.contractNumber || "—"} ·{" "}
-                        {p.paymentChannel.toUpperCase().replace("_", " ")}
+                        {CHANNEL_LABELS[p.paymentChannel] || p.paymentChannel}
                       </p>
                     </div>
                     <div className="text-right shrink-0 ml-4">
@@ -187,11 +446,11 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Contract status breakdown + delinquents */}
         <div className="space-y-5">
+          {/* Contract status breakdown */}
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg font-semibold">
+              <CardTitle className="text-[15px] font-semibold">
                 Contract Status
               </CardTitle>
             </CardHeader>
@@ -205,7 +464,7 @@ export default function Dashboard() {
                     >
                       {STATUS_LABELS[status] || status}
                     </Badge>
-                    <span className="text-lg font-bold">{count}</span>
+                    <span className="text-base font-bold">{count}</span>
                   </div>
                 ))}
                 {Object.keys(summary.contractsByStatus).length === 0 && (
@@ -220,22 +479,10 @@ export default function Dashboard() {
           {/* Delinquent alerts */}
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg font-semibold flex items-center gap-2.5">
-                  <AlertTriangle className="h-5 w-5 text-amber-600" />
-                  Delinquent
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 gap-1.5 text-[13px]"
-                  onClick={handleUpdateDelinquency}
-                  disabled={updatingDelinquency}
-                >
-                  <RefreshCw className={`h-4 w-4 ${updatingDelinquency ? "animate-spin" : ""}`} />
-                  {updatingDelinquency ? "Updating..." : "Refresh"}
-                </Button>
-              </div>
+              <CardTitle className="text-[15px] font-semibold flex items-center gap-2.5">
+                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                Needs Attention
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {!delinquent || delinquent.length === 0 ? (
@@ -243,8 +490,8 @@ export default function Dashboard() {
                   All accounts current
                 </p>
               ) : (
-                <div className="space-y-3 max-h-48 overflow-y-auto">
-                  {delinquent.map((c) => (
+                <div className="space-y-3 max-h-56 overflow-y-auto">
+                  {delinquent.slice(0, 10).map((c) => (
                     <div
                       key={c._id}
                       className="flex items-center justify-between py-2 border-b border-border/30 last:border-0"

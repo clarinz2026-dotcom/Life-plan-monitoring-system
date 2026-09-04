@@ -9,18 +9,36 @@ export const summary = query({
     const clients = await ctx.db.query("clients").collect();
     const totalClients = clients.length;
 
+    // New clients this month
+    const monthStart = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1
+    ).getTime();
+    const newClientsThisMonth = clients.filter(
+      (c) => c.createdAt >= monthStart
+    ).length;
+
     // Count contracts by status
     const contracts = await ctx.db.query("contracts").collect();
     const contractsByStatus: Record<string, number> = {};
     let totalContractValue = 0;
     let totalCollected = 0;
+    let fullyPaidCount = 0;
 
     for (const c of contracts) {
       contractsByStatus[c.contractStatus] =
         (contractsByStatus[c.contractStatus] || 0) + 1;
       totalContractValue += c.planAmount;
       totalCollected += c.totalPaid;
+      if (c.contractStatus === "fully_paid") fullyPaidCount++;
     }
+
+    // Collection rate (0-100)
+    const collectionRate =
+      totalContractValue > 0
+        ? Math.min(Math.round((totalCollected / totalContractValue) * 100), 100)
+        : 0;
 
     // Total payments
     const payments = await ctx.db.query("payments").collect();
@@ -35,23 +53,74 @@ export const summary = query({
     const todayAmount = todayPayments.reduce((sum, p) => sum + p.amount, 0);
 
     // This month's payments
-    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).getTime();
     const monthPayments = payments.filter((p) => p.paymentDate >= monthStart);
     const monthAmount = monthPayments.reduce((sum, p) => sum + p.amount, 0);
 
+    // Yesterday's amount (for day-over-day comparison)
+    const yesterdayStart = todayStart - 24 * 60 * 60 * 1000;
+    const yesterdayAmount = payments
+      .filter((p) => p.paymentDate >= yesterdayStart && p.paymentDate < todayStart)
+      .reduce((sum, p) => sum + p.amount, 0);
+
+    // Payment channel breakdown (this month)
+    const byChannel: Record<string, { amount: number; count: number }> = {};
+    for (const p of monthPayments) {
+      const ch = p.paymentChannel;
+      byChannel[ch] = byChannel[ch] || { amount: 0, count: 0 };
+      byChannel[ch].amount += p.amount;
+      byChannel[ch].count += 1;
+    }
+
     return {
       totalClients,
+      newClientsThisMonth,
       totalContracts: contracts.length,
       contractsByStatus,
       totalContractValue,
       totalCollected,
+      collectionRate,
+      fullyPaidCount,
       totalPayments,
       totalPaymentAmount,
       todayPayments: todayPayments.length,
       todayAmount,
+      yesterdayAmount,
       monthPayments: monthPayments.length,
       monthAmount,
+      byChannel,
     };
+  },
+});
+
+/**
+ * Collections for the last 7 days (for the mini trend chart).
+ */
+export const weeklyTrend = query({
+  handler: async (ctx) => {
+    const payments = await ctx.db.query("payments").collect();
+
+    const days: Array<{ label: string; amount: number; count: number }> = [];
+    const now = new Date();
+
+    for (let i = 6; i >= 0; i--) {
+      const dayStart = new Date(now);
+      dayStart.setDate(now.getDate() - i);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayStart);
+      dayEnd.setDate(dayStart.getDate() + 1);
+
+      const dayPayments = payments.filter(
+        (p) => p.paymentDate >= dayStart.getTime() && p.paymentDate < dayEnd.getTime()
+      );
+
+      days.push({
+        label: dayStart.toLocaleDateString("en-US", { weekday: "short" }),
+        amount: dayPayments.reduce((sum, p) => sum + p.amount, 0),
+        count: dayPayments.length,
+      });
+    }
+
+    return days;
   },
 });
 
@@ -102,6 +171,17 @@ export const delinquentContracts = query({
         results.push({ ...c, client });
       }
     }
+
+    // Most severe first (lapsed > 90 > 60 > 30)
+    const severity: Record<string, number> = {
+      lapsed: 4,
+      delinquent_90: 3,
+      delinquent_60: 2,
+      delinquent_30: 1,
+    };
+    results.sort(
+      (a, b) => (severity[b.contractStatus] ?? 0) - (severity[a.contractStatus] ?? 0)
+    );
 
     return results;
   },
