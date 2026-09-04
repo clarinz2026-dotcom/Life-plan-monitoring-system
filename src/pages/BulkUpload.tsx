@@ -83,6 +83,9 @@ const HEADER_ALIASES: Record<string, keyof UploadRow> = {
   installment: "installment",
   installments: "installment",
   monthspaid: "installment",
+  ins: "installment",
+  insinstallment: "installment",
+  insinstallments: "installment",
   amount: "amount",
   planamount: "amount",
   total: "amount",
@@ -304,12 +307,16 @@ export default function BulkUpload() {
   );
 
   const handleUpload = async () => {
-    const validRows = parsedData
-      .filter((_, i) => {
-        const result = validationResults[i];
-        return result && result.errors.length === 0;
-      })
-      .map((row, i) => {
+    // Build a map from filtered-index → original parsedData index so we can
+    // look up per-row monthly rates with the correct key.
+    const originalIndices: number[] = [];
+    parsedData.forEach((_, i) => {
+      const result = validationResults[i];
+      if (result && result.errors.length === 0) originalIndices.push(i);
+    });
+
+    const validRows = originalIndices.map((origIdx, filteredIdx) => {
+      const row = parsedData[origIdx];
         // Per-row monthly rate: only relevant when the row will create a
         // contract with backdated payments and has no Amount column.
         const plan = getMatchedPlan(row);
@@ -317,7 +324,7 @@ export default function BulkUpload() {
         const amount = parseFloat(String(row.amount).replace(/,/g, ""));
         let monthlyRate: number | undefined;
         if (plan && months > 0 && (isNaN(amount) || amount <= 0)) {
-          const v = parseFloat(monthlyRates[i] || "");
+          const v = parseFloat(monthlyRates[origIdx] || "");
           if (!isNaN(v) && v > 0) monthlyRate = v;
         }
         return {
