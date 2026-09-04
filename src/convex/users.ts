@@ -230,6 +230,59 @@ export const setRole = mutation({
 });
 
 /**
+ * Change the locked super admin email (Super Admin only).
+ * This lets you reassign super admin to a different email.
+ */
+export const changeSuperAdminEmail = mutation({
+  args: {
+    newEmail: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
+    const user = await ctx.db.get(userId);
+    if (!user || user.role !== "super_admin") {
+      throw new Error("Only the current Super Admin can change the super admin email.");
+    }
+
+    const newEmail = args.newEmail.toLowerCase().trim();
+    if (!newEmail) throw new Error("New email is required.");
+
+    // Find the current locked setting
+    const lockedSetting = await ctx.db
+      .query("system_settings")
+      .withIndex("by_key", (q) => q.eq("key", "super_admin_email"))
+      .first();
+
+    if (lockedSetting) {
+      await ctx.db.patch(lockedSetting._id, { value: newEmail });
+    } else {
+      await ctx.db.insert("system_settings", {
+        key: "super_admin_email",
+        value: newEmail,
+        lockedAt: Date.now(),
+        lockedBy: userId,
+      });
+    }
+
+    await ctx.db.insert("audit_log", {
+      action: "status_change",
+      entityType: "client",
+      entityId: userId,
+      userId: userId,
+      userName: user.name ?? user.email ?? "Unknown",
+      description: `Super Admin email changed from ${lockedSetting?.value ?? "(none)"} to ${newEmail}`,
+      oldValues: { superAdminEmail: lockedSetting?.value },
+      newValues: { superAdminEmail: newEmail },
+      timestamp: Date.now(),
+    });
+
+    return { success: true, newEmail };
+  },
+});
+
+/**
  * Check if a super_admin exists in the system.
  */
 export const hasSuperAdmin = query({
