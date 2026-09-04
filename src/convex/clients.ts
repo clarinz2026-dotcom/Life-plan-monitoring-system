@@ -153,8 +153,8 @@ export const update = mutation({
 
 /**
  * Permanently delete multiple clients and everything attached to them:
- * contracts, payments, receipts, payment schedules, commissions, death
- * claims, route stops, and notifications. Audit logs are kept for history.
+ * contracts, payments, receipts, payment schedules, death claims, and
+ * notifications. Audit logs are kept for history.
  *
  * Restricted to Super Admin, CEO, and Manager.
  */
@@ -187,7 +187,7 @@ export const bulkDelete = mutation({
       if (!client) continue;
       deletedNames.push(`${client.lastName}, ${client.firstName}`);
 
-      // All contracts for this client → their payments, schedules, commissions
+      // All contracts for this client → their payments and schedules
       const contracts = await ctx.db
         .query("contracts")
         .withIndex("by_client", (q) => q.eq("clientId", clientId))
@@ -206,12 +206,6 @@ export const bulkDelete = mutation({
           .withIndex("by_contract", (q) => q.eq("contractId", contract._id))
           .collect();
         for (const s of schedules) await ctx.db.delete(s._id);
-
-        const commissions = await ctx.db
-          .query("commissions")
-          .withIndex("by_contract", (q) => q.eq("contractId", contract._id))
-          .collect();
-        for (const c of commissions) await ctx.db.delete(c._id);
 
         await ctx.db.delete(contract._id);
         totalContracts++;
@@ -236,12 +230,6 @@ export const bulkDelete = mutation({
         .withIndex("by_client", (q) => q.eq("clientId", clientId))
         .collect();
       for (const claim of claims) await ctx.db.delete(claim._id);
-
-      const routeStops = await ctx.db
-        .query("route_clients")
-        .withIndex("by_client", (q) => q.eq("clientId", clientId))
-        .collect();
-      for (const stop of routeStops) await ctx.db.delete(stop._id);
 
       const notifications = await ctx.db.query("notifications").collect();
       for (const n of notifications) {

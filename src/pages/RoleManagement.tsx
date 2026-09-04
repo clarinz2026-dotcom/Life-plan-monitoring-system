@@ -18,7 +18,6 @@ const ALL_ROLES = [
   { value: "manager", label: "Manager", color: "bg-blue-100 text-blue-800 border-blue-200" },
   { value: "finance_staff", label: "Finance Staff", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
   { value: "cashier", label: "Cashier", color: "bg-orange-100 text-orange-800 border-orange-200" },
-  { value: "collector", label: "Collector", color: "bg-sky-100 text-sky-800 border-sky-200" },
 ] as const;
 
 const ROLE_DESCRIPTIONS: Record<string, string> = {
@@ -27,7 +26,6 @@ const ROLE_DESCRIPTIONS: Record<string, string> = {
   manager: "Manages operations, routes, and team oversight.",
   finance_staff: "Handles payments, contracts, reports, and financial operations.",
   cashier: "Records payments, manages receipts, and does daily reconciliation.",
-  collector: "Field agent — sees assigned routes and marks stops as visited.",
 };
 
 export default function RoleManagement() {
@@ -128,9 +126,7 @@ export default function RoleManagement() {
                       ? "bg-blue-500"
                       : r.value === "finance_staff"
                         ? "bg-emerald-500"
-                        : r.value === "cashier"
-                          ? "bg-orange-500"
-                          : "bg-sky-500"
+                        : "bg-orange-500"
               }`}
             />
             <span className="text-xs font-medium">{r.label}</span>
@@ -240,9 +236,7 @@ export default function RoleManagement() {
                                     ? "bg-blue-500"
                                     : r.value === "finance_staff"
                                       ? "bg-emerald-500"
-                                      : r.value === "cashier"
-                                        ? "bg-orange-500"
-                                        : "bg-sky-500"
+                                      : "bg-orange-500"
                               }`}
                             />
                             {r.label}

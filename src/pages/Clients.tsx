@@ -713,7 +713,7 @@ export default function Clients() {
               </p>
               <p className="text-[13px]">
                 contracts · payments · receipts · payment schedules ·
-                commissions · death claims · route stops
+                death claims
               </p>
               {selectedNames.length > 0 && (
                 <div className="pt-1">

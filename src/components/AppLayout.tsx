@@ -44,11 +44,11 @@ const NAV_ITEMS = [
   { to: "/reconciliation", icon: Calculator, label: "Reconciliation", roles: ["super_admin", "ceo", "manager", "cashier"] },
   { to: "/death-claims", icon: FileX, label: "Death Claims", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
   { to: "/aging-report", icon: AlertTriangle, label: "Aging Report", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
-  { to: "/notifications", icon: Bell, label: "Notifications", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier", "collector"] },
+  { to: "/notifications", icon: Bell, label: "Notifications", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
   { to: "/export", icon: Download, label: "Export Data", roles: ["super_admin", "ceo", "manager"] },
   { to: "/role-management", icon: UserCog, label: "Roles", roles: ["super_admin", "ceo"] },
   { to: "/branding", icon: Palette, label: "Branding", roles: ["super_admin", "ceo"] },
-  { to: "/super-admin-setup", icon: Crown, label: "Setup", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier", "collector"] },
+  { to: "/super-admin-setup", icon: Crown, label: "Setup", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -57,7 +57,6 @@ const ROLE_LABELS: Record<string, string> = {
   finance_staff: "Finance Staff",
   cashier: "Cashier",
   manager: "Manager",
-  collector: "Collector",
 };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

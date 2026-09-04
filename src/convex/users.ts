@@ -29,7 +29,6 @@ export const hasRole = query({
         isManager: false,
         isFinance: false,
         isCashier: false,
-        isCollector: false,
         role: null,
       };
     return {
@@ -38,7 +37,6 @@ export const hasRole = query({
       isManager: user.role === "manager",
       isFinance: user.role === "finance_staff",
       isCashier: user.role === "cashier",
-      isCollector: user.role === "collector",
       role: user.role ?? null,
     };
   },
