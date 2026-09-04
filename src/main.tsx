@@ -23,10 +23,6 @@ const Reports = lazy(() => import("./pages/Reports.tsx"));
 const AuditLog = lazy(() => import("./pages/AuditLog.tsx"));
 const BulkUpload = lazy(() => import("./pages/BulkUpload.tsx"));
 const Plans = lazy(() => import("./pages/Plans.tsx"));
-const RoutesPage = lazy(() => import("./pages/Routes.tsx"));
-const RouteDetail = lazy(() => import("./pages/RouteDetail.tsx"));
-const MyRoute = lazy(() => import("./pages/MyRoute.tsx"));
-const Commissions = lazy(() => import("./pages/Commissions.tsx"));
 const Reconciliation = lazy(() => import("./pages/Reconciliation.tsx"));
 const DeathClaims = lazy(() => import("./pages/DeathClaims.tsx"));
 const AgingReport = lazy(() => import("./pages/AgingReport.tsx"));
@@ -233,38 +229,6 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <ProtectedRoute>
                     <Plans />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/routes"
-                element={
-                  <ProtectedRoute>
-                    <RoutesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/routes/:routeId"
-                element={
-                  <ProtectedRoute>
-                    <RouteDetail />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/my-route"
-                element={
-                  <ProtectedRoute>
-                    <MyRoute />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/commissions"
-                element={
-                  <ProtectedRoute>
-                    <Commissions />
                   </ProtectedRoute>
                 }
               />
