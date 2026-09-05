@@ -121,6 +121,12 @@
   --terminal-red: #f87171;
 }
 
+/* ─── Landing page tokens ─────────────────────────────────────────────────── */
+@layer base {
+  .landing-bg {
+    background-color: #faf8f3;
+  }
+
 /* ─── Base styles ────────────────────────────────────────────────────────── */
 @layer base {
   * {
