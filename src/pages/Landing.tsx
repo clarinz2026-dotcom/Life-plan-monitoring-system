@@ -473,7 +473,7 @@ function NavHeader() {
               className="hidden h-10 rounded-full border-evergreen/25 px-5 text-[13.5px] font-semibold text-evergreen hover:bg-evergreen/5 sm:inline-flex"
               onClick={() => navigate("/auth")}
             >
-              Staff & Client Portal
+              Sign In
             </Button>
             <Button
               variant="ghost"
@@ -1218,28 +1218,31 @@ export default function Landing() {
               />
               <div className="relative">
                 <p className="text-[11px] font-bold uppercase tracking-[0.3em] text-gold-soft">
-                  For officers, agents & branch teams
+                  Planholders, families & agents
                 </p>
                 <h2 className="mx-auto mt-4 max-w-2xl font-display text-3xl font-semibold leading-tight text-white lg:text-[40px]">
-                  Manage plans, payments & receipts
-                  <br className="hidden sm:block" /> from one trusted dashboard
+                  Your plan, our services — all in one place
                 </h2>
                 <p className="mx-auto mt-4 max-w-xl text-[14px] leading-relaxed text-white/70">
-                  Evangelist’s internal management system keeps client contracts,
-                  daily collections, official receipts, and delinquency reports in
-                  one clear, secure place.
+                  Track your Life Plan, view schedules and official receipts, book
+                  chapels, eBurol and cremations, locate branches, and reach our
+                  24/7 team — all from your client portal.
                 </p>
                 <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
                   <Button
                     className="h-12 rounded-full bg-paper px-8 text-[15px] font-bold text-evergreen hover:bg-white"
-                    onClick={() => navigate("/auth")}
+                    onClick={() => navigate("/auth?returnTo=%2Fportal")}
                   >
-                    Sign in to the Portal
+                    Open my client portal
                     <ArrowRight className="h-4 w-4" />
                   </Button>
-                  <span className="text-[12.5px] font-medium text-white/60">
-                    First time? Your email OTP sign-in takes under a minute.
-                  </span>
+                  <Button
+                    variant="outline"
+                    className="h-12 rounded-full border-white/30 bg-transparent px-7 text-[14px] font-bold text-white hover:bg-white/10 hover:text-white"
+                    onClick={() => navigate("/auth")}
+                  >
+                    Staff & agents — sign in
+                  </Button>
                 </div>
               </div>
             </div>

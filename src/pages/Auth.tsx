@@ -15,43 +15,51 @@ import {
 } from "@/components/ui/input-otp";
 
 import { useAuth } from "@/hooks/use-auth";
+import { api } from "@/convex/_generated/api";
 import { BrandLogo } from "@/components/BrandLogo";
+import { useQuery } from "convex/react";
 import { ArrowRight, Loader2, Mail, UserX } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 
-interface AuthProps {
-  redirectAfterAuth?: string;
-}
-
-function resolveRedirectAfterAuth(
-  returnTo: string | null,
-  fallback = "/dashboard",
-) {
-  if (returnTo?.startsWith("/") && !returnTo.startsWith("//")) {
-    return returnTo;
-  }
-  return fallback;
-}
-
-function Auth({ redirectAfterAuth }: AuthProps = {}) {
-  const { isLoading: authLoading, isAuthenticated, signIn } = useAuth();
+function Auth() {
+  const {
+    isLoading: authLoading,
+    isAuthenticated,
+    user,
+    signIn,
+  } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const redirect = resolveRedirectAfterAuth(
-    searchParams.get("returnTo"),
-    redirectAfterAuth,
-  );
   const [step, setStep] = useState<"signIn" | { email: string }>("signIn");
   const [otp, setOtp] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const setup = useQuery(api.users.hasSuperAdmin);
+
+  // Route staff to the management dashboard and everyone else to the client
+  // portal. An explicit returnTo (deep link to a protected page) wins.
+  const returnTo = searchParams.get("returnTo");
+  const landing =
+    returnTo && returnTo.startsWith("/") && !returnTo.startsWith("//")
+      ? returnTo
+      : null;
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      navigate(redirect);
+    if (authLoading || !isAuthenticated) return;
+    if (user === undefined || setup === undefined) return;
+    if (landing) {
+      navigate(landing);
+      return;
     }
-  }, [authLoading, isAuthenticated, navigate, redirect]);
+    // Role holders and the very first account (before a Super Admin exists)
+    // go to the staff dashboard/setup flow. Everyone else lands in the portal.
+    if (user?.role || setup?.hasSuperAdmin === false) {
+      navigate("/dashboard");
+      return;
+    }
+    navigate("/portal");
+  }, [authLoading, isAuthenticated, user, setup, landing, navigate]);
 
   const handleEmailSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -81,7 +89,6 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     try {
       const formData = new FormData(event.currentTarget);
       await signIn("email-otp", formData);
-      navigate(redirect);
     } catch (error) {
       console.error("OTP verification error:", error);
       setError("The verification code you entered is incorrect.");
@@ -95,7 +102,6 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
     setError(null);
     try {
       await signIn("anonymous");
-      navigate(redirect);
     } catch (error) {
       console.error("Guest login error:", error);
       setError(
@@ -298,10 +304,10 @@ function Auth({ redirectAfterAuth }: AuthProps = {}) {
   );
 }
 
-export default function AuthPage(props: AuthProps) {
+export default function AuthPage() {
   return (
     <Suspense>
-      <Auth {...props} />
+      <Auth />
     </Suspense>
   );
 }

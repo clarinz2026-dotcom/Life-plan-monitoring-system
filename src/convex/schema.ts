@@ -101,7 +101,8 @@ const schema = defineSchema(
       createdBy: v.id("users"),
     })
       .index("by_lastName", ["lastName"])
-      .index("by_createdAt", ["createdAt"]),
+      .index("by_createdAt", ["createdAt"])
+      .index("by_email", ["email"]),
 
     // Contracts / plans
     contracts: defineTable({
@@ -339,6 +340,29 @@ const schema = defineSchema(
       createdAt: v.number(),
     })
       .index("by_code", ["code"]),
+
+    // ─── Client portal: service requests ────────────────────────────────
+    service_requests: defineTable({
+      userId: v.id("users"),
+      serviceType: v.string(),
+      branchId: v.optional(v.id("branches")),
+      contactName: v.string(),
+      contactNumber: v.string(),
+      preferredDate: v.optional(v.number()),
+      message: v.optional(v.string()),
+      status: v.union(
+        v.literal("submitted"),
+        v.literal("under_review"),
+        v.literal("scheduled"),
+        v.literal("completed"),
+        v.literal("cancelled"),
+      ),
+      staffNotes: v.optional(v.string()),
+      createdAt: v.number(),
+    })
+      .index("by_user", ["userId"])
+      .index("by_status", ["status"])
+      .index("by_createdAt", ["createdAt"]),
   },
   {
     schemaValidation: false,

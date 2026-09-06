@@ -31,6 +31,12 @@ const ExportData = lazy(() => import("./pages/ExportData.tsx"));
 const RoleManagement = lazy(() => import("./pages/RoleManagement.tsx"));
 const Branding = lazy(() => import("./pages/Branding.tsx"));
 const SuperAdminSetup = lazy(() => import("./pages/SuperAdminSetup.tsx"));
+const PortalLayout = lazy(() => import("./pages/portal/PortalLayout.tsx"));
+const PortalOverview = lazy(() => import("./pages/portal/Overview.tsx"));
+const PortalPlans = lazy(() => import("./pages/portal/Plans.tsx"));
+const PortalServices = lazy(() => import("./pages/portal/Services.tsx"));
+const PortalChapels = lazy(() => import("./pages/portal/Chapels.tsx"));
+const PortalHelp = lazy(() => import("./pages/portal/Help.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 // Simple loading fallback for route transitions
@@ -146,10 +152,7 @@ createRoot(document.getElementById("root")!).render(
           <Suspense fallback={<RouteLoading />}>
             <Routes>
               <Route path="/" element={<Landing />} />
-              <Route
-                path="/auth"
-                element={<AuthPage redirectAfterAuth="/dashboard" />}
-              />
+              <Route path="/auth" element={<AuthPage />} />
 
               {/* Protected routes with AppLayout */}
               <Route
@@ -296,6 +299,22 @@ createRoot(document.getElementById("root")!).render(
                   </ProtectedRoute>
                 }
               />
+
+              {/* Client portal (families & planholders) */}
+              <Route
+                path="/portal"
+                element={
+                  <RequireAuth>
+                    <PortalLayout />
+                  </RequireAuth>
+                }
+              >
+                <Route index element={<PortalOverview />} />
+                <Route path="plans" element={<PortalPlans />} />
+                <Route path="services" element={<PortalServices />} />
+                <Route path="chapels" element={<PortalChapels />} />
+                <Route path="help" element={<PortalHelp />} />
+              </Route>
 
               <Route path="*" element={<NotFound />} />
             </Routes>
