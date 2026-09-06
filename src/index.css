@@ -121,7 +121,22 @@
   --terminal-red: #f87171;
 }
 
-/* ─── Landing page tokens ─────────────────────────────────────────────────── */
+/* ─── Corporate landing page tokens ──────────────────────────────────────── */
+@theme {
+  --font-display: Georgia, "Times New Roman", ui-serif, serif;
+  --color-evergreen: #1b4332;
+  --color-pine: #10291d;
+  --color-moss: #2d6a4f;
+  --color-sage: #dce5dd;
+  --color-gold: #a9874f;
+  --color-gold-soft: #d9c49c;
+  --color-cream: #faf7ef;
+  --color-paper: #fdfcf8;
+  --color-ink: #211f1a;
+  --color-stone: #716c60;
+  --color-line: #e6dfd1;
+}
+
 @layer base {
   .landing-bg {
     background-color: #faf8f3;
