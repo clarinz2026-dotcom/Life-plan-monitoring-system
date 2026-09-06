@@ -308,7 +308,7 @@ export default function Overview() {
             Everything we offer
           </h2>
           <div className="grid grid-cols-2 gap-2.5">
-            {SERVICES.map((s) => (
+            {SERVICES.filter((s) => s.key !== "eburol_access").map((s) => (
               <Link
                 key={s.key}
                 to={`/portal/services?type=${s.key}`}
