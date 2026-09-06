@@ -901,32 +901,6 @@ export default function Landing() {
             ))}
           </div>
 
-          <Reveal className="mt-10">
-            <div className="flex flex-col items-center justify-between gap-5 rounded-3xl border border-evergreen/15 bg-white px-7 py-6 text-center shadow-sm lg:flex-row lg:text-left">
-              <div>
-                <p className="text-[14px] font-semibold text-evergreen">
-                  Convenient payment options accepted on all plans
-                </p>
-                <div className="mt-2.5 flex flex-wrap justify-center gap-2 lg:justify-start">
-                  {["Cash", "GCash", "Maya", "Bank Transfer", "Check"].map((m) => (
-                    <span
-                      key={m}
-                      className="rounded-full bg-evergreen/6 px-3 py-1 text-[11.5px] font-bold uppercase tracking-wider text-evergreen"
-                    >
-                      {m}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-full bg-evergreen px-6 py-3 text-[13px] font-bold text-white transition-all hover:-translate-y-0.5 hover:bg-moss hover:shadow-xl"
-              >
-                Request a free plan quotation
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            </div>
-          </Reveal>
         </div>
       </section>
 
