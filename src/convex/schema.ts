@@ -77,7 +77,9 @@ const schema = defineSchema(
       emailVerificationTime: v.optional(v.number()),
       isAnonymous: v.optional(v.boolean()),
       role: v.optional(roleValidator),
-    }).index("email", ["email"]),
+    })
+      .index("email", ["email"])
+      .index("by_role", ["role"]),
 
     // Clients / planholders
     clients: defineTable({

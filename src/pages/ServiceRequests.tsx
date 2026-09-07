@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -65,63 +65,83 @@ type Request = {
   userName: string | null;
 };
 
+/** Debounce a value by `ms` milliseconds. */
+function useDebounced<T>(value: T, ms: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), ms);
+    return () => clearTimeout(id);
+  }, [value, ms]);
+  return debounced;
+}
+
 export default function ServiceRequests() {
   const [filter, setFilter] = useState<string>("submitted");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [declineNotes, setDeclineNotes] = useState("");
+  // Per-request decline notes: keyed by request _id
+  const [declineNotesMap, setDeclineNotesMap] = useState<Record<string, string>>({});
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [linkClientId, setLinkClientId] = useState<string>("");
-  const [clientSearch, setClientSearch] = useState("");
+  const [clientSearchRaw, setClientSearch] = useState("");
+  const clientSearch = useDebounced(clientSearchRaw, 300);
+  // Reset link selection when search changes
+  const prevSearchRef = useRef(clientSearch);
+  useEffect(() => {
+    if (prevSearchRef.current !== clientSearch) {
+      setLinkClientId("");
+      prevSearchRef.current = clientSearch;
+    }
+  }, [clientSearch]);
 
   const requests = useQuery(
-    api.portal.staffListRequests as any,
-    filter === "all" ? {} : { status: filter as any }
+    api.portal.staffListRequests,
+    filter === "all" ? {} : { status: filter as "submitted" | "under_review" | "scheduled" | "completed" | "cancelled" }
   );
 
-  const resolveRequest = useMutation(api.portal.staffResolveRequest as any);
-  const progressRequest = useMutation(api.portal.staffProgressRequest as any);
-  const linkAccount = useMutation(api.portal.staffLinkAccount as any);
-  const clients = useQuery(api.clients.list as any, { search: clientSearch || undefined });
+  const resolveRequest = useMutation(api.portal.staffResolveRequest);
+  const progressRequest = useMutation(api.portal.staffProgressRequest);
+  const linkAccount = useMutation(api.portal.staffLinkAccount);
+  const clients = useQuery(api.clients.list, { search: clientSearch || undefined });
 
-  const handleApprove = async (id: string) => {
+  const handleApprove = useCallback(async (id: string) => {
     setProcessingId(id);
     try {
-      await resolveRequest({ requestId: id, action: "approve" });
+      await resolveRequest({ requestId: id as Id<"service_requests">, action: "approve" });
     } catch (e) {
       console.error(e);
     } finally {
       setProcessingId(null);
     }
-  };
+  }, [resolveRequest]);
 
-  const handleSchedule = async (id: string) => {
+  const handleSchedule = useCallback(async (id: string) => {
     setProcessingId(id);
     try {
-      await progressRequest({ requestId: id, action: "schedule" });
+      await progressRequest({ requestId: id as Id<"service_requests">, action: "schedule" });
     } catch (e) {
       console.error(e);
     } finally {
       setProcessingId(null);
     }
-  };
+  }, [progressRequest]);
 
-  const handleComplete = async (id: string) => {
+  const handleComplete = useCallback(async (id: string) => {
     setProcessingId(id);
     try {
-      await progressRequest({ requestId: id, action: "complete" });
+      await progressRequest({ requestId: id as Id<"service_requests">, action: "complete" });
     } catch (e) {
       console.error(e);
     } finally {
       setProcessingId(null);
     }
-  };
+  }, [progressRequest]);
 
   const filteredClients = useMemo(() => {
     if (!clients) return [];
     return clients.slice(0, 20);
   }, [clients]);
 
-  const handleLinkAccount = async (requestId: string, clientId: string) => {
+  const handleLinkAccount = useCallback(async (requestId: string, clientId: string) => {
     setProcessingId(requestId);
     try {
       await linkAccount({
@@ -135,26 +155,30 @@ export default function ServiceRequests() {
       setLinkClientId("");
       setClientSearch("");
     }
-  };
+  }, [linkAccount]);
 
-  const handleDecline = async (id: string) => {
+  const handleDecline = useCallback(async (id: string) => {
     setProcessingId(id);
     try {
       await resolveRequest({
-        requestId: id,
+        requestId: id as Id<"service_requests">,
         action: "decline",
-        staffNotes: declineNotes || undefined,
+        staffNotes: declineNotesMap[id] || undefined,
       });
-      setDeclineNotes("");
+      setDeclineNotesMap((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
       setExpandedId(null);
     } catch (e) {
       console.error(e);
     } finally {
       setProcessingId(null);
     }
-  };
+  }, [resolveRequest, declineNotesMap]);
 
-  const counts = useQuery(api.portal.staffListRequests as any, {});
+  const counts = useQuery(api.portal.staffListRequests, {});
 
   const pendingCount = (counts ?? []).filter(
     (r: Request) => r.status === "submitted"
@@ -416,15 +440,14 @@ export default function ServiceRequests() {
                         </p>
                         <p className="text-xs text-blue-700 leading-relaxed">
                           This client wants to link their portal account to an existing
-                          planholder record. Once approved, their sign-in email will be
-                          matched to their client record and all plan/payment data will
-                          appear in their portal. To approve, ensure the contact details
-                          match a record in the Clients tab.
+                          planholder record. Search for the matching client below and click
+                          "Link Account" to update the client record's email to match
+                          the user's sign-in email.
                         </p>
                       </div>
                     )}
 
-                    {/* Action buttons */}
+                    {/* Action buttons — Account Linking */}
                     {isPending && isAccountLink && (
                       <div className="flex flex-col gap-3 border-t border-border/50 pt-4">
                         <div>
@@ -433,7 +456,7 @@ export default function ServiceRequests() {
                           </p>
                           <input
                             type="text"
-                            value={clientSearch}
+                            value={clientSearchRaw}
                             onChange={(e) => {
                               setClientSearch(e.target.value);
                               setLinkClientId("");
@@ -441,7 +464,7 @@ export default function ServiceRequests() {
                             placeholder="Search by name or phone..."
                             className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
                           />
-                          {clientSearch && filteredClients.length > 0 && !linkClientId && (
+                          {clientSearchRaw && filteredClients.length > 0 && !linkClientId && (
                             <div className="mt-1 max-h-40 overflow-y-auto rounded-lg border border-border bg-white shadow-sm">
                               {filteredClients.map((c: any) => (
                                 <button
@@ -470,9 +493,11 @@ export default function ServiceRequests() {
                               Staff Notes (optional)
                             </p>
                             <textarea
-                              value={declineNotes}
-                              onChange={(e) => setDeclineNotes(e.target.value)}
-                              placeholder="Add a note for the client (shown on decline)..."
+                              value={declineNotesMap[req._id] ?? ""}
+                              onChange={(e) =>
+                                setDeclineNotesMap((prev) => ({ ...prev, [req._id]: e.target.value }))
+                              }
+                              placeholder="Add a note for the client..."
                               rows={2}
                               className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
                             />
@@ -501,6 +526,8 @@ export default function ServiceRequests() {
                         </div>
                       </div>
                     )}
+
+                    {/* Action buttons — Regular requests (pending) */}
                     {isPending && !isAccountLink && (
                       <div className="flex flex-col gap-3 border-t border-border/50 pt-4 sm:flex-row sm:items-end">
                         <div className="flex-1">
@@ -508,8 +535,10 @@ export default function ServiceRequests() {
                             Staff Notes (optional)
                           </p>
                           <textarea
-                            value={declineNotes}
-                            onChange={(e) => setDeclineNotes(e.target.value)}
+                            value={declineNotesMap[req._id] ?? ""}
+                            onChange={(e) =>
+                              setDeclineNotesMap((prev) => ({ ...prev, [req._id]: e.target.value }))
+                            }
                             placeholder="Add a note for the client (shown on decline)..."
                             rows={2}
                             className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
@@ -539,6 +568,7 @@ export default function ServiceRequests() {
                       </div>
                     )}
 
+                    {/* Action buttons — Approved (ready to schedule) */}
                     {req.status === "under_review" && (
                       <div className="flex gap-2 border-t border-border/50 pt-4">
                         <Button
@@ -553,6 +583,7 @@ export default function ServiceRequests() {
                       </div>
                     )}
 
+                    {/* Action buttons — Scheduled (ready to complete) */}
                     {req.status === "scheduled" && (
                       <div className="flex gap-2 border-t border-border/50 pt-4">
                         <Button

@@ -144,11 +144,16 @@ export default function Chapels() {
                 )}
                 <div className="mt-4 flex items-center gap-2 border-t border-line pt-3.5">
                   <a
-                    href={`tel:${(b.contactNumber ?? "").replace(/[^+\d]/g, "")}`}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-evergreen px-3.5 py-2 text-[12px] font-bold text-white transition-colors hover:bg-moss"
+                    href={b.contactNumber ? `tel:${b.contactNumber.replace(/[^+\d]/g, "")}` : undefined}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[12px] font-bold transition-colors ${
+                      b.contactNumber
+                        ? "bg-evergreen text-white hover:bg-moss"
+                        : "bg-muted text-muted-foreground cursor-not-allowed"
+                    }`}
+                    aria-disabled={!b.contactNumber}
                   >
                     <Phone className="h-3.5 w-3.5" />
-                    {b.contactNumber ?? "Call branch"}
+                    {b.contactNumber ?? "No number listed"}
                   </a>
                   <span className="ml-auto text-[11px] text-stone">
                     Memorial services & embalming

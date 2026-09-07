@@ -64,6 +64,22 @@ async function enrichRequest(
   };
 }
 
+const STAFF_ROLES = ["super_admin", "ceo", "manager"] as const;
+
+/**
+ * Require the current user to be staff (super_admin, ceo, or manager).
+ * Returns the user doc on success, throws on failure.
+ */
+async function requireStaff(ctx: MutationCtx) {
+  const userId = await getAuthUserId(ctx);
+  if (!userId) throw new Error("Not authenticated.");
+  const user = await ctx.db.get(userId);
+  if (!user || !STAFF_ROLES.includes(user.role as typeof STAFF_ROLES[number])) {
+    throw new Error("Not authorized — staff access required.");
+  }
+  return user;
+}
+
 /** Notify office staff (super admin / ceo / manager) of a new client request. */
 async function notifyOffice(
   ctx: MutationCtx,
@@ -71,9 +87,12 @@ async function notifyOffice(
   message: string
 ) {
   const now = Date.now();
-  const users = await ctx.db.query("users").collect();
-  for (const u of users) {
-    if (u.role === "super_admin" || u.role === "ceo" || u.role === "manager") {
+  for (const role of STAFF_ROLES) {
+    const staff = await ctx.db
+      .query("users")
+      .withIndex("by_role", (q) => q.eq("role", role))
+      .collect();
+    for (const u of staff) {
       await ctx.db.insert("notifications", {
         userId: u._id,
         type: "system",
@@ -119,35 +138,71 @@ export const myOverview = query({
         if (matched.size > 0) break;
       }
 
-      for (const client of matched.values()) {
-        const contracts = await ctx.db
-          .query("contracts")
-          .withIndex("by_client", (q) => q.eq("clientId", client._id))
-          .collect();
-        const payments = await ctx.db
-          .query("payments")
-          .withIndex("by_client", (q) => q.eq("clientId", client._id))
-          .collect();
-        const schedules = await ctx.db
-          .query("payment_schedules")
-          .withIndex("by_client", (q) => q.eq("clientId", client._id))
-          .collect();
-        const receipts = await ctx.db
-          .query("receipts")
-          .withIndex("by_client", (q) => q.eq("clientId", client._id))
-          .collect();
+      const clientIds = Array.from(matched.values()).map((c) => c._id);
 
-        const contractIds = new Set(contracts.map((c) => c._id));
+      // Batch-fetch all related data across all matched clients (avoid N+1)
+      const allContracts: Doc<"contracts">[] = [];
+      const allPayments: Doc<"payments">[] = [];
+      const allSchedules: Doc<"payment_schedules">[] = [];
+      const allReceipts: Doc<"receipts">[] = [];
+      for (const cid of clientIds) {
+        allContracts.push(
+          ...(await ctx.db
+            .query("contracts")
+            .withIndex("by_client", (q) => q.eq("clientId", cid))
+            .collect())
+        );
+        allPayments.push(
+          ...(await ctx.db
+            .query("payments")
+            .withIndex("by_client", (q) => q.eq("clientId", cid))
+            .collect())
+        );
+        allSchedules.push(
+          ...(await ctx.db
+            .query("payment_schedules")
+            .withIndex("by_client", (q) => q.eq("clientId", cid))
+            .collect())
+        );
+        allReceipts.push(
+          ...(await ctx.db
+            .query("receipts")
+            .withIndex("by_client", (q) => q.eq("clientId", cid))
+            .collect())
+        );
+      }
+
+      // Build lookup maps for fast filtering
+      const paymentsByClient = new Map<string, Doc<"payments">[]>();
+      for (const p of allPayments) {
+        const list = paymentsByClient.get(p.clientId) ?? [];
+        list.push(p);
+        paymentsByClient.set(p.clientId, list);
+      }
+      const schedulesByContract = new Map<string, Doc<"payment_schedules">[]>();
+      for (const s of allSchedules) {
+        const list = schedulesByContract.get(s.contractId) ?? [];
+        list.push(s);
+        schedulesByContract.set(s.contractId, list);
+      }
+      const receiptsByContract = new Map<string, Doc<"receipts">[]>();
+      for (const r of allReceipts) {
+        const list = receiptsByContract.get(r.contractId) ?? [];
+        list.push(r);
+        receiptsByContract.set(r.contractId, list);
+      }
+
+      for (const client of matched.values()) {
+        const contracts = allContracts.filter((c) => c.clientId === client._id);
+        const clientPayments = paymentsByClient.get(client._id) ?? [];
         const contractDetails: ContractDetail[] = contracts.map((contract) => ({
           contract,
-          payments: payments
+          payments: clientPayments
             .filter((p) => p.contractId === contract._id)
             .sort((a, b) => b.paymentDate - a.paymentDate),
-          schedules: schedules
-            .filter((s) => s.contractId === contract._id)
+          schedules: (schedulesByContract.get(contract._id) ?? [])
             .sort((a, b) => a.dueDate - b.dueDate),
-          receipts: receipts
-            .filter((r) => contractIds.has(r.contractId))
+          receipts: (receiptsByContract.get(contract._id) ?? [])
             .sort((a, b) => b.createdAt - a.createdAt),
         }));
 
@@ -269,6 +324,8 @@ export const staffListRequests = query({
   handler: async (ctx, args): Promise<StaffEnrichedRequest[]> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
+    const user = await ctx.db.get(userId);
+    if (!user || !STAFF_ROLES.includes(user.role as typeof STAFF_ROLES[number])) return [];
 
     let requests: Doc<"service_requests">[];
     if (args.status) {
@@ -320,8 +377,7 @@ export const staffResolveRequest = mutation({
     staffNotes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated.");
+    await requireStaff(ctx);
 
     const request = await ctx.db.get(args.requestId);
     if (!request) throw new Error("Request not found.");
@@ -366,8 +422,7 @@ export const staffProgressRequest = mutation({
     staffNotes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated.");
+    await requireStaff(ctx);
 
     const request = await ctx.db.get(args.requestId);
     if (!request) throw new Error("Request not found.");
@@ -420,8 +475,7 @@ export const staffLinkAccount = mutation({
     clientId: v.id("clients"),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated.");
+    await requireStaff(ctx);
 
     const request = await ctx.db.get(args.requestId);
     if (!request) throw new Error("Request not found.");
@@ -437,6 +491,18 @@ export const staffLinkAccount = mutation({
     const userEmail = (requestUser?.email ?? "").trim().toLowerCase();
     if (!userEmail) {
       throw new Error("The requesting user has no email on their auth account.");
+    }
+
+    // Uniqueness guard: check if another client already has this email
+    const existingClients = await ctx.db
+      .query("clients")
+      .withIndex("by_email", (q) => q.eq("email", userEmail))
+      .collect();
+    const conflict = existingClients.find((c) => c._id !== args.clientId);
+    if (conflict) {
+      throw new Error(
+        `This email is already linked to ${conflict.firstName} ${conflict.lastName}. Unlink that record first or use a different email.`
+      );
     }
 
     // Update the client record's email to match the user's auth email
