@@ -1309,11 +1309,11 @@ export default function Landing() {
                 <li className="flex items-start gap-3">
                   <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold-soft" />
                   <span>
-                    Head Office & Flagship Chapel
+                    Main Office (Malaybalay)
                     <br />
-                    88 Evangelist Ave., Brgy. Old City,
+                    2nd Floor, Gabrinez Bldg, Fortich St.,
                     <br />
-                    Metro Manila, Philippines
+                    Malaybalay City, Bukidnon 8700
                   </span>
                 </li>
                 <li className="flex items-start gap-3">

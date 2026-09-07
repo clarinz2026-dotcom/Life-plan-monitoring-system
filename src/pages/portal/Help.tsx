@@ -47,9 +47,9 @@ const CONTACTS = [
   },
   {
     icon: MapPin,
-    title: "Head office",
-    line1: "88 Evangelist Ave., Brgy. Old City",
-    line2: "Metro Manila, Philippines",
+    title: "Main office (Malaybalay)",
+    line1: "2nd Floor, Gabrinez Bldg, Fortich St.,",
+    line2: "Malaybalay City, Bukidnon 8700",
     href: "/portal/chapels",
     cta: "Store locator",
     internal: true,
