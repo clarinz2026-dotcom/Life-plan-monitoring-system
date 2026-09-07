@@ -105,3 +105,122 @@ export const get = query({
     return await ctx.db.get(args.branchId);
   },
 });
+
+/**
+ * Branch performance summary — one row per branch with key stats.
+ * Used by CEO to compare branches side by side.
+ */
+export const summary = query({
+  args: {},
+  handler: async (ctx) => {
+    const branches = await ctx.db.query("branches").collect();
+    const monthStart = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(), 1
+    ).getTime();
+
+    const results = await Promise.all(
+      branches.map(async (b) => {
+        // Clients in this branch
+        const clients = await ctx.db
+          .query("clients")
+          .withIndex("by_branch", (q) => q.eq("branchId", b._id))
+          .collect();
+
+        // Contracts in this branch
+        const contracts = await ctx.db
+          .query("contracts")
+          .withIndex("by_branch", (q) => q.eq("branchId", b._id))
+          .collect();
+
+        let totalContractValue = 0;
+        let totalCollected = 0;
+        let fullyPaidCount = 0;
+        const contractsByStatus: Record<string, number> = {};
+        for (const c of contracts) {
+          contractsByStatus[c.contractStatus] = (contractsByStatus[c.contractStatus] || 0) + 1;
+          totalContractValue += c.planAmount;
+          totalCollected += c.totalPaid;
+          if (c.contractStatus === "fully_paid") fullyPaidCount++;
+        }
+
+        // Payments this month
+        const payments = await ctx.db
+          .query("payments")
+          .withIndex("by_branch", (q) => q.eq("branchId", b._id))
+          .collect();
+        const monthPayments = payments.filter((p) => p.paymentDate >= monthStart);
+        const monthAmount = monthPayments.reduce((sum, p) => sum + p.amount, 0);
+        const totalPaymentAmount = payments.reduce((sum, p) => sum + p.amount, 0);
+
+        // Staff count
+        const allUsers = await ctx.db.query("users").collect();
+        const staffCount = allUsers.filter((u) => u.branchId === b._id).length;
+
+        const manager = b.managerId ? await ctx.db.get(b.managerId) : null;
+
+        return {
+          _id: b._id,
+          name: b.name,
+          code: b.code,
+          address: b.address,
+          city: b.city,
+          province: b.province,
+          contactNumber: b.contactNumber,
+          isActive: b.isActive,
+          managerName: manager?.name || manager?.email || null,
+          clientCount: clients.length,
+          contractCount: contracts.length,
+          fullyPaidCount,
+          totalContractValue,
+          totalCollected,
+          collectionRate: totalContractValue > 0
+            ? Math.min(Math.round((totalCollected / totalContractValue) * 100), 100)
+            : 0,
+          monthPayments: monthPayments.length,
+          monthAmount,
+          totalPaymentAmount,
+          staffCount,
+          contractsByStatus,
+        };
+      })
+    );
+
+    return results;
+  },
+});
+
+/**
+ * Delete a branch (CEO/Super Admin only). Only if no clients/contracts reference it.
+ */
+export const remove = mutation({
+  args: { branchId: v.id("branches") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const user = await ctx.db.get(userId);
+    if (user?.role !== "super_admin" && user?.role !== "ceo") {
+      throw new Error("Only Super Admin or CEO can delete branches.");
+    }
+
+    // Check if any clients are assigned
+    const clients = await ctx.db
+      .query("clients")
+      .withIndex("by_branch", (q) => q.eq("branchId", args.branchId))
+      .first();
+    if (clients) {
+      throw new Error("Cannot delete a branch that still has assigned clients. Reassign them first.");
+    }
+
+    // Unassign any users from this branch
+    const users = await ctx.db.query("users").collect();
+    for (const u of users) {
+      if (u.branchId === args.branchId) {
+        await ctx.db.patch(u._id, { branchId: undefined });
+      }
+    }
+
+    await ctx.db.delete(args.branchId);
+    return { success: true };
+  },
+});

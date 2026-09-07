@@ -32,6 +32,7 @@ const RoleManagement = lazy(() => import("./pages/RoleManagement.tsx"));
 const Branding = lazy(() => import("./pages/Branding.tsx"));
 const SuperAdminSetup = lazy(() => import("./pages/SuperAdminSetup.tsx"));
 const ServiceRequests = lazy(() => import("./pages/ServiceRequests.tsx"));
+const Branches = lazy(() => import("./pages/Branches.tsx"));
 const PortalLayout = lazy(() => import("./pages/portal/PortalLayout.tsx"));
 const PortalOverview = lazy(() => import("./pages/portal/Overview.tsx"));
 const PortalPlans = lazy(() => import("./pages/portal/Plans.tsx"));
@@ -257,6 +258,14 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <ProtectedRoute>
                     <ServiceRequests />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/branches"
+                element={
+                  <ProtectedRoute>
+                    <Branches />
                   </ProtectedRoute>
                 }
               />

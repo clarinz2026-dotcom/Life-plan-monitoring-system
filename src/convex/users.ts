@@ -38,6 +38,7 @@ export const hasRole = query({
       isFinance: user.role === "finance_staff",
       isCashier: user.role === "cashier",
       role: user.role ?? null,
+      branchId: user.branchId ?? null,
     };
   },
 });
@@ -305,3 +306,78 @@ export const getCurrentUser = async (ctx: QueryCtx) => {
   if (userId === null) return null;
   return await ctx.db.get(userId);
 };
+
+/**
+ * Assign a user to a branch (CEO/Super Admin only).
+ */
+export const assignBranch = mutation({
+  args: {
+    userId: v.id("users"),
+    branchId: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) throw new Error("Not authenticated");
+    const currentUserDoc = await ctx.db.get(currentUserId);
+    const viewerRole = currentUserDoc?.role;
+    if (viewerRole !== "super_admin" && viewerRole !== "ceo") {
+      throw new Error("Only the Super Admin or CEO can assign branches.");
+    }
+
+    const targetUser = await ctx.db.get(args.userId);
+    if (!targetUser) throw new Error("User not found.");
+
+    const oldBranchId = targetUser.branchId;
+    await ctx.db.patch(args.userId, { branchId: args.branchId ?? undefined });
+
+    // Audit log
+    await ctx.db.insert("audit_log", {
+      action: "status_change",
+      entityType: "client",
+      entityId: args.userId,
+      userId: currentUserId,
+      userName: (currentUserDoc?.name ?? currentUserDoc?.email) || "Unknown",
+      description: `Branch assigned for ${targetUser.name ?? targetUser.email}: ${args.branchId ?? "none"} (by ${viewerRole})`,
+      oldValues: { branchId: oldBranchId ?? null },
+      newValues: { branchId: args.branchId ?? null },
+      timestamp: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * List all users with branch info (for role/branch management).
+ */
+export const listWithBranches = query({
+  args: {},
+  handler: async (ctx) => {
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) return [];
+    const currentUserDoc = await ctx.db.get(currentUserId);
+    if (
+      !currentUserDoc ||
+      (currentUserDoc.role !== "super_admin" && currentUserDoc.role !== "ceo")
+    )
+      return [];
+
+    const users = await ctx.db.query("users").collect();
+    const enriched = await Promise.all(
+      users.map(async (u) => {
+        const branch = u.branchId ? await ctx.db.get(u.branchId) : null;
+        return {
+          _id: u._id,
+          name: u.name,
+          email: u.email,
+          image: u.image,
+          role: u.role ?? null,
+          branchId: u.branchId ?? null,
+          branchName: branch?.name ?? null,
+          createdAt: u._creationTime,
+        };
+      })
+    );
+    return enriched;
+  },
+});

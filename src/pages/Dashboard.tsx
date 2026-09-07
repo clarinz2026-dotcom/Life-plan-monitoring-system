@@ -75,10 +75,10 @@ function greeting() {
 }
 
 export default function Dashboard() {
-  const summary = useQuery(api.dashboard.summary);
-  const weeklyTrend = useQuery(api.dashboard.weeklyTrend);
-  const recentPayments = useQuery(api.dashboard.recentPayments);
-  const delinquent = useQuery(api.dashboard.delinquentContracts);
+  const summary = useQuery(api.dashboard.summary, {});
+  const weeklyTrend = useQuery(api.dashboard.weeklyTrend, {});
+  const recentPayments = useQuery(api.dashboard.recentPayments, {});
+  const delinquent = useQuery(api.dashboard.delinquentContracts, {});
   const updateDelinquency = useMutation(api.delinquency.updateAllContractStatuses);
   const [updatingDelinquency, setUpdatingDelinquency] = useState(false);
 
