@@ -30,20 +30,19 @@ export const create = mutation({
 });
 
 /**
- * Main office branch (authoritative address).
+ * Head office / flagship chapel (authoritative address).
  *
- * 2nd Floor, Gabrinez Bldg
- * Fortich St.
- * Malaybalay City, Bukidnon 8700
- * Philippines
+ * Head Office & Flagship Chapel
+ * 88 Evangelist Ave., Brgy. Old City
+ * Metro Manila, Philippines
  */
 export const MAIN_OFFICE = {
-  name: "Evangelist Funeral Services — Main Office",
-  code: "MBS-001",
-  address: "2nd Floor, Gabrinez Building",
-  city: "Malaybalay City",
-  province: "Bukidnon",
-  contactNumber: "(088) 500-0000",
+  name: "Evangelist Funeral Services — Head Office & Flagship Chapel",
+  code: "HQ-001",
+  address: "88 Evangelist Ave., Brgy. Old City",
+  city: "Metro Manila",
+  province: "Philippines",
+  contactNumber: "(02) 8-700-0000",
   managerId: null,
 } as const;
 

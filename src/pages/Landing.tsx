@@ -402,9 +402,9 @@ function NavHeader() {
               <Clock className="h-3 w-3 text-gold-soft" />
               Mon–Sat, 8:00 AM – 5:00 PM
             </span>
-            <span className="flex items-center gap-1.5 truncate max-w-[220px]">
+            <span className="flex items-center gap-1.5 truncate max-w-[260px]">
               <MapPin className="h-3 w-3 text-gold-soft" />
-              Main Office: Gabrinez Bldg, Fortich St., Malaybalay City, Bukidnon 8700
+              Head Office & Flagship Chapel: 88 Evangelist Ave., Brgy. Old City, Metro Manila
             </span>
           </div>
         </div>

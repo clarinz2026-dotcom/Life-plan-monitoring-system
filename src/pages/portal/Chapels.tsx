@@ -177,11 +177,11 @@ export default function Chapels() {
           </p>
         </div>
         <a
-          href="tel:0885000000"
+          href="tel:0287000000"
           className="inline-flex items-center gap-3 rounded-2xl bg-gold px-7 py-4 text-[16px] font-bold text-pine transition-transform hover:scale-[1.02]"
         >
           <Phone className="h-5 w-5" />
-          (088) 500-0000 · Main Office
+          (02) 8-700-0000 · Head Office
         </a>
       </div>
       </div>
