@@ -396,11 +396,15 @@ function NavHeader() {
           <div className="flex items-center gap-5 text-[11.5px]">
             <span className="flex items-center gap-1.5">
               <Phone className="h-3 w-3 text-gold-soft" />
-              24/7 Hotline: (02) 8-700-0000 · 0917 000 0000
+              24/7 Hotline: (088) 500-0000
             </span>
             <span className="flex items-center gap-1.5">
               <Clock className="h-3 w-3 text-gold-soft" />
               Mon–Sat, 8:00 AM – 5:00 PM
+            </span>
+            <span className="flex items-center gap-1.5 truncate max-w-[220px]">
+              <MapPin className="h-3 w-3 text-gold-soft" />
+              Main Office: Gabrinez Bldg, Fortich St., Malaybalay City, Bukidnon 8700
             </span>
           </div>
         </div>

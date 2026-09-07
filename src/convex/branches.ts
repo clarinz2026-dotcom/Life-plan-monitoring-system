@@ -30,6 +30,24 @@ export const create = mutation({
 });
 
 /**
+ * Main office branch (authoritative address).
+ *
+ * 2nd Floor, Gabrinez Bldg
+ * Fortich St.
+ * Malaybalay City, Bukidnon 8700
+ * Philippines
+ */
+export const MAIN_OFFICE = {
+  name: "Evangelist Funeral Services — Main Office",
+  code: "MBS-001",
+  address: "2nd Floor, Gabrinez Building",
+  city: "Malaybalay City",
+  province: "Bukidnon",
+  contactNumber: "(088) 500-0000",
+  managerId: null,
+} as const;
+
+/**
  * List all branches.
  */
 export const list = query({
