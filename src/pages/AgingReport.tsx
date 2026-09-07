@@ -29,7 +29,7 @@ function formatPHP(amount: number) {
 }
 
 export default function AgingReport() {
-  const clientsWithStatus = useQuery(api.clients.listWithStatus);
+  const clientsWithStatus = useQuery(api.clients.listWithStatus, {});
   const contracts = useQuery(api.contracts.list, {});
 
   // Group by computed status

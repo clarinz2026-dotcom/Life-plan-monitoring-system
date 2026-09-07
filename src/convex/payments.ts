@@ -25,11 +25,24 @@ export const list = query({
   args: {
     contractId: v.optional(v.id("contracts")),
     clientId: v.optional(v.id("clients")),
+    branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
     let payments;
 
-    if (args.contractId) {
+    if (args.branchId) {
+      payments = await ctx.db
+        .query("payments")
+        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .order("desc")
+        .collect();
+      if (args.contractId) {
+        payments = payments.filter((p) => String(p.contractId) === String(args.contractId));
+      }
+      if (args.clientId) {
+        payments = payments.filter((p) => String(p.clientId) === String(args.clientId));
+      }
+    } else if (args.contractId) {
       payments = await ctx.db
         .query("payments")
         .withIndex("by_contract", (q) =>
@@ -84,6 +97,10 @@ export const record = mutation({
     const client = await ctx.db.get(contract.clientId);
     if (!client) throw new Error("Client not found");
 
+    // Auto-assign branchId from contract or user
+    const currentUserDoc = await ctx.db.get(userId);
+    const branchId = contract.branchId ?? currentUserDoc?.branchId;
+
     // Insert payment
     const paymentId = await ctx.db.insert("payments", {
       contractId: args.contractId,
@@ -96,6 +113,7 @@ export const record = mutation({
       chequeNumber: args.chequeNumber,
       bankName: args.bankName,
       remarks: args.remarks,
+      branchId,
       recordedBy: userId,
       createdAt: Date.now(),
     });

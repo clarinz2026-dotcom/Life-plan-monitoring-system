@@ -22,6 +22,7 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format } from "date-fns";
 import { useState } from "react";
+import { useBranch } from "@/hooks/use-branch";
 
 const STATUS_LABELS: Record<string, string> = {
   current: "Current",
@@ -75,10 +76,11 @@ function greeting() {
 }
 
 export default function Dashboard() {
-  const summary = useQuery(api.dashboard.summary, {});
-  const weeklyTrend = useQuery(api.dashboard.weeklyTrend, {});
-  const recentPayments = useQuery(api.dashboard.recentPayments, {});
-  const delinquent = useQuery(api.dashboard.delinquentContracts, {});
+  const { queryBranchId, isBranchStaff, branchId } = useBranch();
+  const summary = useQuery(api.dashboard.summary, { branchId: queryBranchId });
+  const weeklyTrend = useQuery(api.dashboard.weeklyTrend, { branchId: queryBranchId });
+  const recentPayments = useQuery(api.dashboard.recentPayments, { branchId: queryBranchId });
+  const delinquent = useQuery(api.dashboard.delinquentContracts, { branchId: queryBranchId });
   const updateDelinquency = useMutation(api.delinquency.updateAllContractStatuses);
   const [updatingDelinquency, setUpdatingDelinquency] = useState(false);
 
@@ -100,6 +102,9 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  // For branch staff, show the branch context in the header
+  const branchName = isBranchStaff && branchId ? " — Branch View" : "";
 
   const dayChange =
     summary.todayAmount - summary.yesterdayAmount;

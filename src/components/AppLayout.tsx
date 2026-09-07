@@ -31,6 +31,8 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/BrandLogo";
+import { useBranch } from "@/hooks/use-branch";
+import { Building2 } from "lucide-react";
 
 const NAV_ITEMS = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
@@ -66,6 +68,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const roleData = useQuery(api.users.hasRole);
   const superAdminData = useQuery(api.users.hasSuperAdmin);
+  const { branchId, isBranchStaff } = useBranch();
+  const branches = useQuery(api.branches.list);
+  const userBranch = isBranchStaff && branchId ? branches?.find((b) => b._id === branchId) : null;
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
@@ -190,6 +195,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <p className="text-[12px] text-white/50">
                 {ROLE_LABELS[userRole] || userRole}
               </p>
+              {isBranchStaff && userBranch && (
+                <div className="mt-1.5 flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-1">
+                  <Building2 className="h-3 w-3 text-white/60" />
+                  <p className="text-[11px] text-white/70 truncate">
+                    {userBranch.name}
+                  </p>
+                </div>
+              )}
             </div>
           )}
           <Button
@@ -215,12 +228,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-[99999] flex items-center justify-between border-b border-border bg-sidebar px-4 py-3.5">
+      {/* Mobile top bar */}        <div className="md:hidden fixed top-0 left-0 right-0 z-[99999] flex items-center justify-between border-b border-border bg-sidebar px-4 py-3.5">
         <div className="flex items-center gap-3">
           <BrandLogo className="h-8 w-8 rounded-lg" />
           <div>
             <span className="font-bold text-[15px] text-white">Evangelist</span>
+            {isBranchStaff && userBranch && (
+              <span className="ml-2 inline-flex items-center gap-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/60">
+                <Building2 className="h-2.5 w-2.5" />
+                {userBranch.name}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">

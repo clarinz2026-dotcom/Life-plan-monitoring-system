@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { ScrollableTable } from "@/components/ScrollableTable";
 import { toast } from "sonner";
+import { useBranch } from "@/hooks/use-branch";
 
 const STATUS_LABELS: Record<string, string> = {
   current: "Current",
@@ -102,7 +103,8 @@ function getPageItems(
 }
 
 export default function Clients() {
-  const clientsWithStatus = useQuery(api.clients.listWithStatus, {});
+  const { queryBranchId, isBranchStaff } = useBranch();
+  const clientsWithStatus = useQuery(api.clients.listWithStatus, { branchId: queryBranchId });
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");

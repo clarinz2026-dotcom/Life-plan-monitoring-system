@@ -41,12 +41,19 @@ function computeDelinquencyStatus(
 export const list = query({
   args: {
     search: v.optional(v.string()),
+    branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
     const search = args.search?.toLowerCase().trim();
 
     let clients;
-    if (search) {
+    if (args.branchId) {
+      clients = await ctx.db
+        .query("clients")
+        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .order("desc")
+        .collect();
+    } else if (search) {
       // Search by last name
       clients = await ctx.db
         .query("clients")
@@ -64,6 +71,15 @@ export const list = query({
         .withIndex("by_createdAt")
         .order("desc")
         .collect();
+    }
+
+    if (search && args.branchId) {
+      clients = clients.filter(
+        (c) =>
+          c.lastName.toLowerCase().includes(search) ||
+          c.firstName.toLowerCase().includes(search) ||
+          (c.contactNumber || "").toLowerCase().includes(search)
+      );
     }
 
     return clients;
@@ -106,8 +122,13 @@ export const create = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    // Auto-assign branchId from the current user's profile
+    const currentUserDoc = await ctx.db.get(userId);
+    const branchId = currentUserDoc?.branchId;
+
     return await ctx.db.insert("clients", {
       ...args,
+      branchId,
       createdAt: Date.now(),
       createdBy: userId,
     });
@@ -264,13 +285,24 @@ export const bulkDelete = mutation({
  * Returns each client with their active contract and computed status.
  */
 export const listWithStatus = query({
-  args: {},
-  handler: async (ctx) => {
-    const clients = await ctx.db
-      .query("clients")
-      .withIndex("by_createdAt")
-      .order("desc")
-      .collect();
+  args: {
+    branchId: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    let clients;
+    if (args.branchId) {
+      clients = await ctx.db
+        .query("clients")
+        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .order("desc")
+        .collect();
+    } else {
+      clients = await ctx.db
+        .query("clients")
+        .withIndex("by_createdAt")
+        .order("desc")
+        .collect();
+    }
 
     const now = Date.now();
     const results = [];

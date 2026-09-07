@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useBranch } from "@/hooks/use-branch";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,8 +37,9 @@ function formatPHP(amount: number) {
 }
 
 export default function Payments() {
-  const payments = useQuery(api.payments.list, {});
-  const contracts = useQuery(api.contracts.list, {});
+  const { queryBranchId } = useBranch();
+  const payments = useQuery(api.payments.list, { branchId: queryBranchId });
+  const contracts = useQuery(api.contracts.list, { branchId: queryBranchId });
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const recordPayment = useMutation(api.payments.record);

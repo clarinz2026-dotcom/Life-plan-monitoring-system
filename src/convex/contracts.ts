@@ -27,11 +27,25 @@ export const list = query({
   args: {
     clientId: v.optional(v.id("clients")),
     status: v.optional(v.string()),
+    branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
     let contracts;
 
-    if (args.clientId) {
+    if (args.branchId) {
+      contracts = await ctx.db
+        .query("contracts")
+        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .order("desc")
+        .collect();
+      // Optionally narrow by client or status within the branch
+      if (args.clientId) {
+        contracts = contracts.filter((c) => String(c.clientId) === String(args.clientId));
+      }
+      if (args.status) {
+        contracts = contracts.filter((c) => c.contractStatus === args.status);
+      }
+    } else if (args.clientId) {
       contracts = await ctx.db
         .query("contracts")
         .withIndex("by_client", (q) => q.eq("clientId", args.clientId!))
@@ -93,8 +107,17 @@ export const create = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    // Auto-assign branchId from the current user's profile
+    const currentUserDoc = await ctx.db.get(userId);
+    const branchId = currentUserDoc?.branchId;
+
+    // Get client's branch if available
+    const clientDoc = await ctx.db.get(args.clientId);
+    const clientBranchId = clientDoc?.branchId;
+
     const contractId = await ctx.db.insert("contracts", {
       ...args,
+      branchId: branchId ?? clientBranchId ?? undefined,
       totalPaid: 0,
       contractStatus: "current",
       createdAt: Date.now(),

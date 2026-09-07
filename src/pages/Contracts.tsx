@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { useBranch } from "@/hooks/use-branch";
 import { useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +47,8 @@ const TABS = [
 ];
 
 export default function Contracts() {
-  const contracts = useQuery(api.contracts.list, {});
+  const { queryBranchId } = useBranch();
+  const contracts = useQuery(api.contracts.list, { branchId: queryBranchId });
   const navigate = useNavigate();
   const [filter, setFilter] = useState("all");
 
