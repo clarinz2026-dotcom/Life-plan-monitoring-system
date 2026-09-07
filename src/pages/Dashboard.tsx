@@ -82,6 +82,7 @@ export default function Dashboard() {
   const weeklyTrend = useQuery(api.dashboard.weeklyTrend, { branchId: queryBranchId });
   const recentPayments = useQuery(api.dashboard.recentPayments, { branchId: queryBranchId });
   const delinquent = useQuery(api.dashboard.delinquentContracts, { branchId: queryBranchId });
+  const branch = useQuery(api.branches.get, branchId ? { branchId } : "skip");
   const updateDelinquency = useMutation(api.delinquency.updateAllContractStatuses);
   const [updatingDelinquency, setUpdatingDelinquency] = useState(false);
 
@@ -104,8 +105,7 @@ export default function Dashboard() {
     );
   }
 
-  // Branch staff see a banner naming the branch whose data is shown
-  const branch = useQuery(api.branches.get, branchId ? { branchId } : "skip");
+
 
   const dayChange =
     summary.todayAmount - summary.yesterdayAmount;
