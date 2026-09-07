@@ -26,6 +26,7 @@ export default function Services() {
   const [serviceType, setServiceType] = useState(initialType);
   const [contactName, setContactName] = useState("");
   const [contactNumber, setContactNumber] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
   const [branchId, setBranchId] = useState<string>("");
   const [preferredDate, setPreferredDate] = useState("");
   const [message, setMessage] = useState("");
@@ -47,7 +48,11 @@ export default function Services() {
       if (!contactName) setContactName(`${c.firstName} ${c.lastName}`);
       if (!contactNumber) setContactNumber(c.contactNumber);
     }
-  }, [overview, contactName, contactNumber]);
+    // Prefill email from the signed-in auth account
+    if (overview?.email && !contactEmail) {
+      setContactEmail(overview.email);
+    }
+  }, [overview, contactName, contactNumber, contactEmail]);
 
   const activeBranches = (branches ?? []).filter((b) => b.isActive !== false);
 
@@ -69,6 +74,7 @@ export default function Services() {
         branchId: (branchId || undefined) as Id<"branches"> | undefined,
         contactName: contactName.trim(),
         contactNumber: contactNumber.trim(),
+        contactEmail: contactEmail.trim() || undefined,
         preferredDate: preferred,
         message: message.trim() || undefined,
       });
@@ -198,6 +204,18 @@ export default function Services() {
                 />
               </label>
             </div>
+
+            <label className="block">
+              <span className="text-[12px] font-bold text-ink">Email address (Gmail)</span>
+              <input
+                type="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="e.g. example@gmail.com"
+                inputMode="email"
+                className="mt-1.5 h-11 w-full rounded-xl border border-line bg-white px-3.5 text-[14px] outline-none transition-colors focus:border-evergreen"
+              />
+            </label>
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">

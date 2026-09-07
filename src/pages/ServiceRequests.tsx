@@ -8,6 +8,7 @@ import {
   ExternalLink,
   Filter,
   Link,
+  Mail,
   MapPin,
   MessageSquare,
   Phone,
@@ -46,6 +47,7 @@ type Request = {
   serviceType: string;
   contactName: string;
   contactNumber: string;
+  contactEmail?: string;
   preferredDate?: number;
   message?: string;
   status: string;
@@ -280,6 +282,12 @@ export default function ServiceRequests() {
                         <Phone className="h-3 w-3" />
                         {req.contactNumber}
                       </span>
+                      {req.contactEmail && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {req.contactEmail}
+                        </span>
+                      )}
                       {req.branch && (
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />

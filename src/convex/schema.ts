@@ -348,6 +348,7 @@ const schema = defineSchema(
       branchId: v.optional(v.id("branches")),
       contactName: v.string(),
       contactNumber: v.string(),
+      contactEmail: v.optional(v.string()),
       preferredDate: v.optional(v.number()),
       message: v.optional(v.string()),
       status: v.union(
