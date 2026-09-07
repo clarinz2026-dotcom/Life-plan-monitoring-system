@@ -364,6 +364,65 @@ export const staffResolveRequest = mutation({
   },
 });
 
+/**
+ * Progress a request forward: under_review → scheduled → completed.
+ */
+export const staffProgressRequest = mutation({
+  args: {
+    requestId: v.id("service_requests"),
+    action: v.union(v.literal("schedule"), v.literal("complete")),
+    staffNotes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated.");
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("User not found.");
+    const role = user.role;
+    if (role !== "super_admin" && role !== "ceo" && role !== "manager") {
+      throw new Error("Only managers and above can progress service requests.");
+    }
+
+    const request = await ctx.db.get(args.requestId);
+    if (!request) throw new Error("Request not found.");
+
+    let newStatus: "scheduled" | "completed";
+    if (args.action === "schedule") {
+      if (request.status !== "under_review") {
+        throw new Error("Only approved requests can be scheduled.");
+      }
+      newStatus = "scheduled";
+    } else {
+      if (request.status !== "scheduled") {
+        throw new Error("Only scheduled requests can be marked as completed.");
+      }
+      newStatus = "completed";
+    }
+
+    const updates: { status: typeof newStatus; staffNotes?: string } = { status: newStatus };
+    if (args.staffNotes) updates.staffNotes = args.staffNotes.trim();
+    await ctx.db.patch(args.requestId, updates);
+
+    const label = request.serviceType.replace(/_/g, " ");
+    const actionWord = args.action === "schedule" ? "scheduled" : "completed";
+    await ctx.db.insert("notifications", {
+      userId: request.userId,
+      type: "system",
+      title: `Request ${actionWord}: ${label}`,
+      message:
+        args.action === "schedule"
+          ? `Your ${label} request has been scheduled. Our staff will contact you with the details.`
+          : `Your ${label} request has been completed. Thank you for choosing Evangelist Funeral Services.`,
+      channel: "in_app",
+      status: "pending",
+      scheduledAt: Date.now(),
+      createdAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
 /** Cancel one of your own requests while it is still being reviewed. */
 export const cancelMyRequest = mutation({
   args: { requestId: v.id("service_requests") },

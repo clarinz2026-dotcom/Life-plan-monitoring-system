@@ -74,11 +74,34 @@ export default function ServiceRequests() {
   );
 
   const resolveRequest = useMutation(api.portal.staffResolveRequest as any);
+  const progressRequest = useMutation(api.portal.staffProgressRequest as any);
 
   const handleApprove = async (id: string) => {
     setProcessingId(id);
     try {
       await resolveRequest({ requestId: id, action: "approve" });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleSchedule = async (id: string) => {
+    setProcessingId(id);
+    try {
+      await progressRequest({ requestId: id, action: "schedule" });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleComplete = async (id: string) => {
+    setProcessingId(id);
+    try {
+      await progressRequest({ requestId: id, action: "complete" });
     } catch (e) {
       console.error(e);
     } finally {
@@ -403,6 +426,34 @@ export default function ServiceRequests() {
                             Approve
                           </Button>
                         </div>
+                      </div>
+                    )}
+
+                    {req.status === "under_review" && (
+                      <div className="flex gap-2 border-t border-border/50 pt-4">
+                        <Button
+                          size="sm"
+                          className="gap-1.5"
+                          disabled={processingId === req._id}
+                          onClick={() => handleSchedule(req._id)}
+                        >
+                          <Clock className="h-3.5 w-3.5" />
+                          Mark as Scheduled
+                        </Button>
+                      </div>
+                    )}
+
+                    {req.status === "scheduled" && (
+                      <div className="flex gap-2 border-t border-border/50 pt-4">
+                        <Button
+                          size="sm"
+                          className="gap-1.5 bg-green-600 hover:bg-green-700"
+                          disabled={processingId === req._id}
+                          onClick={() => handleComplete(req._id)}
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          Mark as Completed
+                        </Button>
                       </div>
                     )}
                   </div>
