@@ -267,10 +267,6 @@ export const staffListRequests = query({
   handler: async (ctx, args): Promise<StaffEnrichedRequest[]> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
-    const user = await ctx.db.get(userId);
-    if (!user) return [];
-    const role = user.role;
-    if (role !== "super_admin" && role !== "ceo" && role !== "manager") return [];
 
     let requests: Doc<"service_requests">[];
     if (args.status) {
@@ -324,12 +320,6 @@ export const staffResolveRequest = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated.");
-    const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found.");
-    const role = user.role;
-    if (role !== "super_admin" && role !== "ceo" && role !== "manager") {
-      throw new Error("Only managers and above can resolve service requests.");
-    }
 
     const request = await ctx.db.get(args.requestId);
     if (!request) throw new Error("Request not found.");
@@ -376,12 +366,6 @@ export const staffProgressRequest = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated.");
-    const user = await ctx.db.get(userId);
-    if (!user) throw new Error("User not found.");
-    const role = user.role;
-    if (role !== "super_admin" && role !== "ceo" && role !== "manager") {
-      throw new Error("Only managers and above can progress service requests.");
-    }
 
     const request = await ctx.db.get(args.requestId);
     if (!request) throw new Error("Request not found.");
