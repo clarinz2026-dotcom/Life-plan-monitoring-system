@@ -19,6 +19,18 @@ export const roleValidator = v.union(
   v.literal("manager"),
 );
 
+export const POSITION_LABELS: Record<string, string> = {
+  branch_manager: "Branch Manager",
+  collector: "Collector",
+  cashier: "Cashier",
+};
+
+const positionValidator = v.union(
+  v.literal("branch_manager"),
+  v.literal("collector"),
+  v.literal("cashier"),
+);
+
 // ─── Enum values ────────────────────────────────────────────────────────────
 export const CONTRACT_STATUSES = [
   "current",
@@ -78,6 +90,7 @@ const schema = defineSchema(
       isAnonymous: v.optional(v.boolean()),
       role: v.optional(roleValidator),
       branchId: v.optional(v.id("branches")),
+      position: v.optional(positionValidator),
     })
       .index("email", ["email"])
       .index("by_role", ["role"])

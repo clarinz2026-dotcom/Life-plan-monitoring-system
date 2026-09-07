@@ -81,6 +81,7 @@ export default function Branches() {
   const [assignForm, setAssignForm] = useState({
     userId: "",
     branchId: "",
+    position: "" as string,
   });
 
   const inputClass =
@@ -140,6 +141,9 @@ export default function Branches() {
         branchId: assignForm.branchId
           ? (assignForm.branchId as any)
           : undefined,
+        position: assignForm.position
+          ? (assignForm.position as any)
+          : undefined,
       });
       toast.success("User branch assignment updated!");
       setAssignOpen(false);
@@ -174,7 +178,7 @@ export default function Branches() {
   };
 
   const openAssign = () => {
-    setAssignForm({ userId: "", branchId: "" });
+    setAssignForm({ userId: "", branchId: "", position: "" });
     setAssignOpen(true);
   };
 
@@ -753,7 +757,7 @@ export default function Branches() {
                 <option value="">Select staff member...</option>
                 {users?.map((u) => (
                   <option key={u._id} value={u._id}>
-                    {u.name || u.email} ({u.role})
+                    {u.name || u.email} — {u.role}{u.position ? ` / ${u.position === "branch_manager" ? "Branch Manager" : u.position === "collector" ? "Collector" : "Cashier"}` : ""}{u.branchName ? ` @ ${u.branchName}` : " (unassigned)"}
                   </option>
                 ))}
               </select>
@@ -774,6 +778,22 @@ export default function Branches() {
                     {b.name} ({b.code})
                   </option>
                 ))}
+              </select>
+            </div>
+            <div>
+              <Label className="text-[14px]">Position *</Label>
+              <select
+                value={assignForm.position}
+                onChange={(e) =>
+                  setAssignForm({ ...assignForm, position: e.target.value })
+                }
+                className="text-base bg-background border border-border rounded-md h-11 px-3 w-full"
+                required
+              >
+                <option value="">Select position...</option>
+                <option value="branch_manager">Branch Manager</option>
+                <option value="collector">Collector</option>
+                <option value="cashier">Cashier</option>
               </select>
             </div>
             <Button

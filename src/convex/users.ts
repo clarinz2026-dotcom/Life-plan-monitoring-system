@@ -65,6 +65,8 @@ export const list = query({
       email: u.email,
       image: u.image,
       role: u.role ?? null,
+      branchId: u.branchId ?? null,
+      position: u.position ?? null,
       createdAt: u._creationTime,
     }));
   },
@@ -308,12 +310,17 @@ export const getCurrentUser = async (ctx: QueryCtx) => {
 };
 
 /**
- * Assign a user to a branch (CEO/Super Admin only).
+ * Assign a user to a branch with a position (CEO/Super Admin only).
  */
 export const assignBranch = mutation({
   args: {
     userId: v.id("users"),
     branchId: v.optional(v.id("branches")),
+    position: v.optional(v.union(
+      v.literal("branch_manager"),
+      v.literal("collector"),
+      v.literal("cashier"),
+    )),
   },
   handler: async (ctx, args) => {
     const currentUserId = await getAuthUserId(ctx);
@@ -328,18 +335,25 @@ export const assignBranch = mutation({
     if (!targetUser) throw new Error("User not found.");
 
     const oldBranchId = targetUser.branchId;
-    await ctx.db.patch(args.userId, { branchId: args.branchId ?? undefined });
+    const oldPosition = targetUser.position;
+    const patch: Record<string, unknown> = {};
+    if (args.branchId !== undefined) patch.branchId = args.branchId;
+    else patch.branchId = undefined;
+    if (args.position !== undefined) patch.position = args.position;
+    else patch.position = undefined;
+    await ctx.db.patch(args.userId, patch);
 
     // Audit log
+    const positionLabel = args.position === "branch_manager" ? "Branch Manager" : args.position === "collector" ? "Collector" : args.position === "cashier" ? "Cashier" : "none";
     await ctx.db.insert("audit_log", {
       action: "status_change",
       entityType: "client",
       entityId: args.userId,
       userId: currentUserId,
       userName: (currentUserDoc?.name ?? currentUserDoc?.email) || "Unknown",
-      description: `Branch assigned for ${targetUser.name ?? targetUser.email}: ${args.branchId ?? "none"} (by ${viewerRole})`,
-      oldValues: { branchId: oldBranchId ?? null },
-      newValues: { branchId: args.branchId ?? null },
+      description: `Branch & position assigned for ${targetUser.name ?? targetUser.email}: ${args.branchId ?? "no branch"} / ${positionLabel} (by ${viewerRole})`,
+      oldValues: { branchId: oldBranchId ?? null, position: oldPosition ?? null },
+      newValues: { branchId: args.branchId ?? null, position: args.position ?? null },
       timestamp: Date.now(),
     });
 
@@ -374,6 +388,7 @@ export const listWithBranches = query({
           role: u.role ?? null,
           branchId: u.branchId ?? null,
           branchName: branch?.name ?? null,
+          position: u.position ?? null,
           createdAt: u._creationTime,
         };
       })
