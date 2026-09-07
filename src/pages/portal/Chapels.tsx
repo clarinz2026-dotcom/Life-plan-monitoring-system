@@ -170,7 +170,7 @@ export default function Chapels() {
             <h3 className="mt-2 font-display text-2xl font-semibold leading-snug">
               We are always awake so you don’t have to be.
             </h3>
-            <p className="mt-2 text-[13px] leading-relaxed text-white/70"          >
+            <p className="mt-2 text-[13px] leading-relaxed text-white/70">
             Call any time — our chapel staff handle transport, embalming,
             documentation guidance, and wake setup 24 hours a day, 365 days a
             year.
@@ -181,7 +181,7 @@ export default function Chapels() {
           className="inline-flex items-center gap-3 rounded-2xl bg-gold px-7 py-4 text-[16px] font-bold text-pine transition-transform hover:scale-[1.02]"
         >
           <Phone className="h-5 w-5" />
-          (02) 8-700-0000 · Head Office
+          (02) 8-700-0000 · Main Office
         </a>
       </div>
       </div>

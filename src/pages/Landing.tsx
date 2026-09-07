@@ -404,7 +404,7 @@ function NavHeader() {
             </span>
             <span className="flex items-center gap-1.5 truncate max-w-[260px]">
               <MapPin className="h-3 w-3 text-gold-soft" />
-              Head Office & Flagship Chapel: 88 Evangelist Ave., Brgy. Old City, Metro Manila
+              Main Office: 2nd Floor, Gabrinez Bldg, Fortich St., Malaybalay City, Bukidnon 8700
             </span>
           </div>
         </div>
