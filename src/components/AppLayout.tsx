@@ -44,6 +44,7 @@ const NAV_ITEMS = [
   { to: "/reconciliation", icon: Calculator, label: "Reconciliation", roles: ["super_admin", "ceo", "manager", "cashier"] },
   { to: "/death-claims", icon: FileX, label: "Death Claims", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
   { to: "/aging-report", icon: AlertTriangle, label: "Aging Report", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
+  { to: "/service-requests", icon: Bell, label: "Service Requests", roles: ["super_admin", "ceo", "manager"] },
   { to: "/notifications", icon: Bell, label: "Notifications", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
   { to: "/export", icon: Download, label: "Export Data", roles: ["super_admin", "ceo", "manager"] },
   { to: "/role-management", icon: UserCog, label: "Roles", roles: ["super_admin", "ceo"] },

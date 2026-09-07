@@ -238,6 +238,132 @@ export const submitRequest = mutation({
   },
 });
 
+/**
+ * ─── Staff-facing endpoints ────────────────────────────────────────────────
+ */
+
+type StaffEnrichedRequest = Doc<"service_requests"> & {
+  branch: RequestBranch | null;
+  userEmail: string | null;
+  userName: string | null;
+};
+
+/**
+ * List all service requests (staff view), newest first.
+ * Optional `status` filter.
+ */
+export const staffListRequests = query({
+  args: {
+    status: v.optional(
+      v.union(
+        v.literal("submitted"),
+        v.literal("under_review"),
+        v.literal("scheduled"),
+        v.literal("completed"),
+        v.literal("cancelled"),
+      )
+    ),
+  },
+  handler: async (ctx, args): Promise<StaffEnrichedRequest[]> => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    const user = await ctx.db.get(userId);
+    if (!user) return [];
+    const role = user.role;
+    if (role !== "super_admin" && role !== "ceo" && role !== "manager") return [];
+
+    let requests: Doc<"service_requests">[];
+    if (args.status) {
+      requests = await ctx.db
+        .query("service_requests")
+        .withIndex("by_status", (q) => q.eq("status", args.status!))
+        .order("desc")
+        .collect();
+    } else {
+      requests = await ctx.db
+        .query("service_requests")
+        .withIndex("by_createdAt")
+        .order("desc")
+        .collect();
+    }
+
+    const enriched: StaffEnrichedRequest[] = [];
+    for (const r of requests) {
+      const branch = r.branchId ? await ctx.db.get(r.branchId) : null;
+      const reqUser = await ctx.db.get(r.userId);
+      enriched.push({
+        ...r,
+        branch: branch
+          ? {
+              name: branch.name,
+              city: branch.city,
+              province: branch.province,
+              address: branch.address,
+              contactNumber: branch.contactNumber ?? null,
+            }
+          : null,
+        userEmail: reqUser?.email ?? null,
+        userName: reqUser?.name ?? null,
+      });
+    }
+    return enriched;
+  },
+});
+
+/**
+ * Approve or decline a service request (staff action).
+ * Sets status to `under_review` (approve) or `cancelled` (decline).
+ * Optionally sets staffNotes.
+ */
+export const staffResolveRequest = mutation({
+  args: {
+    requestId: v.id("service_requests"),
+    action: v.union(v.literal("approve"), v.literal("decline")),
+    staffNotes: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated.");
+    const user = await ctx.db.get(userId);
+    if (!user) throw new Error("User not found.");
+    const role = user.role;
+    if (role !== "super_admin" && role !== "ceo" && role !== "manager") {
+      throw new Error("Only managers and above can resolve service requests.");
+    }
+
+    const request = await ctx.db.get(args.requestId);
+    if (!request) throw new Error("Request not found.");
+    if (request.status !== "submitted" && request.status !== "under_review") {
+      throw new Error("This request has already been resolved.");
+    }
+
+    const newStatus = args.action === "approve" ? "under_review" : "cancelled";
+    const updates: { status: typeof newStatus; staffNotes?: string } = { status: newStatus };
+    if (args.staffNotes) updates.staffNotes = args.staffNotes.trim();
+
+    await ctx.db.patch(args.requestId, updates);
+
+    // Notify the requesting client
+    const label = request.serviceType.replace(/_/g, " ");
+    const actionWord = args.action === "approve" ? "approved" : "declined";
+    await ctx.db.insert("notifications", {
+      userId: request.userId,
+      type: "system",
+      title: `Request ${actionWord}: ${label}`,
+      message:
+        args.action === "approve"
+          ? `Your ${label} request has been approved and is now under review. Our staff will contact you shortly.`
+          : `Your ${label} request has been declined.${args.staffNotes ? ` Reason: ${args.staffNotes}` : ""}`,
+      channel: "in_app",
+      status: "pending",
+      scheduledAt: Date.now(),
+      createdAt: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
 /** Cancel one of your own requests while it is still being reviewed. */
 export const cancelMyRequest = mutation({
   args: { requestId: v.id("service_requests") },
