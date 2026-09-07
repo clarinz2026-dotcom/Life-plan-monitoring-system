@@ -130,7 +130,7 @@ export default function ServiceRequests() {
             color: "text-amber-600",
           },
           {
-            label: "Under Review",
+            label: "Approved",
             value: (counts ?? []).filter((r: Request) => r.status === "under_review").length,
             color: "text-blue-600",
           },
@@ -165,7 +165,7 @@ export default function ServiceRequests() {
         {[
           { value: "submitted", label: "Pending" },
           { value: "all", label: "All" },
-          { value: "under_review", label: "Under Review" },
+          { value: "under_review", label: "Approved" },
           { value: "completed", label: "Completed" },
           { value: "cancelled", label: "Declined" },
         ].map((tab) => (
@@ -239,7 +239,7 @@ export default function ServiceRequests() {
                       <span
                         className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLES[req.status] ?? ""}`}
                       >
-                        {req.status.replace(/_/g, " ")}
+                        {req.status === "under_review" ? "approved" : req.status.replace(/_/g, " ")}
                       </span>
                       {isAccountLink && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700 border border-blue-200">

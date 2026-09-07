@@ -352,7 +352,7 @@ export const staffResolveRequest = mutation({
       title: `Request ${actionWord}: ${label}`,
       message:
         args.action === "approve"
-          ? `Your ${label} request has been approved and is now under review. Our staff will contact you shortly.`
+          ? `Your ${label} request has been approved. Our staff will contact you shortly.`
           : `Your ${label} request has been declined.${args.staffNotes ? ` Reason: ${args.staffNotes}` : ""}`,
       channel: "in_app",
       status: "pending",

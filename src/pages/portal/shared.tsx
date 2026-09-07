@@ -102,8 +102,8 @@ export const REQUEST_PILL: Record<string, { label: string; cls: string }> = {
     cls: "border-sky-300 bg-sky-50 text-sky-800",
   },
   under_review: {
-    label: "Under Review",
-    cls: "border-amber-300 bg-amber-50 text-amber-800",
+    label: "Approved",
+    cls: "border-blue-300 bg-blue-50 text-blue-800",
   },
   scheduled: {
     label: "Scheduled",
