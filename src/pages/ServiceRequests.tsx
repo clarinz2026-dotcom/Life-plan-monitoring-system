@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import {
   Check,
@@ -69,6 +70,8 @@ export default function ServiceRequests() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [declineNotes, setDeclineNotes] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [linkClientId, setLinkClientId] = useState<string>("");
+  const [clientSearch, setClientSearch] = useState("");
 
   const requests = useQuery(
     api.portal.staffListRequests as any,
@@ -77,6 +80,8 @@ export default function ServiceRequests() {
 
   const resolveRequest = useMutation(api.portal.staffResolveRequest as any);
   const progressRequest = useMutation(api.portal.staffProgressRequest as any);
+  const linkAccount = useMutation(api.portal.staffLinkAccount as any);
+  const clients = useQuery(api.clients.list as any, { search: clientSearch || undefined });
 
   const handleApprove = async (id: string) => {
     setProcessingId(id);
@@ -108,6 +113,27 @@ export default function ServiceRequests() {
       console.error(e);
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  const filteredClients = useMemo(() => {
+    if (!clients) return [];
+    return clients.slice(0, 20);
+  }, [clients]);
+
+  const handleLinkAccount = async (requestId: string, clientId: string) => {
+    setProcessingId(requestId);
+    try {
+      await linkAccount({
+        requestId: requestId as Id<"service_requests">,
+        clientId: clientId as Id<"clients">,
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setProcessingId(null);
+      setLinkClientId("");
+      setClientSearch("");
     }
   };
 
@@ -399,7 +425,83 @@ export default function ServiceRequests() {
                     )}
 
                     {/* Action buttons */}
-                    {isPending && (
+                    {isPending && isAccountLink && (
+                      <div className="flex flex-col gap-3 border-t border-border/50 pt-4">
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono mb-1.5">
+                            Link to client record *
+                          </p>
+                          <input
+                            type="text"
+                            value={clientSearch}
+                            onChange={(e) => {
+                              setClientSearch(e.target.value);
+                              setLinkClientId("");
+                            }}
+                            placeholder="Search by name or phone..."
+                            className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          />
+                          {clientSearch && filteredClients.length > 0 && !linkClientId && (
+                            <div className="mt-1 max-h-40 overflow-y-auto rounded-lg border border-border bg-white shadow-sm">
+                              {filteredClients.map((c: any) => (
+                                <button
+                                  key={c._id}
+                                  type="button"
+                                  onClick={() => {
+                                    setLinkClientId(c._id);
+                                    setClientSearch(`${c.lastName}, ${c.firstName} — ${c.contactNumber}`);
+                                  }}
+                                  className="flex w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-muted/50 transition-colors"
+                                >
+                                  <span className="font-medium">
+                                    {c.lastName}, {c.firstName}{c.middleName ? ` ${c.middleName}` : ""}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground font-mono">
+                                    {c.contactNumber}
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                          <div className="flex-1">
+                            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono mb-1.5">
+                              Staff Notes (optional)
+                            </p>
+                            <textarea
+                              value={declineNotes}
+                              onChange={(e) => setDeclineNotes(e.target.value)}
+                              placeholder="Add a note for the client (shown on decline)..."
+                              rows={2}
+                              className="w-full rounded-lg border border-border bg-white px-3 py-2 text-sm placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            />
+                          </div>
+                          <div className="flex gap-2 shrink-0">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                              disabled={processingId === req._id}
+                              onClick={() => handleDecline(req._id)}
+                            >
+                              <ThumbsDown className="h-3.5 w-3.5" />
+                              Decline
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="gap-1.5"
+                              disabled={processingId === req._id || !linkClientId}
+                              onClick={() => linkClientId && handleLinkAccount(req._id, linkClientId)}
+                            >
+                              <Link className="h-3.5 w-3.5" />
+                              Link Account
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {isPending && !isAccountLink && (
                       <div className="flex flex-col gap-3 border-t border-border/50 pt-4 sm:flex-row sm:items-end">
                         <div className="flex-1">
                           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono mb-1.5">

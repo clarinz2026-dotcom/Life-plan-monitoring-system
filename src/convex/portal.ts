@@ -409,6 +409,61 @@ export const staffProgressRequest = mutation({
   },
 });
 
+/**
+ * Link a portal user to a client record (account linking).
+ * Updates the client's email to match the requesting user's auth email,
+ * marks the request as completed, and notifies the client.
+ */
+export const staffLinkAccount = mutation({
+  args: {
+    requestId: v.id("service_requests"),
+    clientId: v.id("clients"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated.");
+
+    const request = await ctx.db.get(args.requestId);
+    if (!request) throw new Error("Request not found.");
+    if (request.serviceType !== "account_link") {
+      throw new Error("This request is not an account linking request.");
+    }
+
+    const client = await ctx.db.get(args.clientId);
+    if (!client) throw new Error("Client record not found.");
+
+    // Get the requesting user's auth email
+    const requestUser = await ctx.db.get(request.userId);
+    const userEmail = (requestUser?.email ?? "").trim().toLowerCase();
+    if (!userEmail) {
+      throw new Error("The requesting user has no email on their auth account.");
+    }
+
+    // Update the client record's email to match the user's auth email
+    await ctx.db.patch(args.clientId, { email: userEmail });
+
+    // Mark the request as completed
+    await ctx.db.patch(args.requestId, {
+      status: "completed",
+      staffNotes: `Account linked: ${client.firstName} ${client.lastName} (${client.contactNumber}) → ${userEmail}`,
+    });
+
+    // Notify the requesting client
+    await ctx.db.insert("notifications", {
+      userId: request.userId,
+      type: "system",
+      title: "Account linked successfully",
+      message: `Your account has been linked to ${client.firstName} ${client.lastName}'s plan records. Refresh your portal to see your plans and payments.`,
+      channel: "in_app",
+      status: "pending",
+      scheduledAt: Date.now(),
+      createdAt: Date.now(),
+    });
+
+    return { success: true, clientName: `${client.firstName} ${client.lastName}` };
+  },
+});
+
 /** Cancel one of your own requests while it is still being reviewed. */
 export const cancelMyRequest = mutation({
   args: { requestId: v.id("service_requests") },
