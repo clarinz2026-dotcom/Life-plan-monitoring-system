@@ -30,7 +30,7 @@ const SERVICE_LABELS: Record<string, string> = {
   death_claim: "Death Claim Filing",
   payment_assistance: "Payment Assistance",
   receipt_copy: "Receipt / SOA Copy",
-  account_linking: "Account Linking",
+  account_link: "Account Linking",
   grief_support: "Grief Support",
   general_inquiry: "General Inquiry",
 };
@@ -259,7 +259,7 @@ export default function ServiceRequests() {
         <div className="space-y-3">
           {rows.map((req) => {
             const expanded = expandedId === req._id;
-            const isAccountLink = req.serviceType === "account_linking";
+            const isAccountLink = req.serviceType === "account_link";
             const isPending = req.status === "submitted";
 
             return (
