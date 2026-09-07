@@ -1,15 +1,27 @@
+import { v } from "convex/values";
 import { query } from "./_generated/server";
 
 /**
- * Dashboard summary stats for the main overview.
+ * Dashboard summary stats — optionally filtered by branchId.
+ * Pass branchId: undefined or skip for "all branches" view.
  */
 export const summary = query({
-  handler: async (ctx) => {
-    // Count clients
-    const clients = await ctx.db.query("clients").collect();
+  args: {
+    branchId: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    // ── Clients ──
+    let clients;
+    if (args.branchId) {
+      clients = await ctx.db
+        .query("clients")
+        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .collect();
+    } else {
+      clients = await ctx.db.query("clients").collect();
+    }
     const totalClients = clients.length;
 
-    // New clients this month
     const monthStart = new Date(
       new Date().getFullYear(),
       new Date().getMonth(),
@@ -19,8 +31,16 @@ export const summary = query({
       (c) => c.createdAt >= monthStart
     ).length;
 
-    // Count contracts by status
-    const contracts = await ctx.db.query("contracts").collect();
+    // ── Contracts ──
+    let contracts;
+    if (args.branchId) {
+      contracts = await ctx.db
+        .query("contracts")
+        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .collect();
+    } else {
+      contracts = await ctx.db.query("contracts").collect();
+    }
     const contractsByStatus: Record<string, number> = {};
     let totalContractValue = 0;
     let totalCollected = 0;
@@ -34,35 +54,38 @@ export const summary = query({
       if (c.contractStatus === "fully_paid") fullyPaidCount++;
     }
 
-    // Collection rate (0-100)
     const collectionRate =
       totalContractValue > 0
         ? Math.min(Math.round((totalCollected / totalContractValue) * 100), 100)
         : 0;
 
-    // Total payments
-    const payments = await ctx.db.query("payments").collect();
+    // ── Payments ──
+    let payments;
+    if (args.branchId) {
+      payments = await ctx.db
+        .query("payments")
+        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .collect();
+    } else {
+      payments = await ctx.db.query("payments").collect();
+    }
     const totalPayments = payments.length;
     const totalPaymentAmount = payments.reduce((sum, p) => sum + p.amount, 0);
 
-    // Today's payments
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStart = today.getTime();
     const todayPayments = payments.filter((p) => p.paymentDate >= todayStart);
     const todayAmount = todayPayments.reduce((sum, p) => sum + p.amount, 0);
 
-    // This month's payments
     const monthPayments = payments.filter((p) => p.paymentDate >= monthStart);
     const monthAmount = monthPayments.reduce((sum, p) => sum + p.amount, 0);
 
-    // Yesterday's amount (for day-over-day comparison)
     const yesterdayStart = todayStart - 24 * 60 * 60 * 1000;
     const yesterdayAmount = payments
       .filter((p) => p.paymentDate >= yesterdayStart && p.paymentDate < todayStart)
       .reduce((sum, p) => sum + p.amount, 0);
 
-    // Payment channel breakdown (this month)
     const byChannel: Record<string, { amount: number; count: number }> = {};
     for (const p of monthPayments) {
       const ch = p.paymentChannel;
@@ -93,11 +116,22 @@ export const summary = query({
 });
 
 /**
- * Collections for the last 7 days (for the mini trend chart).
+ * Collections for the last 7 days — optionally filtered by branch.
  */
 export const weeklyTrend = query({
-  handler: async (ctx) => {
-    const payments = await ctx.db.query("payments").collect();
+  args: {
+    branchId: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    let payments;
+    if (args.branchId) {
+      payments = await ctx.db
+        .query("payments")
+        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .collect();
+    } else {
+      payments = await ctx.db.query("payments").collect();
+    }
 
     const days: Array<{ label: string; amount: number; count: number }> = [];
     const now = new Date();
@@ -125,15 +159,26 @@ export const weeklyTrend = query({
 });
 
 /**
- * Recent activity: latest payments across the system.
+ * Recent payments — optionally filtered by branch.
  */
 export const recentPayments = query({
-  args: {},
-  handler: async (ctx) => {
-    const payments = await ctx.db
-      .query("payments")
-      .order("desc")
-      .take(20);
+  args: {
+    branchId: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    let payments;
+    if (args.branchId) {
+      payments = await ctx.db
+        .query("payments")
+        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .order("desc")
+        .take(20);
+    } else {
+      payments = await ctx.db
+        .query("payments")
+        .order("desc")
+        .take(20);
+    }
 
     const enriched = await Promise.all(
       payments.map(async (p) => {
@@ -148,10 +193,13 @@ export const recentPayments = query({
 });
 
 /**
- * Upcoming delinquent contracts (for alerts).
+ * Delinquent contracts — optionally filtered by branch.
  */
 export const delinquentContracts = query({
-  handler: async (ctx) => {
+  args: {
+    branchId: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
     const statuses = [
       "delinquent_30",
       "delinquent_60",
@@ -161,10 +209,20 @@ export const delinquentContracts = query({
 
     const results = [];
     for (const status of statuses) {
-      const contracts = await ctx.db
-        .query("contracts")
-        .withIndex("by_status", (q) => q.eq("contractStatus", status))
-        .collect();
+      let contracts;
+      if (args.branchId) {
+        // Fetch all contracts of this status, then filter by branch
+        const all = await ctx.db
+          .query("contracts")
+          .withIndex("by_status", (q) => q.eq("contractStatus", status))
+          .collect();
+        contracts = all.filter((c) => c.branchId === args.branchId);
+      } else {
+        contracts = await ctx.db
+          .query("contracts")
+          .withIndex("by_status", (q) => q.eq("contractStatus", status))
+          .collect();
+      }
 
       for (const c of contracts) {
         const client = await ctx.db.get(c.clientId);
@@ -172,7 +230,6 @@ export const delinquentContracts = query({
       }
     }
 
-    // Most severe first (lapsed > 90 > 60 > 30)
     const severity: Record<string, number> = {
       lapsed: 4,
       delinquent_90: 3,

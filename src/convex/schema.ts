@@ -99,12 +99,14 @@ const schema = defineSchema(
       beneficiaryRelationship: v.string(),
       beneficiaryContact: v.optional(v.string()),
       notes: v.optional(v.string()),
+      branchId: v.optional(v.id("branches")),
       createdAt: v.number(),
       createdBy: v.id("users"),
     })
       .index("by_lastName", ["lastName"])
       .index("by_createdAt", ["createdAt"])
-      .index("by_email", ["email"]),
+      .index("by_email", ["email"])
+      .index("by_branch", ["branchId"]),
 
     // Contracts / plans
     contracts: defineTable({
@@ -118,12 +120,14 @@ const schema = defineSchema(
       startDate: v.number(),
       maturityDate: v.optional(v.number()),
       assignedAgent: v.optional(v.id("users")),
+      branchId: v.optional(v.id("branches")),
       createdAt: v.number(),
       createdBy: v.id("users"),
     })
       .index("by_client", ["clientId"])
       .index("by_status", ["contractStatus"])
-      .index("by_contractNumber", ["contractNumber"]),
+      .index("by_contractNumber", ["contractNumber"])
+      .index("by_branch", ["branchId"]),
 
     // Plan catalog (e.g. Isidore, Gabriel, Raphael, Michael).
     // price = current MONTHLY amortization; oldPrice = legacy monthly rate
@@ -150,13 +154,15 @@ const schema = defineSchema(
       chequeNumber: v.optional(v.string()),
       bankName: v.optional(v.string()),
       remarks: v.optional(v.string()),
+      branchId: v.optional(v.id("branches")),
       recordedBy: v.id("users"),
       createdAt: v.number(),
     })
       .index("by_contract", ["contractId"])
       .index("by_client", ["clientId"])
       .index("by_paymentDate", ["paymentDate"])
-      .index("by_orNumber", ["orNumber"]),
+      .index("by_orNumber", ["orNumber"])
+      .index("by_branch", ["branchId"]),
 
     // Audit log
     audit_log: defineTable({
