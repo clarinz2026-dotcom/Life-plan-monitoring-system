@@ -25,6 +25,7 @@ import {
   Wallet,
   Target,
   BarChart3,
+  Database,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollableTable } from "@/components/ScrollableTable";
@@ -53,6 +54,7 @@ export default function Branches() {
   const updateBranch = useMutation(api.branches.update);
   const removeBranch = useMutation(api.branches.remove);
   const assignBranch = useMutation(api.users.assignBranch);
+  const assignToBranch = useMutation(api.branches.assignToBranch);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -83,6 +85,10 @@ export default function Branches() {
     branchId: "",
     position: "" as string,
   });
+
+  const [backfillOpen, setBackfillOpen] = useState(false);
+  const [backfillBranchId, setBackfillBranchId] = useState("");
+  const [backfilling, setBackfilling] = useState(false);
 
   const inputClass =
     "text-base bg-background border-border h-11 focus-visible:ring-ring";
@@ -182,6 +188,29 @@ export default function Branches() {
     setAssignOpen(true);
   };
 
+  const handleBackfill = async () => {
+    if (!backfillBranchId) {
+      toast.error("Select a target branch first.");
+      return;
+    }
+    setBackfilling(true);
+    try {
+      const result = await assignToBranch({
+        branchId: backfillBranchId as any,
+        assignUnassigned: true,
+      });
+      toast.success(
+        `Backfilled ${result.clients} client(s), ${result.contracts} contract(s), ${result.payments} payment(s), ${result.receipts} receipt(s) to the selected branch.`
+      );
+      setBackfillOpen(false);
+      setBackfillBranchId("");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to backfill records");
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
   const totalClients =
     branchSummary?.reduce((s, b) => s + b.clientCount, 0) ?? 0;
   const totalContracts =
@@ -218,6 +247,15 @@ export default function Branches() {
           >
             <Users className="h-4 w-4" />
             <span className="hidden sm:inline">Assign Staff</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="default"
+            className="gap-2 h-11 px-4 text-[15px]"
+            onClick={() => setBackfillOpen(true)}
+          >
+            <Database className="h-4 w-4" />
+            <span className="hidden sm:inline">Backfill Records</span>
           </Button>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
@@ -318,6 +356,48 @@ export default function Branches() {
                   Create Branch
                 </Button>
               </form>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={backfillOpen} onOpenChange={setBackfillOpen}>
+            <DialogContent className="max-w-md mx-2 sm:mx-0">
+              <DialogHeader>
+                <DialogTitle className="text-[15px] font-semibold">
+                  &gt; Backfill Legacy Records
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4 py-2">
+                <div>
+                  <Label className="text-[13px]">Target Branch *</Label>
+                  <select
+                    value={backfillBranchId}
+                    onChange={(e) => setBackfillBranchId(e.target.value)}
+                    className="w-full h-11 rounded-md border border-border bg-background px-3 text-[14px] mt-1"
+                  >
+                    <option value="">Select a branch…</option>
+                    {branches?.map((b) => (
+                      <option key={b._id} value={b._id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="text-[13px] text-muted-foreground leading-relaxed">
+                  Assigns every client, contract, payment, and receipt that has
+                  no branch yet (legacy or bulk-imported records) to the
+                  selected branch, so they appear in that branch&apos;s filtered
+                  views.
+                </p>
+                <Button
+                  onClick={handleBackfill}
+                  disabled={backfilling || !backfillBranchId}
+                  className="w-full h-11"
+                >
+                  {backfilling
+                    ? "Assigning…"
+                    : "Assign All Unassigned Records"}
+                </Button>
+              </div>
             </DialogContent>
           </Dialog>
         </div>

@@ -18,6 +18,7 @@ import {
   Target,
   CheckCircle2,
   UserPlus,
+  Building2,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format } from "date-fns";
@@ -103,8 +104,8 @@ export default function Dashboard() {
     );
   }
 
-  // For branch staff, show the branch context in the header
-  const branchName = isBranchStaff && branchId ? " — Branch View" : "";
+  // Branch staff see a banner naming the branch whose data is shown
+  const branch = useQuery(api.branches.get, branchId ? { branchId } : "skip");
 
   const dayChange =
     summary.todayAmount - summary.yesterdayAmount;
@@ -149,6 +150,21 @@ export default function Dashboard() {
           {updatingDelinquency ? "Checking..." : "Check Late Accounts"}
         </Button>
       </div>
+
+      {/* Branch context banner (branch staff only) */}
+      {isBranchStaff && branch && (
+        <div className="flex items-center gap-3 rounded-xl border border-terminal-green/20 bg-terminal-green/10 px-4 py-3">
+          <Building2 className="h-5 w-5 text-terminal-green shrink-0" />
+          <div className="min-w-0">
+            <p className="text-[14px] font-semibold text-terminal-green truncate">
+              {branch.name}
+            </p>
+            <p className="text-[12px] text-muted-foreground">
+              You are viewing this branch only — {branch.city}, {branch.province}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Hero: Today's collections + day comparison */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">

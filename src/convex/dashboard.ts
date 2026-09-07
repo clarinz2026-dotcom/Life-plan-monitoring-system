@@ -1,5 +1,6 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
+import { resolveBranchFilter } from "./access";
 
 /**
  * Dashboard summary stats — optionally filtered by branchId.
@@ -10,12 +11,14 @@ export const summary = query({
     branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
+
     // ── Clients ──
     let clients;
-    if (args.branchId) {
+    if (branchId) {
       clients = await ctx.db
         .query("clients")
-        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .withIndex("by_branch", (q) => q.eq("branchId", branchId!))
         .collect();
     } else {
       clients = await ctx.db.query("clients").collect();
@@ -33,10 +36,10 @@ export const summary = query({
 
     // ── Contracts ──
     let contracts;
-    if (args.branchId) {
+    if (branchId) {
       contracts = await ctx.db
         .query("contracts")
-        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .withIndex("by_branch", (q) => q.eq("branchId", branchId!))
         .collect();
     } else {
       contracts = await ctx.db.query("contracts").collect();
@@ -61,10 +64,10 @@ export const summary = query({
 
     // ── Payments ──
     let payments;
-    if (args.branchId) {
+    if (branchId) {
       payments = await ctx.db
         .query("payments")
-        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .withIndex("by_branch", (q) => q.eq("branchId", branchId!))
         .collect();
     } else {
       payments = await ctx.db.query("payments").collect();
@@ -123,11 +126,12 @@ export const weeklyTrend = query({
     branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
     let payments;
-    if (args.branchId) {
+    if (branchId) {
       payments = await ctx.db
         .query("payments")
-        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .withIndex("by_branch", (q) => q.eq("branchId", branchId!))
         .collect();
     } else {
       payments = await ctx.db.query("payments").collect();
@@ -166,11 +170,12 @@ export const recentPayments = query({
     branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
     let payments;
-    if (args.branchId) {
+    if (branchId) {
       payments = await ctx.db
         .query("payments")
-        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .withIndex("by_branch", (q) => q.eq("branchId", branchId!))
         .order("desc")
         .take(20);
     } else {
@@ -200,6 +205,7 @@ export const delinquentContracts = query({
     branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
     const statuses = [
       "delinquent_30",
       "delinquent_60",
@@ -210,13 +216,13 @@ export const delinquentContracts = query({
     const results = [];
     for (const status of statuses) {
       let contracts;
-      if (args.branchId) {
+      if (branchId) {
         // Fetch all contracts of this status, then filter by branch
         const all = await ctx.db
           .query("contracts")
           .withIndex("by_status", (q) => q.eq("contractStatus", status))
           .collect();
-        contracts = all.filter((c) => c.branchId === args.branchId);
+        contracts = all.filter((c) => c.branchId === branchId);
       } else {
         contracts = await ctx.db
           .query("contracts")

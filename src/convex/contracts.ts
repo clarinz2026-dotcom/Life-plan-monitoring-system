@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { assertCanAccessRecord, resolveBranchFilter } from "./access";
 
 function formatPHP(amount: number) {
   return new Intl.NumberFormat("en-PH", {
@@ -30,12 +31,13 @@ export const list = query({
     branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
     let contracts;
 
-    if (args.branchId) {
+    if (branchId) {
       contracts = await ctx.db
         .query("contracts")
-        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .withIndex("by_branch", (q) => q.eq("branchId", branchId!))
         .order("desc")
         .collect();
       // Optionally narrow by client or status within the branch
@@ -113,7 +115,11 @@ export const create = mutation({
 
     // Get client's branch if available
     const clientDoc = await ctx.db.get(args.clientId);
+    if (!clientDoc) throw new Error("Client not found");
     const clientBranchId = clientDoc?.branchId;
+
+    // Branch staff may only create contracts for clients of their own branch.
+    await assertCanAccessRecord(ctx, clientBranchId ?? branchId);
 
     const contractId = await ctx.db.insert("contracts", {
       ...args,
@@ -159,6 +165,8 @@ export const updateStatus = mutation({
     if (!userId) throw new Error("Not authenticated");
 
     const oldContract = await ctx.db.get(args.contractId);
+    if (!oldContract) throw new Error("Contract not found");
+    await assertCanAccessRecord(ctx, oldContract.branchId);
     const oldStatus = oldContract?.contractStatus;
 
     await ctx.db.patch(args.contractId, {

@@ -19,6 +19,7 @@ import {
   FileText,
 } from "lucide-react";
 import { ScrollableTable } from "@/components/ScrollableTable";
+import { useBranch } from "@/hooks/use-branch";
 
 function formatPHP(amount: number) {
   return new Intl.NumberFormat("en-PH", {
@@ -29,8 +30,9 @@ function formatPHP(amount: number) {
 }
 
 export default function AgingReport() {
-  const clientsWithStatus = useQuery(api.clients.listWithStatus, {});
-  const contracts = useQuery(api.contracts.list, {});
+  const { queryBranchId } = useBranch();
+  const clientsWithStatus = useQuery(api.clients.listWithStatus, { branchId: queryBranchId });
+  const contracts = useQuery(api.contracts.list, { branchId: queryBranchId });
 
   // Group by computed status
   const groups = {

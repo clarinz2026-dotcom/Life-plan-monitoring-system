@@ -25,6 +25,7 @@ import {
   Line,
 } from "recharts";
 import { useState } from "react";
+import { useBranch } from "@/hooks/use-branch";
 
 function formatPHP(amount: number) {
   return new Intl.NumberFormat("en-PH", {
@@ -61,12 +62,13 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default function Reports() {
-  const collectionSummary = useQuery(api.reports.collectionSummary);
-  const byChannel = useQuery(api.reports.byChannel);
-  const byCashier = useQuery(api.reports.byCashier);
-  const dailyCollections = useQuery(api.reports.dailyCollections);
-  const agingReport = useQuery(api.reports.agingReport);
-  const monthlyTrend = useQuery(api.reports.monthlyTrend);
+  const { queryBranchId } = useBranch();
+  const collectionSummary = useQuery(api.reports.collectionSummary, { branchId: queryBranchId });
+  const byChannel = useQuery(api.reports.byChannel, { branchId: queryBranchId });
+  const byCashier = useQuery(api.reports.byCashier, { branchId: queryBranchId });
+  const dailyCollections = useQuery(api.reports.dailyCollections, { branchId: queryBranchId });
+  const agingReport = useQuery(api.reports.agingReport, { branchId: queryBranchId });
+  const monthlyTrend = useQuery(api.reports.monthlyTrend, { branchId: queryBranchId });
 
   if (!collectionSummary || !byChannel || !agingReport) {
     return (

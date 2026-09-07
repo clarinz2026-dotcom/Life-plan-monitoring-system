@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { ScrollableTable } from "@/components/ScrollableTable";
+import { useBranch } from "@/hooks/use-branch";
 
 function formatPHP(amount: number) {
   return new Intl.NumberFormat("en-PH", {
@@ -64,9 +65,10 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default function DeathClaims() {
-  const claims = useQuery(api.deathClaims.list, {});
-  const clients = useQuery(api.clients.list, {});
-  const contracts = useQuery(api.contracts.list, {});
+  const { queryBranchId } = useBranch();
+  const claims = useQuery(api.deathClaims.list, { branchId: queryBranchId });
+  const clients = useQuery(api.clients.list, { branchId: queryBranchId });
+  const contracts = useQuery(api.contracts.list, { branchId: queryBranchId });
   const fileClaim = useMutation(api.deathClaims.fileClaim);
   const updateStatus = useMutation(api.deathClaims.updateStatus);
   const submitDocs = useMutation(api.deathClaims.submitDocuments);

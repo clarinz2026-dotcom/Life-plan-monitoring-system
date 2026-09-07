@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { assertCanAccessRecord, resolveBranchFilter } from "./access";
 
 /**
  * Start/end-of-day reconciliation.
@@ -19,19 +20,20 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+    const user = await ctx.db.get(userId);
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStart = today.getTime();
     const todayEnd = todayStart + 86400000;
 
-    // Get all payments recorded today
-    const todayPayments = await ctx.db
+    // Get all payments recorded today (scoped to the cashier's branch)
+    const todayPayments = (await ctx.db
       .query("payments")
       .withIndex("by_paymentDate", (q) =>
         q.gte("paymentDate", todayStart).lt("paymentDate", todayEnd)
       )
-      .collect();
+      .collect()).filter((p) => !user?.branchId || p.branchId === user.branchId);
 
     const totalRecorded = todayPayments.reduce((sum, p) => sum + p.amount, 0);
 
@@ -87,8 +89,11 @@ export const create = mutation({
 export const list = query({
   args: {
     cashierId: v.optional(v.id("users")),
+    branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
+
     let records;
 
     if (args.cashierId) {
@@ -105,16 +110,16 @@ export const list = query({
         .collect();
     }
 
-    // Enrich with cashier name
-    const enriched = await Promise.all(
-      records.map(async (r) => {
-        const cashier = await ctx.db.get(r.cashierId);
-        return {
-          ...r,
-          cashierName: cashier?.name || cashier?.email || "Unknown",
-        };
-      })
-    );
+    // Filter by branch through each cashier's assignment
+    const enriched = [];
+    for (const r of records) {
+      const cashier = await ctx.db.get(r.cashierId);
+      if (branchId && cashier?.branchId !== branchId) continue;
+      enriched.push({
+        ...r,
+        cashierName: cashier?.name || cashier?.email || "Unknown",
+      });
+    }
 
     return enriched;
   },
@@ -132,6 +137,11 @@ export const review = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    const record = await ctx.db.get(args.reconciliationId);
+    if (!record) throw new Error("Reconciliation record not found");
+    const cashier = await ctx.db.get(record.cashierId);
+    await assertCanAccessRecord(ctx, cashier?.branchId ?? undefined);
+
     await ctx.db.patch(args.reconciliationId, {
       status: "reviewed",
       reviewedBy: userId,
@@ -144,22 +154,28 @@ export const review = mutation({
 });
 
 /**
- * Get today's summary for a cashier.
+ * Get today's summary, optionally filtered by branch.
  */
 export const todaySummary = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    branchId: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayStart = today.getTime();
     const todayEnd = todayStart + 86400000;
 
-    const payments = await ctx.db
+    let payments = await ctx.db
       .query("payments")
       .withIndex("by_paymentDate", (q) =>
         q.gte("paymentDate", todayStart).lt("paymentDate", todayEnd)
       )
       .collect();
+    if (branchId) {
+      payments = payments.filter((p) => p.branchId === branchId);
+    }
 
     const byChannel = {
       cash: payments.filter((p) => p.paymentChannel === "cash").reduce((s, p) => s + p.amount, 0),

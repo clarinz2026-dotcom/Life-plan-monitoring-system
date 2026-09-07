@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useBranch } from "@/hooks/use-branch";
 import { Button } from "@/components/ui/button";
 import {
   Check,
@@ -93,15 +94,16 @@ export default function ServiceRequests() {
     }
   }, [clientSearch]);
 
+  const { queryBranchId } = useBranch();
   const requests = useQuery(
     api.portal.staffListRequests,
-    filter === "all" ? {} : { status: filter as "submitted" | "under_review" | "scheduled" | "completed" | "cancelled" }
+    filter === "all" ? { branchId: queryBranchId } : { status: filter as "submitted" | "under_review" | "scheduled" | "completed" | "cancelled", branchId: queryBranchId }
   );
 
   const resolveRequest = useMutation(api.portal.staffResolveRequest);
   const progressRequest = useMutation(api.portal.staffProgressRequest);
   const linkAccount = useMutation(api.portal.staffLinkAccount);
-  const clients = useQuery(api.clients.list, { search: clientSearch || undefined });
+  const clients = useQuery(api.clients.list, { search: clientSearch || undefined, branchId: queryBranchId });
 
   const handleApprove = useCallback(async (id: string) => {
     setProcessingId(id);
@@ -178,7 +180,7 @@ export default function ServiceRequests() {
     }
   }, [resolveRequest, declineNotesMap]);
 
-  const counts = useQuery(api.portal.staffListRequests, {});
+  const counts = useQuery(api.portal.staffListRequests, { branchId: queryBranchId });
 
   const pendingCount = (counts ?? []).filter(
     (r: Request) => r.status === "submitted"

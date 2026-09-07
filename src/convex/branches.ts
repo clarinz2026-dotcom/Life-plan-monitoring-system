@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { assertCanAccessRecord, getViewer, isAdminRole } from "./access";
 
 /**
  * Create a branch.
@@ -18,6 +19,10 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+    const user = await ctx.db.get(userId);
+    if (!isAdminRole(user?.role ?? null)) {
+      throw new Error("Only the Super Admin or CEO can create branches.");
+    }
 
     const branchId = await ctx.db.insert("branches", {
       ...args,
@@ -48,11 +53,14 @@ export const MAIN_OFFICE = {
 } as const;
 
 /**
- * List all branches.
+ * List all branches (staff only).
  */
 export const list = query({
   args: {},
   handler: async (ctx) => {
+    const viewer = await getViewer(ctx);
+    if (!viewer) throw new Error("Not authenticated");
+
     const branches = await ctx.db.query("branches").collect();
 
     const enriched = await Promise.all(
@@ -85,6 +93,13 @@ export const update = mutation({
     isActive: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const user = await ctx.db.get(userId);
+    if (!isAdminRole(user?.role ?? null)) {
+      throw new Error("Only the Super Admin or CEO can update branches.");
+    }
+
     const { branchId, ...updates } = args;
     const clean = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
@@ -97,11 +112,13 @@ export const update = mutation({
 });
 
 /**
- * Get a single branch.
+ * Get a single branch (staff only).
  */
 export const get = query({
   args: { branchId: v.id("branches") },
   handler: async (ctx, args) => {
+    const viewer = await getViewer(ctx);
+    if (!viewer) throw new Error("Not authenticated");
     return await ctx.db.get(args.branchId);
   },
 });
@@ -113,6 +130,13 @@ export const get = query({
 export const summary = query({
   args: {},
   handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const user = await ctx.db.get(userId);
+    if (!isAdminRole(user?.role ?? null)) {
+      throw new Error("Only the Super Admin or CEO can view branch performance.");
+    }
+
     const branches = await ctx.db.query("branches").collect();
     const monthStart = new Date(
       new Date().getFullYear(),
@@ -212,15 +236,142 @@ export const remove = mutation({
       throw new Error("Cannot delete a branch that still has assigned clients. Reassign them first.");
     }
 
-    // Unassign any users from this branch
+    // Unassign any users from this branch (also clears their position)
     const users = await ctx.db.query("users").collect();
     for (const u of users) {
       if (u.branchId === args.branchId) {
-        await ctx.db.patch(u._id, { branchId: undefined });
+        await ctx.db.patch(u._id, { branchId: undefined, position: undefined });
       }
     }
 
     await ctx.db.delete(args.branchId);
     return { success: true };
+  },
+});
+
+/**
+ * Assign clients (and everything attached to them) to a branch, or backfill
+ * ALL records that currently have no branchId (legacy data) into one branch.
+ *
+ * CEO/Super Admin only. When a client is (re)assigned, its contracts,
+ * payments, and receipts follow automatically so branch totals stay coherent.
+ */
+export const assignToBranch = mutation({
+  args: {
+    branchId: v.id("branches"),
+    clientIds: v.optional(v.array(v.id("clients"))),
+    assignUnassigned: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const user = await ctx.db.get(userId);
+    if (!isAdminRole(user?.role ?? null)) {
+      throw new Error("Only the Super Admin or CEO can assign records to branches.");
+    }
+    const branch = await ctx.db.get(args.branchId);
+    if (!branch) throw new Error("Branch not found.");
+
+    let clientIds = [...(args.clientIds ?? [])];
+    if (args.assignUnassigned) {
+      const unassignedClients = await ctx.db
+        .query("clients")
+        .filter((q) => q.eq(q.field("branchId"), undefined))
+        .collect();
+      clientIds = [
+        ...clientIds,
+        ...unassignedClients.map((c) => c._id),
+      ];
+    }
+
+    let clients = 0;
+    let contracts = 0;
+    let payments = 0;
+    let receipts = 0;
+
+    for (const clientId of clientIds) {
+      const client = await ctx.db.get(clientId);
+      if (!client) continue;
+      await ctx.db.patch(clientId, { branchId: args.branchId });
+      clients++;
+
+      const clientContracts = await ctx.db
+        .query("contracts")
+        .withIndex("by_client", (q) => q.eq("clientId", clientId))
+        .collect();
+      for (const contract of clientContracts) {
+        await ctx.db.patch(contract._id, { branchId: args.branchId });
+        contracts++;
+
+        const contractPayments = await ctx.db
+          .query("payments")
+          .withIndex("by_contract", (q) => q.eq("contractId", contract._id))
+          .collect();
+        for (const payment of contractPayments) {
+          await ctx.db.patch(payment._id, { branchId: args.branchId });
+          payments++;
+
+          const paymentReceipts = await ctx.db
+            .query("receipts")
+            .withIndex("by_payment", (q) => q.eq("paymentId", payment._id))
+            .collect();
+          for (const receipt of paymentReceipts) {
+            await ctx.db.patch(receipt._id, { branchId: args.branchId });
+            receipts++;
+          }
+        }
+      }
+    }
+
+    // Catch any orphaned records (contracts/payments without a client above,
+    // or receipts whose payment is missing) in full-backfill mode.
+    if (args.assignUnassigned) {
+      const orphanContracts = await ctx.db
+        .query("contracts")
+        .filter((q) => q.eq(q.field("branchId"), undefined))
+        .collect();
+      for (const c of orphanContracts) {
+        await ctx.db.patch(c._id, { branchId: args.branchId });
+        contracts++;
+      }
+
+      const orphanPayments = await ctx.db
+        .query("payments")
+        .filter((q) => q.eq(q.field("branchId"), undefined))
+        .collect();
+      for (const p of orphanPayments) {
+        await ctx.db.patch(p._id, { branchId: args.branchId });
+        payments++;
+      }
+
+      const orphanReceipts = await ctx.db
+        .query("receipts")
+        .filter((q) => q.eq(q.field("branchId"), undefined))
+        .collect();
+      for (const r of orphanReceipts) {
+        const payment = await ctx.db.get(r.paymentId);
+        await ctx.db.patch(r._id, {
+          branchId: payment?.branchId ?? args.branchId,
+        });
+        receipts++;
+      }
+    }
+
+    await ctx.db.insert("audit_log", {
+      action: "update",
+      entityType: "client",
+      entityId: "branch-assign",
+      userId,
+      userName: user?.name ?? user?.email ?? "Unknown",
+      description: `Assigned ${clients} client(s) to "${branch.name}" (${contracts} contracts, ${payments} payments, ${receipts} receipts updated)`,
+      newValues: {
+        branchId: args.branchId,
+        branchName: branch.name,
+        assignUnassigned: args.assignUnassigned ?? false,
+      },
+      timestamp: Date.now(),
+    });
+
+    return { clients, contracts, payments, receipts };
   },
 });

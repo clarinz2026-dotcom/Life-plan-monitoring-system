@@ -220,12 +220,14 @@ const schema = defineSchema(
       contractNumber: v.string(),
       status: orStatusValidator,
       issuedBy: v.id("users"),
+      branchId: v.optional(v.id("branches")),
       createdAt: v.number(),
     })
       .index("by_payment", ["paymentId"])
       .index("by_client", ["clientId"])
       .index("by_receiptNumber", ["receiptNumber"])
-      .index("by_createdAt", ["createdAt"]),
+      .index("by_createdAt", ["createdAt"])
+      .index("by_branch", ["branchId"]),
 
     // ─── NEW: Payment Schedules (due dates) ──────────────────────────────
     payment_schedules: defineTable({

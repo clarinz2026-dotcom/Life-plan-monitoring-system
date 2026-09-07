@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { assertCanAccessRecord, resolveBranchFilter } from "./access";
 
 function formatPHP(amount: number) {
   return new Intl.NumberFormat("en-PH", {
@@ -28,12 +29,13 @@ export const list = query({
     branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
     let payments;
 
-    if (args.branchId) {
+    if (branchId) {
       payments = await ctx.db
         .query("payments")
-        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .withIndex("by_branch", (q) => q.eq("branchId", branchId!))
         .order("desc")
         .collect();
       if (args.contractId) {
@@ -93,6 +95,7 @@ export const record = mutation({
 
     const contract = await ctx.db.get(args.contractId);
     if (!contract) throw new Error("Contract not found");
+    await assertCanAccessRecord(ctx, contract.branchId);
 
     const client = await ctx.db.get(contract.clientId);
     if (!client) throw new Error("Client not found");
@@ -173,6 +176,7 @@ export const record = mutation({
       contractNumber: contract.contractNumber,
       status: "active",
       issuedBy: userId,
+      branchId,
       createdAt: Date.now(),
     });
 

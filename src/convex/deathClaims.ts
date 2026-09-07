@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { assertCanAccessRecord, resolveBranchFilter } from "./access";
 
 const CLAIM_STATUSES = [
   "filed",
@@ -35,6 +36,7 @@ export const fileClaim = mutation({
 
     const contract = await ctx.db.get(args.contractId);
     if (!contract) throw new Error("Contract not found");
+    await assertCanAccessRecord(ctx, contract.branchId);
 
     // Required documents
     const documentsRequired = [
@@ -106,6 +108,8 @@ export const updateStatus = mutation({
 
     const claim = await ctx.db.get(args.claimId);
     if (!claim) throw new Error("Claim not found");
+    const claimContract = await ctx.db.get(claim.contractId);
+    await assertCanAccessRecord(ctx, claimContract?.branchId ?? undefined);
 
     const patch: Record<string, unknown> = {
       status: args.status,
@@ -154,8 +158,13 @@ export const submitDocuments = mutation({
     documents: v.array(v.string()),
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
     const claim = await ctx.db.get(args.claimId);
     if (!claim) throw new Error("Claim not found");
+    const claimContract = await ctx.db.get(claim.contractId);
+    await assertCanAccessRecord(ctx, claimContract?.branchId ?? undefined);
 
     const allSubmitted = [...new Set([...claim.documentsSubmitted, ...args.documents])];
     await ctx.db.patch(args.claimId, {
@@ -186,12 +195,24 @@ export const list = query({
     status: v.optional(
       v.union(...CLAIM_STATUSES.map((s) => v.literal(s)) as any)
     ),
+    branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
     let claims = await ctx.db.query("death_claims").order("desc").collect();
 
     if (args.status) {
       claims = claims.filter((c) => c.status === args.status);
+    }
+
+    // Filter by the branch of each claim's contract
+    if (branchId) {
+      const filtered = [];
+      for (const c of claims) {
+        const contract = await ctx.db.get(c.contractId);
+        if (contract?.branchId === branchId) filtered.push(c);
+      }
+      claims = filtered;
     }
 
     const enriched = await Promise.all(

@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { ScrollableTable } from "@/components/ScrollableTable";
+import { useBranch } from "@/hooks/use-branch";
 
 function formatPHP(amount: number) {
   return new Intl.NumberFormat("en-PH", {
@@ -40,8 +41,9 @@ function formatPHP(amount: number) {
 }
 
 export default function Reconciliation() {
-  const todaySummary = useQuery(api.reconciliation.todaySummary);
-  const records = useQuery(api.reconciliation.list, {});
+  const { queryBranchId } = useBranch();
+  const todaySummary = useQuery(api.reconciliation.todaySummary, { branchId: queryBranchId });
+  const records = useQuery(api.reconciliation.list, { branchId: queryBranchId });
   const createReconciliation = useMutation(api.reconciliation.create);
   const reviewReconciliation = useMutation(api.reconciliation.review);
 

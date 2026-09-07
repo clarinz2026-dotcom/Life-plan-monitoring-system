@@ -1,11 +1,16 @@
+import { v } from "convex/values";
 import { query } from "./_generated/server";
+import { resolveBranchFilter } from "./access";
 
 /**
- * Collection summary by date range.
+ * Collection summary by date range, optionally filtered by branch.
  */
 export const collectionSummary = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    branchId: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const weekAgo = today - 7 * 24 * 60 * 60 * 1000;
@@ -14,7 +19,10 @@ export const collectionSummary = query({
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0).getTime();
     const yearStart = new Date(now.getFullYear(), 0, 1).getTime();
 
-    const payments = await ctx.db.query("payments").collect();
+    let payments = await ctx.db.query("payments").collect();
+    if (branchId) {
+      payments = payments.filter((p) => p.branchId === branchId);
+    }
 
     // Today
     const todayPayments = payments.filter((p) => p.paymentDate >= today);
@@ -50,15 +58,21 @@ export const collectionSummary = query({
 });
 
 /**
- * Collections by payment channel.
+ * Collections by payment channel, optionally filtered by branch.
  */
 export const byChannel = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    branchId: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-    const payments = await ctx.db.query("payments").collect();
+    let payments = await ctx.db.query("payments").collect();
+    if (branchId) {
+      payments = payments.filter((p) => p.branchId === branchId);
+    }
     const monthPayments = payments.filter((p) => p.paymentDate >= monthStart);
 
     const channels: Record<string, { count: number; amount: number }> = {};
@@ -75,15 +89,21 @@ export const byChannel = query({
 });
 
 /**
- * Collections by cashier/user.
+ * Collections by cashier/user, optionally filtered by branch.
  */
 export const byCashier = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    branchId: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-    const payments = await ctx.db.query("payments").collect();
+    let payments = await ctx.db.query("payments").collect();
+    if (branchId) {
+      payments = payments.filter((p) => p.branchId === branchId);
+    }
     const monthPayments = payments.filter((p) => p.paymentDate >= monthStart);
 
     const cashiers: Record<string, { count: number; amount: number; name: string }> = {};
@@ -107,18 +127,24 @@ export const byCashier = query({
 });
 
 /**
- * Daily collections for the current month (for chart).
+ * Daily collections for the current month (for chart), optionally filtered by branch.
  */
 export const dailyCollections = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    branchId: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const monthStart = new Date(year, month, 1).getTime();
 
-    const payments = await ctx.db.query("payments").collect();
+    let payments = await ctx.db.query("payments").collect();
+    if (branchId) {
+      payments = payments.filter((p) => p.branchId === branchId);
+    }
     const monthPayments = payments.filter((p) => p.paymentDate >= monthStart);
 
     const daily: Array<{ day: number; amount: number; count: number }> = [];
@@ -141,12 +167,18 @@ export const dailyCollections = query({
 });
 
 /**
- * Outstanding receivables aging report.
+ * Outstanding receivables aging report, optionally filtered by branch.
  */
 export const agingReport = query({
-  args: {},
-  handler: async (ctx) => {
-    const contracts = await ctx.db.query("contracts").collect();
+  args: {
+    branchId: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
+    let contracts = await ctx.db.query("contracts").collect();
+    if (branchId) {
+      contracts = contracts.filter((c) => c.branchId === branchId);
+    }
 
     const aging = {
       current: { count: 0, amount: 0 },
@@ -192,21 +224,28 @@ export const agingReport = query({
 });
 
 /**
- * Monthly collections trend (last 12 months).
+ * Monthly collections trend (last 12 months), optionally filtered by branch.
  */
 export const monthlyTrend = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    branchId: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
     const now = new Date();
     const months: Array<{ month: string; amount: number; count: number }> = [];
+
+    let allPayments = await ctx.db.query("payments").collect();
+    if (branchId) {
+      allPayments = allPayments.filter((p) => p.branchId === branchId);
+    }
 
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthStart = d.getTime();
       const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0).getTime();
 
-      const payments = await ctx.db.query("payments").collect();
-      const monthPayments = payments.filter(
+      const monthPayments = allPayments.filter(
         (p) => p.paymentDate >= monthStart && p.paymentDate <= monthEnd
       );
 

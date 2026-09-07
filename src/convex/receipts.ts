@@ -1,20 +1,32 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
+import { resolveBranchFilter } from "./access";
 
 /**
- * List all receipts, optionally filtered by client.
+ * List receipts, optionally filtered by client or branch.
  */
 export const list = query({
   args: {
     clientId: v.optional(v.id("clients")),
+    branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
     let receipts;
 
     if (args.clientId) {
       receipts = await ctx.db
         .query("receipts")
         .withIndex("by_client", (q) => q.eq("clientId", args.clientId!))
+        .order("desc")
+        .collect();
+      if (branchId) {
+        receipts = receipts.filter((r) => r.branchId === branchId);
+      }
+    } else if (branchId) {
+      receipts = await ctx.db
+        .query("receipts")
+        .withIndex("by_branch", (q) => q.eq("branchId", branchId!))
         .order("desc")
         .collect();
     } else {

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { printThermalReceipt } from "@/components/ThermalReceipt";
+import { useBranch } from "@/hooks/use-branch";
 
 const CHANNEL_LABELS: Record<string, string> = {
   cash: "Cash",
@@ -40,7 +41,8 @@ function formatPHP(amount: number) {
 }
 
 export default function Receipts() {
-  const receipts = useQuery(api.receipts.list, {});
+  const { queryBranchId } = useBranch();
+  const receipts = useQuery(api.receipts.list, { branchId: queryBranchId });
   const [selectedReceipt, setSelectedReceipt] = useState<any>(null);
 
   return (

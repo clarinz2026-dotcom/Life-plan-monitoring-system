@@ -13,6 +13,7 @@ import {
   Receipt,
   Loader2,
 } from "lucide-react";
+import { useBranch } from "@/hooks/use-branch";
 
 const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -61,11 +62,12 @@ function saveBlob(blob: Blob, filename: string) {
 
 export default function ExportData() {
   const [exporting, setExporting] = useState(false);
+  const { queryBranchId } = useBranch();
 
-  const clients = useQuery(api.clients.list, {});
-  const contracts = useQuery(api.contracts.list, {});
-  const payments = useQuery(api.payments.list, {});
-  const receipts = useQuery(api.receipts.list, {});
+  const clients = useQuery(api.clients.list, { branchId: queryBranchId });
+  const contracts = useQuery(api.contracts.list, { branchId: queryBranchId });
+  const payments = useQuery(api.payments.list, { branchId: queryBranchId });
+  const receipts = useQuery(api.receipts.list, { branchId: queryBranchId });
 
   const handleExportAll = async () => {
     if (exporting) return;

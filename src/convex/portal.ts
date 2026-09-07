@@ -2,6 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
+import { resolveBranchFilter } from "./access";
 
 /**
  * Portal access model:
@@ -320,12 +321,15 @@ export const staffListRequests = query({
         v.literal("cancelled"),
       )
     ),
+    branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args): Promise<StaffEnrichedRequest[]> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
     const user = await ctx.db.get(userId);
     if (!user || !STAFF_ROLES.includes(user.role as typeof STAFF_ROLES[number])) return [];
+
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
 
     let requests: Doc<"service_requests">[];
     if (args.status) {
@@ -344,6 +348,7 @@ export const staffListRequests = query({
 
     const enriched: StaffEnrichedRequest[] = [];
     for (const r of requests) {
+      if (branchId && r.branchId !== branchId) continue;
       const branch = r.branchId ? await ctx.db.get(r.branchId) : null;
       const reqUser = await ctx.db.get(r.userId);
       enriched.push({

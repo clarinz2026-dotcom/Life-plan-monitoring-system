@@ -54,6 +54,7 @@ export const bulkCreateClients = mutation({
 
     const user = await ctx.db.get(userId);
     const userName = user?.name || user?.email || "Unknown";
+    const branchId = user?.branchId;
 
     const results = {
       success: 0,
@@ -95,6 +96,7 @@ export const bulkCreateClients = mutation({
           beneficiaryRelationship: "TBD",
           beneficiaryContact: undefined,
           notes: buildReferenceNotes(row) || undefined,
+          branchId,
           createdAt: Date.now(),
           createdBy: userId,
         });
@@ -125,6 +127,7 @@ export const bulkCreateClients = mutation({
           clientId,
           userId,
           userName,
+          branchId,
           row,
           plan,
           rowIndex: i,
@@ -180,6 +183,7 @@ async function createContractWithBackdatedPayments(
     clientId: Id<"clients">;
     userId: Id<"users">;
     userName: string;
+    branchId?: Id<"branches">;
     row: {
       lpaNo?: string;
       effectivityDate?: string;
@@ -207,6 +211,7 @@ async function createContractWithBackdatedPayments(
     startDate,
     maturityDate: addMonths(startDate, PLAN_TERM_MONTHS),
     assignedAgent: undefined,
+    branchId: opts.branchId,
     createdAt: Date.now(),
     createdBy: opts.userId,
   });
@@ -225,6 +230,7 @@ async function createContractWithBackdatedPayments(
       chequeNumber: undefined,
       bankName: undefined,
       remarks: "Backdated (bulk import)",
+      branchId: opts.branchId,
       recordedBy: opts.userId,
       createdAt: Date.now(),
     });

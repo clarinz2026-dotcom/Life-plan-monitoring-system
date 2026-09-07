@@ -2,6 +2,12 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import {
+  assertCanAccessRecord,
+  getViewer,
+  isAdminRole,
+  resolveBranchFilter,
+} from "./access";
 
 /**
  * Compute delinquency status based on days since last payment.
@@ -45,12 +51,13 @@ export const list = query({
   },
   handler: async (ctx, args) => {
     const search = args.search?.toLowerCase().trim();
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
 
     let clients;
-    if (args.branchId) {
+    if (branchId) {
       clients = await ctx.db
         .query("clients")
-        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .withIndex("by_branch", (q) => q.eq("branchId", branchId!))
         .order("desc")
         .collect();
     } else if (search) {
@@ -73,7 +80,7 @@ export const list = query({
         .collect();
     }
 
-    if (search && args.branchId) {
+    if (search && branchId) {
       clients = clients.filter(
         (c) =>
           c.lastName.toLowerCase().includes(search) ||
@@ -159,13 +166,31 @@ export const update = mutation({
     beneficiaryRelationship: v.optional(v.string()),
     beneficiaryContact: v.optional(v.string()),
     notes: v.optional(v.string()),
+    // Reassign the client to another branch (CEO/Super Admin only).
+    branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
     const { clientId, ...updates } = args;
+
+    const client = await ctx.db.get(clientId);
+    if (!client) throw new Error("Client not found");
+    const viewer = await assertCanAccessRecord(ctx, client.branchId);
+
+    // Only admins may change the branch assignment.
+    const { branchId, ...rest } = updates;
+    if (branchId !== undefined) {
+      if (!isAdminRole(viewer.role)) {
+        throw new Error("Only the Super Admin or CEO can reassign a client to a branch.");
+      }
+      const target = await ctx.db.get(branchId);
+      if (!target) throw new Error("Branch not found.");
+    }
+
     // Remove undefined values
     const cleanUpdates = Object.fromEntries(
-      Object.entries(updates).filter(([, v]) => v !== undefined)
+      Object.entries(rest).filter(([, v]) => v !== undefined)
     );
+    if (branchId !== undefined) cleanUpdates.branchId = branchId;
     if (Object.keys(cleanUpdates).length === 0) return;
 
     await ctx.db.patch(clientId, cleanUpdates);
@@ -206,6 +231,8 @@ export const bulkDelete = mutation({
     for (const clientId of args.clientIds) {
       const client = await ctx.db.get(clientId);
       if (!client) continue;
+      // Branch staff may only delete clients from their own branch.
+      await assertCanAccessRecord(ctx, client.branchId);
       deletedNames.push(`${client.lastName}, ${client.firstName}`);
 
       // All contracts for this client → their payments and schedules
@@ -289,11 +316,12 @@ export const listWithStatus = query({
     branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
+    const branchId = await resolveBranchFilter(ctx, args.branchId);
     let clients;
-    if (args.branchId) {
+    if (branchId) {
       clients = await ctx.db
         .query("clients")
-        .withIndex("by_branch", (q) => q.eq("branchId", args.branchId!))
+        .withIndex("by_branch", (q) => q.eq("branchId", branchId!))
         .order("desc")
         .collect();
     } else {

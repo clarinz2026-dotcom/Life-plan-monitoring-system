@@ -56,6 +56,9 @@ export const list = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
     let logs;
 
     if (args.entityType && args.entityId) {
@@ -93,6 +96,9 @@ export const getEntityTrail = query({
     entityId: v.string(),
   },
   handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+
     return await ctx.db
       .query("audit_log")
       .withIndex("by_entity", (q) =>
