@@ -3,13 +3,18 @@ import jsPDF from "jspdf";
 import { generateSOAHTML, type SOAData } from "@/components/SOADocument";
 
 export async function generateSOAPDF(data: SOAData): Promise<void> {
-  // Create a temporary container with the SOA HTML
+  // The document must be painted inside the viewport for html2canvas to
+  // capture it — placing it off-screen (e.g. top/left: -9999px) is a known
+  // cause of blank PDFs. We attach it at (0,0) behind the page (z-index -1)
+  // so it renders fully without ever being visible to the user.
   const container = document.createElement("div");
   container.style.position = "fixed";
-  container.style.top = "-9999px";
-  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.style.left = "0";
   container.style.width = "794px"; // A4 width at 96 DPI
   container.style.background = "white";
+  container.style.zIndex = "-1";
+  container.style.pointerEvents = "none";
   container.innerHTML = generateSOAHTML(data);
   document.body.appendChild(container);
 
@@ -22,6 +27,8 @@ export async function generateSOAPDF(data: SOAData): Promise<void> {
       backgroundColor: "#ffffff",
       width: 794,
       windowWidth: 794,
+      scrollX: 0,
+      scrollY: 0,
     });
 
     // Create PDF (A4 size in mm: 210 x 297)

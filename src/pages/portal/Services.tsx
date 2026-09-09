@@ -16,6 +16,7 @@ import {
   fmtDate,
   fmtDay,
 } from "./shared";
+import { SOAButton } from "./SOAButton";
 
 export default function Services() {
   const [searchParams] = useSearchParams();
@@ -341,6 +342,20 @@ export default function Services() {
                         )}
                       </div>
                     </div>
+                    {r.serviceType === "receipt_copy" && (
+                      <div className="mt-2.5 rounded-xl bg-evergreen/6 px-3.5 py-2.5">
+                        <p className="text-[11.5px] font-semibold text-evergreen">
+                          Your statement is available now — view it on screen or
+                          download the PDF.
+                        </p>
+                        <SOAButton
+                          records={overview?.records ?? []}
+                          label="View / download my SOA"
+                          size="sm"
+                          className="mt-2"
+                        />
+                      </div>
+                    )}
                     {cancellable && (
                       <button
                         type="button"

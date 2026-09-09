@@ -23,6 +23,7 @@ import {
   fmtPeso,
   initials,
 } from "./shared";
+import { SOAButton } from "./SOAButton";
 
 const CHANNEL_LABEL: Record<string, string> = {
   cash: "Cash",
@@ -109,6 +110,11 @@ export default function Plans() {
                   </strong>
                 </span>
               </div>
+              <SOAButton
+                records={[group]}
+                label="Statement of Account"
+                size="sm"
+              />
             </Card>
 
             {group.contracts.length === 0 ? (

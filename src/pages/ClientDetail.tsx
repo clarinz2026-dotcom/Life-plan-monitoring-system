@@ -177,8 +177,15 @@ export default function ClientDetail() {
         }),
         accountNumber: clientId || "—",
       });
+      toast.success("Statement of Account downloaded");
     } catch (error) {
       console.error("Failed to generate SOA PDF:", error);
+      toast.error("Could not generate the SOA PDF", {
+        description:
+          error instanceof Error
+            ? error.message
+            : "Please try again — if it still fails, the client can download it from the portal instead.",
+      });
     } finally {
       setDownloadingSOA(false);
     }
