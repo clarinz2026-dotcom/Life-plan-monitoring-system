@@ -29,7 +29,8 @@ export type PortalRecordGroup = {
 /** Build a Statement of Account from portal overview records (all linked planholders). */
 export function buildSOAData(
   records: PortalRecordGroup[],
-  branchName?: string
+  branchName?: string,
+  logoUrl?: string
 ): SOAData | null {
   if (records.length === 0) return null;
   const client = records[0].client;
@@ -78,6 +79,7 @@ export function buildSOAData(
           day: "numeric",
         })
       : undefined,
+    logoUrl,
     contracts,
     payments,
     generatedDate: new Date().toLocaleDateString("en-PH", {
@@ -116,8 +118,9 @@ export function SOAButton({
     records.length === 1 && records[0].client.branchId
       ? branches?.find((b) => b._id === records[0].client.branchId)?.name
       : undefined;
+  const settings = useQuery(api.settings.get);
 
-  const data = buildSOAData(records, branchName);
+  const data = buildSOAData(records, branchName, settings?.logoUrl ?? undefined);
 
   const handleOpen = () => {
     if (!data) {

@@ -13,6 +13,8 @@ export interface SOAData {
   salesAgent?: string;
   /** Pre-formatted birth date (e.g. "January 19, 1961"). */
   clientBirthDate?: string;
+  /** Company logo shown in the header lockup (http, data:, or relative URL). */
+  logoUrl?: string;
   contracts: Array<{
     contractNumber: string;
     planType: string;
@@ -190,21 +192,48 @@ export function generateSOAHTML(data: SOAData): string {
       max-width: 740px;
       margin: 0 auto;
     }
-    .office {
-      text-align: center;
-      font-size: 12px;
+    .brand-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    .brand-logo {
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      object-fit: contain;
+    }
+    .brand-name {
+      font-family: 'Brush Script MT', 'Segoe Script', 'Lucida Handwriting', cursive;
+      font-size: 34px;
       font-weight: bold;
+      color: #1f4fa3;
+      line-height: 1.15;
+    }
+    .brand-tagline {
+      font-style: italic;
+      color: #000;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+    .brand-address {
+      text-align: center;
+      font-size: 11.5px;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+    .divider {
+      border-top: 2px solid #b45309;
+      margin: 8px 0 14px;
     }
     h1 {
       text-align: center;
-      font-size: 18px;
+      font-size: 17px;
       letter-spacing: 2px;
-      margin: 14px 0 4px;
+      margin: 0 0 16px;
+      color: #b91c1c;
       text-transform: uppercase;
-    }
-    .divider {
-      border-top: 2px solid #000;
-      margin: 8px 0 16px;
     }
     .contract-block {
       margin-bottom: 26px;
@@ -277,9 +306,16 @@ export function generateSOAHTML(data: SOAData): string {
 </head>
 <body>
   <div id="soa-content">
-    <p class="office">${OFFICE_ADDRESS}</p>
-    <h1>Statement of Account</h1>
+    <div class="brand-header">
+      ${data.logoUrl ? `<img class="brand-logo" src="${data.logoUrl}" alt="Evangelist Funeral Services OPC" />` : ""}
+      <div>
+        <p class="brand-name">Evangelist Funeral Services OPC</p>
+        <p class="brand-tagline">&ldquo;To Care and To Serve&rdquo;</p>
+      </div>
+    </div>
+    <p class="brand-address">${OFFICE_ADDRESS}</p>
     <div class="divider"></div>
+    <h1>Statement of Account</h1>
 
     ${contractsHTML}
 

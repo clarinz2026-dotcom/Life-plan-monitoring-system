@@ -77,6 +77,7 @@ export default function ClientDetail() {
     api.branches.get,
     client?.branchId ? { branchId: client.branchId } : "skip"
   );
+  const settings = useQuery(api.settings.get);
 
   const updateClient = useMutation(api.clients.update);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -180,6 +181,7 @@ export default function ClientDetail() {
               day: "numeric",
             })
           : undefined,
+        logoUrl: settings?.logoUrl ?? undefined,
         contracts: soaContracts,
         payments: soaPayments,
         generatedDate: new Date().toLocaleDateString("en-PH", {
@@ -201,7 +203,7 @@ export default function ClientDetail() {
     } finally {
       setDownloadingSOA(false);
     }
-  }, [client, contracts, payments, clientId, branch?.name]);
+  }, [client, contracts, payments, clientId, branch?.name, settings?.logoUrl]);
 
   const openEditDialog = useCallback(() => {
     if (!client) return;

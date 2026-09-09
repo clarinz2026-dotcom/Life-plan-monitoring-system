@@ -2,7 +2,33 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { generateSOAHTML, type SOAData } from "@/components/SOADocument";
 
+/**
+ * Convert a logo URL to a base64 data URL so html2canvas can always embed it
+ * in the PDF (cross-origin images can otherwise render blank). Returns the
+ * original value for data: URLs, and null when the fetch fails.
+ */
+async function toDataURL(url: string): Promise<string | null> {
+  if (url.startsWith("data:")) return url;
+  try {
+    const res = await fetch(url, { mode: "cors" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return await new Promise<string | null>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
 export async function generateSOAPDF(data: SOAData): Promise<void> {
+  // Embed the logo as a data URL so it renders reliably inside the PDF.
+  const logoUrl = data.logoUrl ? await toDataURL(data.logoUrl) : null;
+  const renderData: SOAData = logoUrl ? { ...data, logoUrl } : data;
+
   // The document must be painted inside the viewport for html2canvas to
   // capture it — placing it off-screen (e.g. top/left: -9999px) is a known
   // cause of blank PDFs. We attach it at (0,0) behind the page (z-index -1)
@@ -15,7 +41,7 @@ export async function generateSOAPDF(data: SOAData): Promise<void> {
   container.style.background = "white";
   container.style.zIndex = "-1";
   container.style.pointerEvents = "none";
-  container.innerHTML = generateSOAHTML(data);
+  container.innerHTML = generateSOAHTML(renderData);
   document.body.appendChild(container);
 
   try {
