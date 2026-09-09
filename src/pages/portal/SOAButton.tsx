@@ -1,4 +1,6 @@
 import { useRef, useState, type ComponentProps } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,7 +27,10 @@ export type PortalRecordGroup = {
 };
 
 /** Build a Statement of Account from portal overview records (all linked planholders). */
-export function buildSOAData(records: PortalRecordGroup[]): SOAData | null {
+export function buildSOAData(
+  records: PortalRecordGroup[],
+  branchName?: string
+): SOAData | null {
   if (records.length === 0) return null;
   const client = records[0].client;
   const fullName = `${client.lastName}, ${client.firstName}${
@@ -58,14 +63,21 @@ export function buildSOAData(records: PortalRecordGroup[]): SOAData | null {
   );
 
   return {
-    clientName:
-      records.length > 1 ? `${fullName} (+${records.length - 1} more)` : fullName,
+    clientName: fullName,
     clientAddress:
       [client.address, client.city, client.province].filter(Boolean).join(", ") || "—",
     clientContact: client.contactNumber || "—",
     clientEmail: client.email || undefined,
     beneficiaryName: client.beneficiaryName,
     beneficiaryRelationship: client.beneficiaryRelationship,
+    branchName,
+    clientBirthDate: client.dateOfBirth
+      ? new Date(client.dateOfBirth).toLocaleDateString("en-PH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : undefined,
     contracts,
     payments,
     generatedDate: new Date().toLocaleDateString("en-PH", {
@@ -99,7 +111,13 @@ export function SOAButton({
   const [downloading, setDownloading] = useState(false);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
 
-  const data = buildSOAData(records);
+  const branches = useQuery(api.branches.list);
+  const branchName =
+    records.length === 1 && records[0].client.branchId
+      ? branches?.find((b) => b._id === records[0].client.branchId)?.name
+      : undefined;
+
+  const data = buildSOAData(records, branchName);
 
   const handleOpen = () => {
     if (!data) {

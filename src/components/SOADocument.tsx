@@ -7,6 +7,12 @@ export interface SOAData {
   clientEmail?: string;
   beneficiaryName: string;
   beneficiaryRelationship: string;
+  /** Branch shown under "Branch:" on the statement. */
+  branchName?: string;
+  /** Sales agent shown under "Sales Agent:". */
+  salesAgent?: string;
+  /** Pre-formatted birth date (e.g. "January 19, 1961"). */
+  clientBirthDate?: string;
   contracts: Array<{
     contractNumber: string;
     planType: string;
@@ -28,7 +34,19 @@ export interface SOAData {
   accountNumber: string;
 }
 
-function formatPHP(amount: number) {
+/** Main office as printed on the original statement template. */
+const OFFICE_ADDRESS =
+  "2nd Floor, Gabrinez Bldg., Fortich St., Malaybalay City, Bukidnon, 8700";
+
+const PAY_CLASS: Record<string, string> = {
+  cash: "CASH",
+  gcash: "GCASH",
+  maya: "MAYA",
+  bank_transfer: "BANK TRANSFER",
+  check: "CHECK",
+};
+
+function fmtPeso(amount: number) {
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
     currency: "PHP",
@@ -36,90 +54,112 @@ function formatPHP(amount: number) {
   }).format(amount);
 }
 
-export function generateSOAHTML(data: SOAData): string {
-  const totalPlanAmount = data.contracts.reduce((sum, c) => sum + c.planAmount, 0);
-  const totalPaid = data.contracts.reduce((sum, c) => sum + c.totalPaid, 0);
-  const totalBalance = totalPlanAmount - totalPaid;
+function fmtNum(amount: number) {
+  return new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+}
 
-  const paymentsByContract: Record<string, typeof data.payments> = {};
-  for (const payment of data.payments) {
-    const key = payment.contractNumber;
-    if (!paymentsByContract[key]) paymentsByContract[key] = [];
-    paymentsByContract[key].push(payment);
+/** "Amer, Mariam Mosa" → "MARIAM MOSA AMER" (as printed on the template). */
+function displayName(name: string): string {
+  const parts = name.split(",").map((s) => s.trim());
+  if (parts.length === 2 && parts[0] && parts[1]) {
+    return `${parts[1]} ${parts[0]}`.toUpperCase();
   }
+  return name.toUpperCase();
+}
 
+export function generateSOAHTML(data: SOAData): string {
   const contractsHTML = data.contracts
     .map((c) => {
-      const balance = c.planAmount - c.totalPaid;
-      const progress = c.planAmount ? (c.totalPaid / c.planAmount) * 100 : 0;
-      const contractPayments = paymentsByContract[c.contractNumber] || [];
+      const termYears =
+        c.monthlyAmortization > 0
+          ? Math.round(c.planAmount / c.monthlyAmortization / 12)
+          : null;
+      const installmentMonth =
+        c.monthlyAmortization > 0
+          ? Math.round(c.totalPaid / c.monthlyAmortization)
+          : null;
 
-      const paymentsRows = contractPayments
-        .map(
-          (p) => `
+      // Ledger rows — oldest first, with a running balance like the template.
+      const contractPayments = data.payments
+        .filter((p) => p.contractNumber === c.contractNumber)
+        .sort((a, b) => a.paymentDate - b.paymentDate);
+
+      let runningBalance = c.planAmount;
+      const ledgerRows = contractPayments
+        .map((p) => {
+          runningBalance = Math.max(0, runningBalance - p.amount);
+          const installmentNo =
+            c.monthlyAmortization > 0
+              ? Math.round(p.amount / c.monthlyAmortization)
+              : "—";
+          return `
         <tr>
-          <td style="padding: 6px 8px; border-bottom: 1px solid #e5e5e0; font-size: 11px; font-family: 'Courier New', monospace;">
-            ${format(new Date(p.paymentDate), "MMM d, yyyy")}
-          </td>
-          <td style="padding: 6px 8px; border-bottom: 1px solid #e5e5e0; font-size: 11px; font-family: 'Courier New', monospace;">
-            ${p.orNumber || "—"}
-          </td>
-          <td style="padding: 6px 8px; border-bottom: 1px solid #e5e5e0; font-size: 11px;">
-            ${p.paymentChannel.toUpperCase().replace(/_/g, " ")}
-          </td>
-          <td style="padding: 6px 8px; border-bottom: 1px solid #e5e5e0; font-size: 11px; text-align: right; font-family: 'Courier New', monospace; font-weight: bold;">
-            ${formatPHP(p.amount)}
-          </td>
-        </tr>`
-        )
+          <td>${PAY_CLASS[p.paymentChannel] ?? p.paymentChannel.toUpperCase()}</td>
+          <td>${format(new Date(p.paymentDate), "dd-MMM-yyyy")}</td>
+          <td>${p.orNumber || "—"}</td>
+          <td class="num">${fmtNum(p.amount)}</td>
+          <td class="num">${installmentNo}</td>
+          <td class="num">${fmtNum(runningBalance)}</td>
+          <td>${p.remarks ?? ""}</td>
+        </tr>`;
+        })
         .join("");
 
-      const statusLabel = c.contractStatus
-        .replace(/_/g, " ")
-        .replace(/\b\w/g, (l) => l.toUpperCase());
-
       return `
-      <div style="margin-bottom: 24px; page-break-inside: avoid;">
-        <div style="background: #f8f7f4; border: 1px solid #e5e5e0; border-radius: 6px; padding: 12px 16px; margin-bottom: 12px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <div>
-              <span style="font-family: 'Courier New', monospace; font-size: 13px; font-weight: bold;">${c.contractNumber}</span>
-              <span style="font-size: 11px; color: #6b6b60; margin-left: 12px;">${c.planType}</span>
-            </div>
-            <span style="font-size: 10px; padding: 2px 8px; border: 1px solid #d4d4cc; border-radius: 4px; font-family: 'Courier New', monospace; text-transform: uppercase;">
-              ${statusLabel}
-            </span>
-          </div>
-          <div style="display: flex; gap: 24px; margin-top: 8px; font-size: 11px; color: #6b6b60;">
-            <span>Start: ${format(new Date(c.startDate), "MMM d, yyyy")}</span>
-            <span>Monthly: ${formatPHP(c.monthlyAmortization)}</span>
-          </div>
-        </div>
+      <div class="contract-block">
+        <table class="info">
+          <tr>
+            <td class="lbl">Branch:</td><td class="val">${data.branchName || "—"}</td>
+            <td class="lbl">Plan Type:</td><td class="val">${c.planType}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Contract No.:</td><td class="val">${c.contractNumber}</td>
+            <td class="lbl">Plan Value:</td><td class="val">${fmtPeso(c.planAmount)}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Name:</td><td class="val">${displayName(data.clientName)}</td>
+            <td class="lbl">Mode of Payment:</td><td class="val">Monthly</td>
+          </tr>
+          <tr>
+            <td class="lbl">Birth Date:</td><td class="val">${data.clientBirthDate || "—"}</td>
+            <td class="lbl">Term (Years):</td><td class="val">${termYears ?? "—"}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Address:</td><td class="val">${data.clientAddress}</td>
+            <td class="lbl">Installment Amount:</td><td class="val">${fmtNum(c.monthlyAmortization)}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Contact No.:</td><td class="val">${data.clientContact}</td>
+            <td class="lbl">Installment Month:</td><td class="val">${installmentMonth ?? "—"}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Sales Agent:</td><td class="val">${data.salesAgent || "—"}</td>
+            <td class="lbl"></td><td class="val"></td>
+          </tr>
+        </table>
 
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px;">
+        <table class="ledger">
           <thead>
-            <tr style="border-bottom: 2px solid #2d8a4e;">
-              <th style="padding: 6px 8px; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b6b60; font-family: 'Courier New', monospace;">Date</th>
-              <th style="padding: 6px 8px; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b6b60; font-family: 'Courier New', monospace;">OR #</th>
-              <th style="padding: 6px 8px; text-align: left; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b6b60; font-family: 'Courier New', monospace;">Channel</th>
-              <th style="padding: 6px 8px; text-align: right; font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: #6b6b60; font-family: 'Courier New', monospace;">Amount</th>
+            <tr>
+              <th>Pay Class</th>
+              <th>O.R. Date</th>
+              <th>O.R. No.</th>
+              <th class="num">Amount</th>
+              <th class="num">Installment No.</th>
+              <th class="num">Balance</th>
+              <th>Remarks</th>
             </tr>
           </thead>
           <tbody>
-            ${paymentsRows || `<tr><td colspan="4" style="padding: 12px 8px; text-align: center; font-size: 11px; color: #999; font-style: italic;">No payments recorded</td></tr>`}
+            ${
+              ledgerRows ||
+              `<tr><td colspan="7" style="text-align: center; font-style: italic; color: #666; padding: 12px;">No payments recorded</td></tr>`
+            }
           </tbody>
-          <tfoot>
-            <tr style="border-top: 2px solid #2d8a4e;">
-              <td colspan="3" style="padding: 8px 8px; font-size: 11px; font-weight: bold; font-family: 'Courier New', monospace;">Total Paid:</td>
-              <td style="padding: 8px 8px; text-align: right; font-size: 12px; font-weight: bold; color: #2d8a4e; font-family: 'Courier New', monospace;">${formatPHP(c.totalPaid)}</td>
-            </tr>
-          </tfoot>
         </table>
-
-        <div style="display: flex; justify-content: flex-end; gap: 16px; font-size: 11px; font-family: 'Courier New', monospace;">
-          <span>Plan Amount: <strong>${formatPHP(c.planAmount)}</strong></span>
-          <span>Balance: <strong style="color: ${balance > 0 ? "#d4a017" : "#2d8a4e"};">${formatPHP(balance)}</strong></span>
-        </div>
       </div>`;
     })
     .join("");
@@ -132,7 +172,7 @@ export function generateSOAHTML(data: SOAData): string {
   <style>
     @page {
       size: A4;
-      margin: 20mm;
+      margin: 15mm;
     }
     * {
       margin: 0;
@@ -140,94 +180,120 @@ export function generateSOAHTML(data: SOAData): string {
       box-sizing: border-box;
     }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      color: #2d2d2a;
+      font-family: Arial, 'Segoe UI', Roboto, sans-serif;
+      color: #000;
       background: #ffffff;
-      line-height: 1.5;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+    #soa-content {
+      max-width: 740px;
+      margin: 0 auto;
+    }
+    .office {
+      text-align: center;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    h1 {
+      text-align: center;
+      font-size: 18px;
+      letter-spacing: 2px;
+      margin: 14px 0 4px;
+      text-transform: uppercase;
+    }
+    .divider {
+      border-top: 2px solid #000;
+      margin: 8px 0 16px;
+    }
+    .contract-block {
+      margin-bottom: 26px;
+      page-break-inside: avoid;
+    }
+    table.info {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 12px;
+    }
+    table.info td {
+      padding: 3px 4px;
+      vertical-align: top;
+      font-size: 11px;
+    }
+    td.lbl {
+      width: 17%;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    td.val {
+      width: 33%;
+    }
+    table.ledger {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table.ledger th {
+      border: 1px solid #000;
+      background: #f2f2f2;
+      padding: 5px 6px;
+      font-size: 10px;
+      text-align: center;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+    table.ledger td {
+      border: 1px solid #000;
+      padding: 4px 6px;
+      font-size: 10.5px;
+    }
+    td.num, th.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+    .signatures {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 44px;
+      padding-top: 8px;
+    }
+    .signatures > div {
+      text-align: center;
+      width: 45%;
+    }
+    .sig-label {
+      font-size: 11px;
+    }
+    .sig-name {
+      font-weight: bold;
+      margin-top: 36px;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+    .sig-title {
+      font-size: 10px;
+      margin-top: 2px;
     }
   </style>
 </head>
 <body>
-  <div id="soa-content" style="max-width: 700px; margin: 0 auto; padding: 24px;">
-    <!-- Header -->
-    <div style="border-bottom: 3px solid #2d8a4e; padding-bottom: 16px; margin-bottom: 24px;">
-      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
-        <div>
-          <h1 style="font-size: 20px; font-weight: bold; letter-spacing: -0.02em; color: #1a1a18;">
-            STATEMENT OF ACCOUNT
-          </h1>
-          <p style="font-family: 'Courier New', monospace; font-size: 11px; color: #6b6b60; margin-top: 4px;">
-            > evangelist.funeralservices — account.statement
-          </p>
-        </div>
-        <div style="text-align: right;">
-          <p style="font-size: 10px; color: #6b6b60; text-transform: uppercase; letter-spacing: 0.05em;">Generated</p>
-          <p style="font-family: 'Courier New', monospace; font-size: 12px; font-weight: bold;">${data.generatedDate}</p>
-          <p style="font-family: 'Courier New', monospace; font-size: 10px; color: #6b6b60; margin-top: 4px;">Acct: ${data.accountNumber}</p>
-        </div>
+  <div id="soa-content">
+    <p class="office">${OFFICE_ADDRESS}</p>
+    <h1>Statement of Account</h1>
+    <div class="divider"></div>
+
+    ${contractsHTML}
+
+    <div class="signatures">
+      <div>
+        <p class="sig-label">Prepared by:</p>
+        <p class="sig-name">Analyn M. Pacana</p>
+        <p class="sig-title">Finance Head, EFS OPC</p>
       </div>
-    </div>
-
-    <!-- Client Info -->
-    <div style="background: #f8f7f4; border: 1px solid #e5e5e0; border-radius: 6px; padding: 16px; margin-bottom: 24px;">
-      <p style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #6b6b60; margin-bottom: 8px; font-family: 'Courier New', monospace;">
-        Account Holder
-      </p>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
-        <div>
-          <span style="color: #6b6b60;">Name:</span>
-          <strong style="margin-left: 4px;">${data.clientName}</strong>
-        </div>
-        <div>
-          <span style="color: #6b6b60;">Contact:</span>
-          <span style="margin-left: 4px; font-family: 'Courier New', monospace; font-size: 11px;">${data.clientContact}</span>
-        </div>
-        <div style="grid-column: 1 / -1;">
-          <span style="color: #6b6b60;">Address:</span>
-          <span style="margin-left: 4px;">${data.clientAddress}</span>
-        </div>
-        ${data.clientEmail ? `<div><span style="color: #6b6b60;">Email:</span><span style="margin-left: 4px;">${data.clientEmail}</span></div>` : ""}
-        <div>
-          <span style="color: #6b6b60;">Beneficiary:</span>
-          <span style="margin-left: 4px;">${data.beneficiaryName} (${data.beneficiaryRelationship})</span>
-        </div>
+      <div>
+        <p class="sig-label">Approved by:</p>
+        <p class="sig-name">Evangeline M. Pacana</p>
+        <p class="sig-title">Chief Executive Officer, EFS OPC</p>
       </div>
-    </div>
-
-    <!-- Contracts & Payments -->
-    <div style="margin-bottom: 24px;">
-      <h2 style="font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; color: #6b6b60; margin-bottom: 16px; font-family: 'Courier New', monospace;">
-        Contracts &amp; Payment History
-      </h2>
-      ${contractsHTML}
-    </div>
-
-    <!-- Summary -->
-    <div style="border-top: 3px solid #2d8a4e; padding-top: 16px; margin-top: 16px;">
-      <h2 style="font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em; color: #6b6b60; margin-bottom: 12px; font-family: 'Courier New', monospace;">
-        Account Summary
-      </h2>
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
-        <div style="background: #f8f7f4; border: 1px solid #e5e5e0; border-radius: 6px; padding: 12px; text-align: center;">
-          <p style="font-size: 9px; text-transform: uppercase; color: #6b6b60; margin-bottom: 4px; font-family: 'Courier New', monospace;">Total Plan Amount</p>
-          <p style="font-size: 16px; font-weight: bold; font-family: 'Courier New', monospace;">${formatPHP(totalPlanAmount)}</p>
-        </div>
-        <div style="background: #f8f7f4; border: 1px solid #e5e5e0; border-radius: 6px; padding: 12px; text-align: center;">
-          <p style="font-size: 9px; text-transform: uppercase; color: #6b6b60; margin-bottom: 4px; font-family: 'Courier New', monospace;">Total Paid</p>
-          <p style="font-size: 16px; font-weight: bold; font-family: 'Courier New', monospace; color: #2d8a4e;">${formatPHP(totalPaid)}</p>
-        </div>
-        <div style="background: #f8f7f4; border: 1px solid #e5e5e0; border-radius: 6px; padding: 12px; text-align: center;">
-          <p style="font-size: 9px; text-transform: uppercase; color: #6b6b60; margin-bottom: 4px; font-family: 'Courier New', monospace;">Outstanding Balance</p>
-          <p style="font-size: 16px; font-weight: bold; font-family: 'Courier New', monospace; color: ${totalBalance > 0 ? "#d4a017" : "#2d8a4e"};">${formatPHP(totalBalance)}</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <div style="margin-top: 32px; padding-top: 12px; border-top: 1px solid #e5e5e0; font-size: 9px; color: #999; text-align: center; font-family: 'Courier New', monospace;">
-      <p>This Statement of Account is computer-generated and does not require a signature.</p>
-      <p style="margin-top: 4px;">Evangelist Funeral Services — Pre-Need Deathcare Plan Management</p>
-      <p style="margin-top: 4px; color: #ccc;">Generated on ${data.generatedDate}</p>
     </div>
   </div>
 </body>
