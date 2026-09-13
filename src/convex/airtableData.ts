@@ -96,14 +96,12 @@ export const whoAmI = internalQuery({
 
 /** Planholders, newest first. */
 export const clients = internalQuery({
-  args: {
-    branchId: v.optional(v.id("branches")),
-    limit: v.optional(v.number()),
-  },
+  args: { limit: v.optional(v.number()) },
   handler: async (ctx, args): Promise<AirtablePayload> => {
+    // Branch scope always comes from the caller's profile, never from the
+    // client, so a branch user cannot widen their own view.
     const viewer = await assertStaff(ctx);
     const branchId = viewer.branchId ?? undefined;
-    void args.branchId; // branch scope always comes from the caller's profile
 
     const rows = branchId
       ? await ctx.db
@@ -157,14 +155,10 @@ export const clients = internalQuery({
 
 /** Memorial plans / contracts, newest first, with the planholder's name. */
 export const contracts = internalQuery({
-  args: {
-    branchId: v.optional(v.id("branches")),
-    limit: v.optional(v.number()),
-  },
+  args: { limit: v.optional(v.number()) },
   handler: async (ctx, args): Promise<AirtablePayload> => {
     const viewer = await assertStaff(ctx);
     const branchId = viewer.branchId ?? undefined;
-    void args.branchId;
 
     const rows = branchId
       ? await ctx.db
@@ -221,14 +215,10 @@ export const contracts = internalQuery({
 
 /** Payments, most recent payment date first, with contract + planholder. */
 export const payments = internalQuery({
-  args: {
-    branchId: v.optional(v.id("branches")),
-    limit: v.optional(v.number()),
-  },
+  args: { limit: v.optional(v.number()) },
   handler: async (ctx, args): Promise<AirtablePayload> => {
     const viewer = await assertStaff(ctx);
     const branchId = viewer.branchId ?? undefined;
-    void args.branchId;
 
     const all = branchId
       ? await ctx.db
@@ -298,6 +288,56 @@ export const payments = internalQuery({
           }),
         };
       }),
+      total: all.length,
+      truncated: all.length > page.length,
+    };
+  },
+});
+
+/** Official receipts, most recent first. */
+export const receipts = internalQuery({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args): Promise<AirtablePayload> => {
+    const viewer = await assertStaff(ctx);
+    const branchId = viewer.branchId ?? undefined;
+
+    const all = branchId
+      ? await ctx.db
+          .query("receipts")
+          .withIndex("by_branch", (q) => q.eq("branchId", branchId))
+          .collect()
+      : await ctx.db.query("receipts").collect();
+
+    all.sort((a, b) => b.createdAt - a.createdAt);
+
+    const limit = clampLimit(args.limit);
+    const page = all.slice(0, limit);
+
+    const branchNames = await branchNameMap(
+      ctx,
+      page.map((r) => r.branchId)
+    );
+    const userIds = Array.from(new Set(page.map((r) => r.issuedBy)));
+    const userDocs = await Promise.all(userIds.map((id) => ctx.db.get(id)));
+    const userById = new Map(userIds.map((id, i) => [id, userDocs[i]] as const));
+
+    return {
+      records: page.map((r) => ({
+        fields: bag({
+          "EFS ID": r._id,
+          "Receipt No.": r.receiptNumber,
+          "Contract No.": r.contractNumber,
+          "Planholder": r.issuedTo,
+          "Branch": r.branchId ? branchNames.get(r.branchId) : "",
+          "Plan Type": r.planType,
+          "Amount": r.amount,
+          "Channel": r.paymentChannel,
+          "Status": r.status,
+          "Payment Date": iso(r.paymentDate),
+          "Issued By": userById.get(r.issuedBy)?.name ?? userById.get(r.issuedBy)?.email,
+          "Issued At": iso(r.createdAt),
+        }),
+      })),
       total: all.length,
       truncated: all.length > page.length,
     };

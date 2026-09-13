@@ -27,6 +27,7 @@ const TABLES: Array<{ key: TableKey; label: string; hint: string }> = [
   { key: "clients", label: "Clients", hint: "Planholders and their contact details, beneficiaries and branch." },
   { key: "contracts", label: "Contracts", hint: "Memorial plans with amounts, balances and delinquency status." },
   { key: "payments", label: "Payments", hint: "Every collection with channel, O.R. number and recorder." },
+  { key: "receipts", label: "Receipts", hint: "Official receipts with number, amount, status and issuer." },
 ];
 
 const envVarRows = [
@@ -148,9 +149,9 @@ export function AirtableSyncCard() {
             <div>
               <p className="text-[15px] font-semibold">Airtable</p>
               <p className="text-sm text-muted-foreground mt-0.5">
-                Mirror clients, contracts and payments into an Airtable base you can
-                share, filter and automate. Records are matched on their ID, so
-                syncing again updates rows instead of duplicating them.
+                Mirror clients, contracts, payments and receipts into an Airtable
+                base you can share, filter and automate. Records are matched on
+                their ID, so syncing again updates rows instead of duplicating them.
               </p>
             </div>
           </div>
@@ -393,7 +394,8 @@ export function AirtableSyncCard() {
               )}
               <p className="text-[12.5px] text-muted-foreground">
                 Up to 500 records per table per run (newest first) — run it again to
-                push older records. Your view is limited to your own branch.
+                push older records. Your view is limited to your own branch. Rows you
+                delete here are not removed from Airtable automatically.
               </p>
             </div>
           </>

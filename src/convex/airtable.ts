@@ -9,10 +9,14 @@ import type { AirtablePayload } from "./airtableData";
 /**
  * Airtable integration.
  *
- * Pushes this system's records into an Airtable base so staff can build their
- * own views, share read-only dashboards, and add automations. Records are
- * upserted on the "EFS ID" column (the record id in this system), so running a
- * sync repeatedly updates the same rows instead of duplicating them.
+ * Pushes this system's records (clients, contracts, payments, receipts) into an
+ * Airtable base so staff can build their own views, share read-only dashboards,
+ * and add automations. Records are upserted on the "EFS ID" column (the record
+ * id in this system), so running a sync repeatedly updates the same rows
+ * instead of duplicating them.
+ *
+ * Note: deletions in this app do not remove rows from Airtable — deliberately,
+ * so an accidental delete here cannot silently wipe the shared sheet.
  *
  * ── Credentials (set these in the project's Keys / API keys tab) ───────────
  *   AIRTABLE_TOKEN    Airtable personal access token ("pat…")
@@ -33,13 +37,14 @@ const BATCH_SIZE = 10;
 /** Airtable allows 5 requests/second per base — leave headroom between batches. */
 const BATCH_PAUSE_MS = 250;
 
-const TABLE_KEYS = ["clients", "contracts", "payments"] as const;
+const TABLE_KEYS = ["clients", "contracts", "payments", "receipts"] as const;
 type TableKey = (typeof TABLE_KEYS)[number];
 
 const TABLE_NAME: Record<TableKey, string> = {
   clients: "Clients",
   contracts: "Contracts",
   payments: "Payments",
+  receipts: "Receipts",
 };
 
 type FieldSpec = {
@@ -138,6 +143,24 @@ const TABLE_SPECS: Record<
       text("Recorded By"),
       longText("Remarks"),
       dateTime("Recorded At"),
+    ],
+  },
+  receipts: {
+    description:
+      "Official receipts synced from the Evangelist Funeral Services system.",
+    fields: [
+      text("EFS ID"),
+      text("Receipt No."),
+      text("Contract No."),
+      text("Planholder"),
+      text("Branch"),
+      text("Plan Type"),
+      number("Amount"),
+      text("Channel"),
+      text("Status"),
+      dateTime("Payment Date"),
+      text("Issued By"),
+      dateTime("Issued At"),
     ],
   },
 };
@@ -361,12 +384,25 @@ export const status = action({
     const { tables, failure } = await tablePresence(token!, baseId!, base);
     if (failure) return { state: "error", ...failure };
 
+    const missingKeys = tables.filter((t) => !t.exists).map((t) => t.key);
+
+    // Without metadata access every table probing as absent can also mean the
+    // base id is wrong, so say that instead of offering to "create" tables in
+    // a base we may not be looking at.
+    if (!base.canReadBase && missingKeys.length === TABLE_KEYS.length) {
+      return {
+        state: "error",
+        error: `No Airtable tables were found in base ${baseId}.`,
+        hint: "Double-check AIRTABLE_BASE_ID (it starts with \"app\" and is the part before the table name in the base URL), and give the token the schema.bases:read scope plus access to that base.",
+      };
+    }
+
     return {
       state: "ready",
       baseId: baseId!,
       baseName: base.baseName,
       tables,
-      missing: tables.filter((t) => !t.exists).map((t) => t.key),
+      missing: missingKeys,
       canReadBase: base.canReadBase,
       viewer: caller.name,
     };
@@ -376,6 +412,8 @@ export const status = action({
 /**
  * Create any missing tables (with their columns).
  * Requires the `schema.bases:write` scope.
+ *
+ * Creates: Clients, Contracts, Payments, Receipts.
  */
 export const ensureTables = action({
   args: {},
@@ -440,7 +478,12 @@ export const sync = action({
   args: {
     tables: v.optional(
       v.array(
-        v.union(v.literal("clients"), v.literal("contracts"), v.literal("payments"))
+        v.union(
+          v.literal("clients"),
+          v.literal("contracts"),
+          v.literal("payments"),
+          v.literal("receipts")
+        )
       )
     ),
     limit: v.optional(v.number()),
@@ -573,5 +616,7 @@ async function loadPayload(
       return await ctx.runQuery(internal.airtableData.contracts, { limit });
     case "payments":
       return await ctx.runQuery(internal.airtableData.payments, { limit });
+    case "receipts":
+      return await ctx.runQuery(internal.airtableData.receipts, { limit });
   }
 }
