@@ -18,9 +18,18 @@ import { useAuth } from "@/hooks/use-auth";
 import { api } from "@/convex/_generated/api";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useQuery } from "convex/react";
-import { ArrowRight, Loader2, Mail, UserX } from "lucide-react";
+import { ArrowRight, Loader2, LogOut, Mail, UserX } from "lucide-react";
 import { Suspense, useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
+
+/** Roles that may open the staff area (mirrors src/convex/roles.ts). */
+const STAFF_ROLES = [
+  "super_admin",
+  "ceo",
+  "manager",
+  "finance_staff",
+  "cashier",
+];
 
 function Auth() {
   const {
@@ -28,6 +37,7 @@ function Auth() {
     isAuthenticated,
     user,
     signIn,
+    signOut,
   } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -54,6 +64,22 @@ function Auth() {
   const awaitingSession =
     isAuthenticated && (!userLoaded || setup === undefined);
 
+  // `?as=staff` marks a visit that started from a "Staff & agents — sign in"
+  // entry point. Those visitors must reach the management dashboard or be told
+  // why they can't — never be quietly dropped into the client portal.
+  const staffIntent = searchParams.get("as") === "staff";
+  const userRole = user?.role ?? null;
+  const userIsStaff = userRole !== null && STAFF_ROLES.includes(userRole);
+  // A brand-new install has no Super Admin yet; its first account is routed to
+  // setup rather than being told it isn't staff.
+  const firstRun = setup !== undefined && setup.hasSuperAdmin === false;
+  const notStaffAccount =
+    staffIntent &&
+    isAuthenticated &&
+    userLoaded &&
+    !userIsStaff &&
+    !firstRun;
+
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
     if (!userLoaded || setup === undefined) return;
@@ -63,12 +89,24 @@ function Auth() {
     }
     // Role holders and the very first account (before a Super Admin exists)
     // go to the staff dashboard/setup flow. Everyone else lands in the portal.
-    if (user?.role || setup.hasSuperAdmin === false) {
+    if (userIsStaff || setup.hasSuperAdmin === false) {
       navigate("/dashboard");
       return;
     }
+    // Staff intent: stay on this page and explain, instead of bouncing a
+    // non-staff account into the client portal.
+    if (staffIntent) return;
     navigate("/portal");
-  }, [authLoading, isAuthenticated, userLoaded, user, setup, landing, navigate]);
+  }, [
+    authLoading,
+    isAuthenticated,
+    userLoaded,
+    userIsStaff,
+    staffIntent,
+    setup,
+    landing,
+    navigate,
+  ]);
 
   const handleEmailSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -106,6 +144,22 @@ function Auth() {
     }
   };
 
+  // Let a visitor drop the current (non-staff) session so they can sign in with
+  // the work email that actually holds their role.
+  const handleSwitchAccount = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await signOut();
+    } catch (error) {
+      console.error("Sign out error:", error);
+    } finally {
+      setIsLoading(false);
+      setStep("signIn");
+      setOtp("");
+    }
+  };
+
   const handleGuestLogin = async () => {
     setIsLoading(true);
     setError(null);
@@ -135,6 +189,68 @@ function Auth() {
     );
   }
 
+  // Came from "Staff & agents — sign in" but this account holds no staff
+  // role. Explain that instead of redirecting into the client portal.
+  if (notStaffAccount) {
+    return (
+      <div className="min-h-screen flex flex-col">
+        <div className="flex-1 flex items-center justify-center px-4">
+          <div className="flex items-center justify-center h-full flex-col w-full max-w-[420px]">
+            <Card className="w-full border shadow-md">
+              <CardHeader className="text-center">
+                <div className="flex justify-center">
+                  <BrandLogo
+                    className="h-14 w-14 rounded-lg mb-3 mt-3 cursor-pointer"
+                    onClick={() => navigate("/")}
+                    title="Evangelist Funeral Services"
+                  />
+                </div>
+                <CardTitle className="text-xl font-mono">
+                  <span className="text-destructive">&gt;</span> Not a staff
+                  account
+                </CardTitle>
+                <CardDescription>
+                  <span className="font-mono text-foreground">
+                    {user?.email ?? "This account"}
+                  </span>{" "}
+                  isn&apos;t registered as office staff.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3 pb-6">
+                <p className="text-sm text-muted-foreground text-center leading-relaxed">
+                  Ask your Super Admin or CEO to set your role — or assign you a
+                  branch position (Branch Manager, Collector, or Cashier) — then
+                  sign in again.
+                </p>
+                <Button
+                  className="w-full gap-2"
+                  onClick={handleSwitchAccount}
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <LogOut className="h-4 w-4" />
+                  )}
+                  Sign in with a different account
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full gap-2"
+                  onClick={() => navigate("/portal")}
+                >
+                  Go to my client portal
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="flex-1 flex items-center justify-center px-4">
@@ -151,10 +267,13 @@ function Auth() {
                     />
                   </div>
                   <CardTitle className="text-xl font-mono">
-                    <span className="text-terminal-green">&gt;</span> Get Started
+                    <span className="text-terminal-green">&gt;</span>{" "}
+                    {staffIntent ? "Staff Sign In" : "Get Started"}
                   </CardTitle>
                   <CardDescription>
-                    Enter your email to log in or sign up
+                    {staffIntent
+                      ? "Enter your work email to open the management dashboard"
+                      : "Enter your email to log in or sign up"}
                   </CardDescription>
                 </CardHeader>
                 <form onSubmit={handleEmailSubmit}>
@@ -200,16 +319,29 @@ function Auth() {
                         </div>
                       </div>
 
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full mt-4 gap-2"
-                        onClick={handleGuestLogin}
-                        disabled={isLoading}
-                      >
-                        <UserX className="h-4 w-4" />
-                        Continue as guest (client portal)
-                      </Button>
+                      {staffIntent ? (
+                        <p className="mt-4 text-center text-xs text-muted-foreground">
+                          Looking for your plan?{" "}
+                          <button
+                            type="button"
+                            className="underline transition-colors hover:text-foreground"
+                            onClick={() => navigate("/auth?returnTo=%2Fportal")}
+                          >
+                            Open the client portal
+                          </button>
+                        </p>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="w-full mt-4 gap-2"
+                          onClick={handleGuestLogin}
+                          disabled={isLoading}
+                        >
+                          <UserX className="h-4 w-4" />
+                          Continue as guest (client portal)
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </form>

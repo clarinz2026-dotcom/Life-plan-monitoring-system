@@ -1281,7 +1281,7 @@ export default function Landing() {
                   <Button
                     variant="outline"
                     className="h-12 rounded-full border-white/30 bg-transparent px-7 text-[14px] font-bold text-white hover:bg-white/10 hover:text-white"
-                    onClick={() => navigate("/auth")}
+                    onClick={() => navigate("/auth?as=staff")}
                   >
                     Staff & agents — sign in
                   </Button>
