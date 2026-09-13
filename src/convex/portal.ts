@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { resolveBranchFilter } from "./access";
+import { effectiveRole } from "./roles";
 
 /**
  * Portal access model:
@@ -75,7 +76,10 @@ async function requireStaff(ctx: MutationCtx) {
   const userId = await getAuthUserId(ctx);
   if (!userId) throw new Error("Not authenticated.");
   const user = await ctx.db.get(userId);
-  if (!user || !STAFF_ROLES.includes(user.role as typeof STAFF_ROLES[number])) {
+  if (
+    !user ||
+    !STAFF_ROLES.includes(effectiveRole(user) as typeof STAFF_ROLES[number])
+  ) {
     throw new Error("Not authorized — staff access required.");
   }
   return user;
@@ -327,7 +331,11 @@ export const staffListRequests = query({
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
     const user = await ctx.db.get(userId);
-    if (!user || !STAFF_ROLES.includes(user.role as typeof STAFF_ROLES[number])) return [];
+    if (
+      !user ||
+      !STAFF_ROLES.includes(effectiveRole(user) as typeof STAFF_ROLES[number])
+    )
+      return [];
 
     const branchId = await resolveBranchFilter(ctx, args.branchId);
 

@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { query, mutation } from "./_generated/server";
 import { assertStaff, resolveBranchFilter } from "./access";
+import { effectiveRole } from "./roles";
 
 /** Roles allowed to trigger a global status recalculation. */
 const STAFF_ROLES = [
@@ -47,7 +48,7 @@ export const updateAllContractStatuses = mutation({
     const viewer = await ctx.db.get(userId);
     if (
       !viewer ||
-      !STAFF_ROLES.includes(viewer.role as (typeof STAFF_ROLES)[number])
+      !STAFF_ROLES.includes(effectiveRole(viewer) as (typeof STAFF_ROLES)[number])
     ) {
       throw new Error("Only staff can recalculate contract statuses.");
     }

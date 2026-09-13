@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { MutationCtx, QueryCtx } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
+import { effectiveRole } from "./roles";
 
 /**
  * Branch access helpers shared across staff endpoints.
@@ -26,7 +27,9 @@ export async function getViewer(
   if (userId === null) return null;
   const doc = await ctx.db.get(userId);
   if (!doc) return null;
-  return { userId, role: doc.role ?? null, branchId: doc.branchId };
+  // A branch position counts as staff even when no explicit role was written
+  // (the "Assign Staff to Branch" flow sets position only).
+  return { userId, role: effectiveRole(doc), branchId: doc.branchId };
 }
 
 export const isAdminRole = (role: string | null) =>

@@ -1,6 +1,8 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { roleValidator } from "./schema";
+import { effectiveRole, roleFromPosition } from "./roles";
+import { isAdminRole } from "./access";
 import { mutation, query, QueryCtx } from "./_generated/server";
 
 /**
@@ -11,7 +13,9 @@ export const currentUser = query({
   handler: async (ctx) => {
     const user = await getCurrentUser(ctx);
     if (user === null) return null;
-    return user;
+    // Report the effective role so the client router and the server guards
+    // agree even when access comes from a branch position (see ./roles).
+    return { ...user, role: effectiveRole(user) ?? undefined };
   },
 });
 
@@ -22,23 +26,15 @@ export const hasRole = query({
   args: {},
   handler: async (ctx) => {
     const user = await getCurrentUser(ctx);
-    if (!user)
-      return {
-        isSuperAdmin: false,
-        isCeo: false,
-        isManager: false,
-        isFinance: false,
-        isCashier: false,
-        role: null,
-      };
+    const role = effectiveRole(user);
     return {
-      isSuperAdmin: user.role === "super_admin",
-      isCeo: user.role === "ceo",
-      isManager: user.role === "manager",
-      isFinance: user.role === "finance_staff",
-      isCashier: user.role === "cashier",
-      role: user.role ?? null,
-      branchId: user.branchId ?? null,
+      isSuperAdmin: role === "super_admin",
+      isCeo: role === "ceo",
+      isManager: role === "manager",
+      isFinance: role === "finance_staff",
+      isCashier: role === "cashier",
+      role,
+      branchId: user?.branchId ?? null,
     };
   },
 });
@@ -64,7 +60,7 @@ export const list = query({
       name: u.name,
       email: u.email,
       image: u.image,
-      role: u.role ?? null,
+      role: effectiveRole(u),
       branchId: u.branchId ?? null,
       position: u.position ?? null,
       createdAt: u._creationTime,
@@ -339,8 +335,21 @@ export const assignBranch = mutation({
     const patch: Record<string, unknown> = {};
     if (args.branchId !== undefined) patch.branchId = args.branchId;
     else patch.branchId = undefined;
-    if (args.position !== undefined) patch.position = args.position;
-    else patch.position = undefined;
+    if (args.position !== undefined) {
+      patch.position = args.position;
+      // Keep the permission role in step with the job title. Assigning a staff
+      // member without writing a role left them with `role: undefined`, which
+      // every guard reads as "not staff" — so they were bounced to the client
+      // portal instead of their branch dashboard.
+      const derivedRole = roleFromPosition(args.position);
+      // Never downgrade an admin: giving the CEO/Super Admin a branch position
+      // must not replace their system role.
+      if (derivedRole && !isAdminRole(targetUser.role ?? null)) {
+        patch.role = derivedRole;
+      }
+    } else {
+      patch.position = undefined;
+    }
     await ctx.db.patch(args.userId, patch);
 
     // Audit log
@@ -385,7 +394,7 @@ export const listWithBranches = query({
       name: u.name,
       email: u.email,
       image: u.image,
-      role: u.role ?? null,
+      role: effectiveRole(u),
       branchId: u.branchId ?? null,
       branchName: (u.branchId && branchNameById.get(u.branchId)) || null,
       position: u.position ?? null,

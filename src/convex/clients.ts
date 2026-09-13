@@ -9,6 +9,7 @@ import {
   isAdminRole,
   resolveBranchFilter,
 } from "./access";
+import { effectiveRole } from "./roles";
 
 /**
  * Compute delinquency status based on days since last payment.
@@ -217,7 +218,7 @@ export const bulkDelete = mutation({
     if (!userId) throw new Error("Not authenticated");
 
     const user = await ctx.db.get(userId);
-    const viewerRole = user?.role;
+    const viewerRole = effectiveRole(user);
     if (
       viewerRole !== "super_admin" &&
       viewerRole !== "ceo" &&
