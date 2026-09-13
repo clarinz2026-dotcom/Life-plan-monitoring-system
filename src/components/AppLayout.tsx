@@ -68,12 +68,14 @@ const STAFF_ROLES = ["super_admin", "ceo", "manager", "finance_staff", "cashier"
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
-  // `hasRole` is also read by useBranch() — Convex shares the subscription, so
-  // this does not add a second round trip. Kept here to know when the role has
-  // actually loaded (null means "loaded with no role" OR "still loading").
-  const roleData = useQuery(api.users.hasRole);
   const superAdminData = useQuery(api.users.hasSuperAdmin);
-  const { role, branchId, isBranchStaff } = useBranch();
+  const { branchId, isBranchStaff } = useBranch();
+
+  // The signed-in user document, not `hasRole`, is the authority for the role.
+  // `hasRole` can still serve the signed-out shape (role: null) for a beat after
+  // a fresh sign-in, which used to bounce staff accounts out to the portal.
+  const userLoaded = user !== undefined && user !== null;
+  const userRole = userLoaded ? user?.role ?? null : null;
   // Fetch only this user's own branch (one document) instead of the full branch
   // list with a manager lookup for every branch on every page load.
   const userBranch = useQuery(
@@ -111,12 +113,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Never assume a privileged role while the role is still loading — the old
   // `?? "super_admin"` default flashed the full admin nav (and setup link) to
   // cashiers and managers on every page mount.
-  const userRole = role;
   const hasSuperAdmin = superAdminData?.hasSuperAdmin ?? false;
   const roleLabel = userRole ? ROLE_LABELS[userRole] || userRole : "";
 
-  const roleKnown = roleData !== undefined;
-  const isStaffAccount = role !== null && STAFF_ROLES.includes(role);
+  const isStaffAccount =
+    userLoaded && userRole !== null && STAFF_ROLES.includes(userRole);
   const onSetupPage = location.pathname === "/super-admin-setup";
 
   // A brand-new install: nobody holds Super Admin yet.
@@ -144,7 +145,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // the staff pages — and their guarded queries — never mount.
   const firstRun = superAdminData !== undefined && !hasSuperAdmin;
   const mustGoToPortal =
-    roleKnown &&
+    userLoaded &&
     superAdminData !== undefined &&
     !isStaffAccount &&
     !onSetupPage &&

@@ -45,21 +45,30 @@ function Auth() {
       ? returnTo
       : null;
 
+  // `currentUser` keeps returning `null` for a beat after sign-in — the cached
+  // result for the signed-out session is served until the new identity lands.
+  // That `null` is indistinguishable from "signed in with no role", so routing
+  // on it dropped staff accounts straight into the client portal. Wait for the
+  // real user document before deciding where anyone goes.
+  const userLoaded = user !== undefined && user !== null;
+  const awaitingSession =
+    isAuthenticated && (!userLoaded || setup === undefined);
+
   useEffect(() => {
     if (authLoading || !isAuthenticated) return;
-    if (user === undefined || setup === undefined) return;
+    if (!userLoaded || setup === undefined) return;
     if (landing) {
       navigate(landing);
       return;
     }
     // Role holders and the very first account (before a Super Admin exists)
     // go to the staff dashboard/setup flow. Everyone else lands in the portal.
-    if (user?.role || setup?.hasSuperAdmin === false) {
+    if (user?.role || setup.hasSuperAdmin === false) {
       navigate("/dashboard");
       return;
     }
     navigate("/portal");
-  }, [authLoading, isAuthenticated, user, setup, landing, navigate]);
+  }, [authLoading, isAuthenticated, userLoaded, user, setup, landing, navigate]);
 
   const handleEmailSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -112,6 +121,19 @@ function Auth() {
       setIsLoading(false);
     }
   };
+
+  // Hold the card while the fresh session loads, so someone who just entered
+  // their code does not briefly see the sign-in form again.
+  if (awaitingSession) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-4">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        <p className="text-sm font-mono text-muted-foreground">
+          Signing you in…
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -186,7 +208,7 @@ function Auth() {
                         disabled={isLoading}
                       >
                         <UserX className="h-4 w-4" />
-                        Continue as Guest
+                        Continue as guest (client portal)
                       </Button>
                     </div>
                   </CardContent>
