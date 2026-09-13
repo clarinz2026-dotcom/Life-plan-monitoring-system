@@ -63,17 +63,20 @@ export const list = query({
 
     const branches = await ctx.db.query("branches").collect();
 
-    const enriched = await Promise.all(
-      branches.map(async (b) => {
-        const manager = b.managerId ? await ctx.db.get(b.managerId) : null;
-        return {
-          ...b,
-          managerName: manager?.name || manager?.email || null,
-        };
-      })
+    // Resolve manager names with one read per distinct manager instead of one
+    // db.get per branch.
+    const managerIds = Array.from(
+      new Set(branches.map((b) => b.managerId).filter(Boolean))
+    ) as Array<NonNullable<(typeof branches)[number]["managerId"]>>;
+    const managers = await Promise.all(managerIds.map((id) => ctx.db.get(id)));
+    const managerNameById = new Map(
+      managerIds.map((id, i) => [id, managers[i]?.name || managers[i]?.email || null])
     );
 
-    return enriched;
+    return branches.map((b) => ({
+      ...b,
+      managerName: (b.managerId && managerNameById.get(b.managerId)) || null,
+    }));
   },
 });
 
@@ -143,6 +146,9 @@ export const summary = query({
       new Date().getMonth(), 1
     ).getTime();
 
+    // Read the staff list once instead of once per branch.
+    const allUsers = await ctx.db.query("users").collect();
+
     const results = await Promise.all(
       branches.map(async (b) => {
         // Clients in this branch
@@ -178,7 +184,6 @@ export const summary = query({
         const totalPaymentAmount = payments.reduce((sum, p) => sum + p.amount, 0);
 
         // Staff count
-        const allUsers = await ctx.db.query("users").collect();
         const staffCount = allUsers.filter((u) => u.branchId === b._id).length;
 
         const manager = b.managerId ? await ctx.db.get(b.managerId) : null;
@@ -237,11 +242,12 @@ export const remove = mutation({
     }
 
     // Unassign any users from this branch (also clears their position)
-    const users = await ctx.db.query("users").collect();
+    const users = await ctx.db
+      .query("users")
+      .withIndex("by_branch", (q) => q.eq("branchId", args.branchId))
+      .collect();
     for (const u of users) {
-      if (u.branchId === args.branchId) {
-        await ctx.db.patch(u._id, { branchId: undefined, position: undefined });
-      }
+      await ctx.db.patch(u._id, { branchId: undefined, position: undefined });
     }
 
     await ctx.db.delete(args.branchId);

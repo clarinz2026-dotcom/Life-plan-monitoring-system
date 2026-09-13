@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { NavLink, useNavigate, useLocation } from "react-router";
+import { NavLink, Navigate, useNavigate, useLocation } from "react-router";
 import {
   LayoutDashboard,
   Users,
@@ -63,13 +63,23 @@ const ROLE_LABELS: Record<string, string> = {
   manager: "Manager",
 };
 
+/** Roles that may use the staff area. Anything else is a client-portal account. */
+const STAFF_ROLES = ["super_admin", "ceo", "manager", "finance_staff", "cashier"];
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
+  // `hasRole` is also read by useBranch() — Convex shares the subscription, so
+  // this does not add a second round trip. Kept here to know when the role has
+  // actually loaded (null means "loaded with no role" OR "still loading").
   const roleData = useQuery(api.users.hasRole);
   const superAdminData = useQuery(api.users.hasSuperAdmin);
-  const { branchId, isBranchStaff } = useBranch();
-  const branches = useQuery(api.branches.list);
-  const userBranch = isBranchStaff && branchId ? branches?.find((b) => b._id === branchId) : null;
+  const { role, branchId, isBranchStaff } = useBranch();
+  // Fetch only this user's own branch (one document) instead of the full branch
+  // list with a manager lookup for every branch on every page load.
+  const userBranch = useQuery(
+    api.branches.get,
+    isBranchStaff && branchId ? { branchId } : "skip"
+  );
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
@@ -98,8 +108,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     navigate("/");
   };
 
-  const userRole = roleData?.role ?? "super_admin";
+  // Never assume a privileged role while the role is still loading — the old
+  // `?? "super_admin"` default flashed the full admin nav (and setup link) to
+  // cashiers and managers on every page mount.
+  const userRole = role;
   const hasSuperAdmin = superAdminData?.hasSuperAdmin ?? false;
+  const roleLabel = userRole ? ROLE_LABELS[userRole] || userRole : "";
+
+  const roleKnown = roleData !== undefined;
+  const isStaffAccount = role !== null && STAFF_ROLES.includes(role);
+  const onSetupPage = location.pathname === "/super-admin-setup";
+
+  // A brand-new install: nobody holds Super Admin yet.
+  const canRenderSetupPage =
+    onSetupPage && superAdminData !== undefined && !hasSuperAdmin;
 
   // Redirect to super admin setup if no super admin exists and user isn't one
   const needsSetup = useMemo(() => {
@@ -115,13 +137,39 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [needsSetup, location.pathname, navigate]);
 
-  const visibleNav = NAV_ITEMS.filter((item) => {
-    if (!item.roles.includes(userRole)) return false;
-    if (item.to === "/super-admin-setup" && hasSuperAdmin) return false;
-    return true;
-  });
+  // Render page content only once we know the account may see it.
+  const canRenderPage = isStaffAccount || canRenderSetupPage;
+  // Staff endpoints reject non-staff callers (a planholder account must never
+  // read client/payment data). Redirect those accounts to the client portal so
+  // the staff pages — and their guarded queries — never mount.
+  const firstRun = superAdminData !== undefined && !hasSuperAdmin;
+  const mustGoToPortal =
+    roleKnown &&
+    superAdminData !== undefined &&
+    !isStaffAccount &&
+    !onSetupPage &&
+    // On a brand-new install the setup flow must win — otherwise the first
+    // account would be sent to the portal and could never claim Super Admin.
+    !firstRun;
+
+  const visibleNav = useMemo(() => {
+    // While the role is still loading (null) nothing is shown, so a cashier or
+    // manager never briefly sees links they are not allowed to use.
+    if (!userRole) return [];
+    return NAV_ITEMS.filter((item) => {
+      if (!item.roles.includes(userRole)) return false;
+      if (item.to === "/super-admin-setup" && hasSuperAdmin) return false;
+      return true;
+    });
+  }, [userRole, hasSuperAdmin]);
 
   const bottomNavItems = visibleNav.slice(0, 5);
+
+  // Early return placed after every hook so the hook order stays stable across
+  // renders (React throws when a conditional return changes it).
+  if (mustGoToPortal) {
+    return <Navigate to="/portal" replace />;
+  }
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-background overflow-visible">
@@ -192,7 +240,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 {user?.name || user?.email || "User"}
               </p>
               <p className="text-[12px] text-white/50">
-                {ROLE_LABELS[userRole] || userRole}
+                {roleLabel}
               </p>
               {isBranchStaff && userBranch && (
                 <div className="mt-1.5 flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-1">
@@ -241,9 +289,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[12px] text-white/60">
-            {ROLE_LABELS[userRole] || userRole}
-          </span>
+          <span className="text-[12px] text-white/60">{roleLabel}</span>
           <Button
             variant="ghost"
             size="icon"
@@ -286,9 +332,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <p className="text-[14px] font-semibold text-white truncate">
                     {user?.name || user?.email || "User"}
                   </p>
-                  <p className="text-[12px] text-white/50">
-                    {ROLE_LABELS[userRole] || userRole}
-                  </p>
+                  <p className="text-[12px] text-white/50">{roleLabel}</p>
                 </div>
                 <button
                   onClick={() => setDarkMode(!darkMode)}
@@ -313,7 +357,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
         <div className="md:hidden h-[60px]" />
-        <main className="flex-1 pb-20 md:pb-0">{children}</main>
+        <main className="flex-1 pb-20 md:pb-0">
+          {canRenderPage ? children : null}
+        </main>
       </div>
 
       {/* Mobile bottom nav */}

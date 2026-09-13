@@ -1,7 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { resolveBranchFilter } from "./access";
 
 /**
@@ -332,7 +332,15 @@ export const staffListRequests = query({
     const branchId = await resolveBranchFilter(ctx, args.branchId);
 
     let requests: Doc<"service_requests">[];
-    if (args.status) {
+    if (branchId) {
+      // Branch staff read only their own branch's requests (indexed).
+      requests = await ctx.db
+        .query("service_requests")
+        .withIndex("by_branch", (q) => q.eq("branchId", branchId))
+        .order("desc")
+        .collect();
+      if (args.status) requests = requests.filter((r) => r.status === args.status);
+    } else if (args.status) {
       requests = await ctx.db
         .query("service_requests")
         .withIndex("by_status", (q) => q.eq("status", args.status!))
@@ -346,12 +354,25 @@ export const staffListRequests = query({
         .collect();
     }
 
-    const enriched: StaffEnrichedRequest[] = [];
-    for (const r of requests) {
-      if (branchId && r.branchId !== branchId) continue;
-      const branch = r.branchId ? await ctx.db.get(r.branchId) : null;
-      const reqUser = await ctx.db.get(r.userId);
-      enriched.push({
+    // Batch the lookups so we do one read per branch / per requesting user
+    // instead of two reads for every row.
+    const branchIds = Array.from(
+      new Set(requests.map((r) => r.branchId).filter(Boolean))
+    ) as Array<Id<"branches">>;
+    const userIds = Array.from(new Set(requests.map((r) => r.userId)));
+    const [branchDocs, userDocs] = await Promise.all([
+      Promise.all(branchIds.map((id) => ctx.db.get(id))),
+      Promise.all(userIds.map((id) => ctx.db.get(id))),
+    ]);
+    const branchById = new Map(
+      branchIds.map((id, i) => [id, branchDocs[i]] as const)
+    );
+    const userById = new Map(userIds.map((id, i) => [id, userDocs[i]] as const));
+
+    return requests.map((r) => {
+      const branch = r.branchId ? branchById.get(r.branchId) ?? null : null;
+      const reqUser = userById.get(r.userId) ?? null;
+      return {
         ...r,
         branch: branch
           ? {
@@ -364,9 +385,8 @@ export const staffListRequests = query({
           : null,
         userEmail: reqUser?.email ?? null,
         userName: reqUser?.name ?? null,
-      });
-    }
-    return enriched;
+      };
+    });
   },
 });
 

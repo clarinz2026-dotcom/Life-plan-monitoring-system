@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
-import { resolveBranchFilter } from "./access";
+import { assertStaff, resolveBranchFilter } from "./access";
 
 /**
  * List receipts, optionally filtered by client or branch.
@@ -47,6 +47,8 @@ export const list = query({
 export const get = query({
   args: { receiptId: v.id("receipts") },
   handler: async (ctx, args) => {
+    // Receipts carry the planholder's name and amounts — staff only.
+    await assertStaff(ctx);
     const receipt = await ctx.db.get(args.receiptId);
     if (!receipt) return null;
 
@@ -63,6 +65,8 @@ export const get = query({
 export const getByNumber = query({
   args: { receiptNumber: v.string() },
   handler: async (ctx, args) => {
+    // Receipt numbers are sequential and guessable, so this must not be public.
+    await assertStaff(ctx);
     const results = await ctx.db
       .query("receipts")
       .withIndex("by_receiptNumber", (q) =>

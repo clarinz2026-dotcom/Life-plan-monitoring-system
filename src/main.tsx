@@ -10,8 +10,12 @@ import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 
-// Lazy load route components for better code splitting
-const Landing = lazy(() => import("./pages/Landing.tsx"));
+import Landing from "./pages/Landing.tsx";
+
+// Lazy load the in-app routes for better code splitting. Landing is imported
+// eagerly: it is the entry point for almost every visitor, and lazy-loading it
+// meant the browser had to finish parsing the app bundle before it even
+// requested the hero markup and images (a full extra round trip before paint).
 const AuthPage = lazy(() => import("./pages/Auth.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const Clients = lazy(() => import("./pages/Clients.tsx"));
@@ -41,13 +45,14 @@ const PortalChapels = lazy(() => import("./pages/portal/Chapels.tsx"));
 const PortalHelp = lazy(() => import("./pages/portal/Help.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
-// Simple loading fallback for route transitions
+// Lightweight, on-brand fallback for route transitions
 function RouteLoading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="animate-pulse text-muted-foreground font-mono text-sm">
-        Loading...
-      </div>
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-background">
+      <div className="h-10 w-10 animate-pulse rounded-lg bg-primary/15" />
+      <span className="animate-pulse text-[13px] tracking-[0.18em] uppercase text-muted-foreground">
+        Loading
+      </span>
     </div>
   );
 }
@@ -109,6 +114,33 @@ class RootErrorBoundary extends React.Component<
 }
 
 const convex = new ConvexReactClient(import.meta.env.VITE_CONVEX_URL as string);
+
+/**
+ * Warm the chunks behind the main calls to action while the browser is idle, so
+ * the first navigation into sign-in or the dashboard does not wait on a fetch.
+ */
+function prefetchPrimaryRoutes() {
+  for (const load of [
+    () => import("./pages/Auth.tsx"),
+    () => import("./pages/Dashboard.tsx"),
+    () => import("./pages/portal/Overview.tsx"),
+  ]) {
+    load().catch(() => {
+      /* prefetch is best-effort — the route still loads on demand */
+    });
+  }
+}
+
+if (typeof window !== "undefined") {
+  const idleWindow = window as Window & {
+    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+  };
+  if (typeof idleWindow.requestIdleCallback === "function") {
+    idleWindow.requestIdleCallback(prefetchPrimaryRoutes, { timeout: 2500 });
+  } else {
+    window.setTimeout(prefetchPrimaryRoutes, 500);
+  }
+}
 
 function RouteSyncer() {
   const location = useLocation();

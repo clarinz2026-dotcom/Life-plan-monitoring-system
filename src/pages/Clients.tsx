@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useNavigate } from "react-router";
@@ -170,32 +170,44 @@ export default function Clients() {
     }
   };
 
-  const filteredClients = clientsWithStatus?.filter((item) => {
-    if (search) {
-      const q = search.toLowerCase();
-      const matchesSearch =
-        item.client.lastName.toLowerCase().includes(q) ||
-        item.client.firstName.toLowerCase().includes(q) ||
-        item.client.contactNumber.includes(q);
-      if (!matchesSearch) return false;
-    }
-    if (statusFilter !== "all") {
-      if (item.computedStatus !== statusFilter) return false;
-    }
-    return true;
-  });
+  // Derived from the query result — memoized so typing in the search box or
+  // toggling a checkbox only recomputes what actually changed instead of
+  // re-filtering the full list on every render.
+  const filteredClients = useMemo(() => {
+    if (!clientsWithStatus) return undefined;
+    const q = search.trim().toLowerCase();
+    return clientsWithStatus.filter((item) => {
+      if (q) {
+        const matchesSearch =
+          item.client.lastName.toLowerCase().includes(q) ||
+          item.client.firstName.toLowerCase().includes(q) ||
+          item.client.contactNumber.includes(q);
+        if (!matchesSearch) return false;
+      }
+      if (statusFilter !== "all" && item.computedStatus !== statusFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [clientsWithStatus, search, statusFilter]);
 
-  const statusCounts: Record<string, number> = {};
-  if (clientsWithStatus) {
-    for (const item of clientsWithStatus) {
-      statusCounts[item.computedStatus] = (statusCounts[item.computedStatus] || 0) + 1;
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const item of clientsWithStatus ?? []) {
+      counts[item.computedStatus] = (counts[item.computedStatus] || 0) + 1;
     }
-  }
+    return counts;
+  }, [clientsWithStatus]);
+
   const clientCount = clientsWithStatus?.length || 0;
 
-  const selectedNames = (clientsWithStatus ?? [])
-    .filter((item) => selectedIds.has(String(item.client._id)))
-    .map((item) => `${item.client.lastName}, ${item.client.firstName}`);
+  const selectedNames = useMemo(
+    () =>
+      (clientsWithStatus ?? [])
+        .filter((item) => selectedIds.has(String(item.client._id)))
+        .map((item) => `${item.client.lastName}, ${item.client.firstName}`),
+    [clientsWithStatus, selectedIds]
+  );
 
   const totalFiltered = filteredClients?.length ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / PAGE_SIZE));

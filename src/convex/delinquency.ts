@@ -1,5 +1,15 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { query, mutation } from "./_generated/server";
+import { assertStaff, resolveBranchFilter } from "./access";
+
+/** Roles allowed to trigger a global status recalculation. */
+const STAFF_ROLES = [
+  "super_admin",
+  "ceo",
+  "manager",
+  "finance_staff",
+  "cashier",
+] as const;
 
 /**
  * Calculate days since a given timestamp.
@@ -32,7 +42,24 @@ export const updateAllContractStatuses = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
-    const contracts = await ctx.db.query("contracts").collect();
+    // Only staff may recalculate statuses. Without this, any signed-in client
+    // portal account could rewrite every contract in the system.
+    const viewer = await ctx.db.get(userId);
+    if (
+      !viewer ||
+      !STAFF_ROLES.includes(viewer.role as (typeof STAFF_ROLES)[number])
+    ) {
+      throw new Error("Only staff can recalculate contract statuses.");
+    }
+
+    // Branch staff only recalculate their own branch (admins do all branches).
+    const branchId = await resolveBranchFilter(ctx, undefined);
+    const contracts = branchId
+      ? await ctx.db
+          .query("contracts")
+          .withIndex("by_branch", (q) => q.eq("branchId", branchId))
+          .collect()
+      : await ctx.db.query("contracts").collect();
     const updated: Array<{ contractId: string; oldStatus: string; newStatus: string }> = [];
 
     for (const contract of contracts) {
@@ -41,18 +68,17 @@ export const updateAllContractStatuses = mutation({
         continue;
       }
 
-      // Get all payments for this contract
-      const payments = await ctx.db
+      // Latest payment only — one indexed row instead of the whole history.
+      const latestPayment = await ctx.db
         .query("payments")
-        .withIndex("by_contract", (q) => q.eq("contractId", contract._id))
-        .collect();
+        .withIndex("by_contract_paymentDate", (q) =>
+          q.eq("contractId", contract._id)
+        )
+        .order("desc")
+        .take(1);
 
       // Determine reference date: last payment date or contract start date
-      let referenceDate = contract.startDate;
-      if (payments.length > 0) {
-        const sortedPayments = payments.sort((a, b) => b.paymentDate - a.paymentDate);
-        referenceDate = sortedPayments[0].paymentDate;
-      }
+      const referenceDate = latestPayment[0]?.paymentDate ?? contract.startDate;
 
       const days = daysSince(referenceDate);
       const isFullyPaid = contract.totalPaid >= contract.planAmount;
@@ -97,6 +123,8 @@ export const updateAllContractStatuses = mutation({
  */
 export const summary = query({
   handler: async (ctx) => {
+    // Business stats — not visible to non-staff callers.
+    await assertStaff(ctx);
     const contracts = await ctx.db.query("contracts").collect();
     const statuses: Record<string, number> = {};
 

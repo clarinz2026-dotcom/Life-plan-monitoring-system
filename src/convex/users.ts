@@ -377,22 +377,19 @@ export const listWithBranches = query({
       return [];
 
     const users = await ctx.db.query("users").collect();
-    const enriched = await Promise.all(
-      users.map(async (u) => {
-        const branch = u.branchId ? await ctx.db.get(u.branchId) : null;
-        return {
-          _id: u._id,
-          name: u.name,
-          email: u.email,
-          image: u.image,
-          role: u.role ?? null,
-          branchId: u.branchId ?? null,
-          branchName: branch?.name ?? null,
-          position: u.position ?? null,
-          createdAt: u._creationTime,
-        };
-      })
-    );
-    return enriched;
+    // Resolve branch names in one pass instead of one db.get per user.
+    const branches = await ctx.db.query("branches").collect();
+    const branchNameById = new Map(branches.map((b) => [b._id, b.name]));
+    return users.map((u) => ({
+      _id: u._id,
+      name: u.name,
+      email: u.email,
+      image: u.image,
+      role: u.role ?? null,
+      branchId: u.branchId ?? null,
+      branchName: (u.branchId && branchNameById.get(u.branchId)) || null,
+      position: u.position ?? null,
+      createdAt: u._creationTime,
+    }));
   },
 });

@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { assertCanAccessRecord, assertStaff } from "./access";
 
 /**
  * Generate payment schedules for a contract (monthly installments).
@@ -15,6 +16,7 @@ export const generateForContract = mutation({
 
     const contract = await ctx.db.get(args.contractId);
     if (!contract) throw new Error("Contract not found");
+    await assertCanAccessRecord(ctx, contract.branchId);
 
     // Check if schedules already exist
     const existing = await ctx.db
@@ -62,8 +64,18 @@ export const markPaid = mutation({
     paymentId: v.id("payments"),
   },
   handler: async (ctx, args) => {
+    await assertStaff(ctx);
+
     const schedule = await ctx.db.get(args.scheduleId);
     if (!schedule) throw new Error("Schedule not found");
+
+    // The payment must belong to the same contract as the schedule.
+    const payment = await ctx.db.get(args.paymentId);
+    if (!payment || payment.contractId !== schedule.contractId) {
+      throw new Error("That payment does not belong to this contract.");
+    }
+    const contract = await ctx.db.get(schedule.contractId);
+    await assertCanAccessRecord(ctx, contract?.branchId);
 
     await ctx.db.patch(args.scheduleId, {
       status: "paid",
@@ -80,6 +92,7 @@ export const markPaid = mutation({
 export const listByContract = query({
   args: { contractId: v.id("contracts") },
   handler: async (ctx, args) => {
+    await assertStaff(ctx);
     return await ctx.db
       .query("payment_schedules")
       .withIndex("by_contract", (q) => q.eq("contractId", args.contractId))
@@ -94,6 +107,7 @@ export const listByContract = query({
 export const listOverdue = query({
   args: {},
   handler: async (ctx) => {
+    await assertStaff(ctx);
     const now = Date.now();
     const allPending = await ctx.db
       .query("payment_schedules")
@@ -122,6 +136,7 @@ export const listOverdue = query({
 export const updateOverdueStatuses = mutation({
   args: {},
   handler: async (ctx) => {
+    await assertStaff(ctx);
     const now = Date.now();
     const allPending = await ctx.db
       .query("payment_schedules")
@@ -146,6 +161,7 @@ export const updateOverdueStatuses = mutation({
 export const upcomingForClient = query({
   args: { clientId: v.id("clients") },
   handler: async (ctx, args) => {
+    await assertStaff(ctx);
     return await ctx.db
       .query("payment_schedules")
       .withIndex("by_client", (q) => q.eq("clientId", args.clientId))

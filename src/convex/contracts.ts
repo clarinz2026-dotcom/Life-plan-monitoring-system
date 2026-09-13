@@ -1,7 +1,11 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { assertCanAccessRecord, resolveBranchFilter } from "./access";
+import {
+  assertCanAccessRecord,
+  assertStaff,
+  resolveBranchFilter,
+} from "./access";
 
 function formatPHP(amount: number) {
   return new Intl.NumberFormat("en-PH", {
@@ -65,15 +69,18 @@ export const list = query({
       contracts = await ctx.db.query("contracts").order("desc").collect();
     }
 
-    // Attach client info
-    const enriched = await Promise.all(
-      contracts.map(async (c) => {
-        const client = await ctx.db.get(c.clientId);
-        return { ...c, client };
-      })
+    // Attach client info with one read per distinct client instead of one read
+    // per contract (N+1).
+    const clientIds = Array.from(new Set(contracts.map((c) => c.clientId)));
+    const clientDocs = await Promise.all(clientIds.map((id) => ctx.db.get(id)));
+    const clientById = new Map(
+      clientIds.map((id, i) => [id, clientDocs[i]] as const)
     );
 
-    return enriched;
+    return contracts.map((c) => ({
+      ...c,
+      client: clientById.get(c.clientId) ?? null,
+    }));
   },
 });
 
@@ -83,6 +90,7 @@ export const list = query({
 export const get = query({
   args: { contractId: v.id("contracts") },
   handler: async (ctx, args) => {
+    await assertStaff(ctx);
     const contract = await ctx.db.get(args.contractId);
     if (!contract) return null;
 

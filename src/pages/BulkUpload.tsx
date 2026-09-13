@@ -168,6 +168,10 @@ export default function BulkUpload() {
   const [monthlyRates, setMonthlyRates] = useState<Record<number, string>>({});
   const [isParsing, setIsParsing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   const [uploadResult, setUploadResult] = useState<{
     success: number;
     failed: number;
@@ -302,13 +306,44 @@ export default function BulkUpload() {
     setIsUploading(true);
     setUploadResult(null);
 
+    // Convex runs every mutation as a single transaction with a bounded size,
+    // and one row can create a contract plus up to 60 back-dated payments.
+    // Sending the whole sheet at once made large imports fail as a whole, so
+    // send it in small batches and accumulate the results.
+    const BATCH_SIZE = 10;
+    const totals = {
+      success: 0,
+      failed: 0,
+      contractsCreated: 0,
+      paymentsCreated: 0,
+      errors: [] as Array<{ row: number; error: string }>,
+    };
+
     try {
-      const result = await bulkCreateClients({ clients: validRows });
-      setUploadResult(result);
+      for (let start = 0; start < validRows.length; start += BATCH_SIZE) {
+        setUploadProgress({ done: start, total: validRows.length });
+        const result = await bulkCreateClients({
+          clients: validRows.slice(start, start + BATCH_SIZE),
+        });
+        totals.success += result.success;
+        totals.failed += result.failed;
+        totals.contractsCreated += result.contractsCreated;
+        totals.paymentsCreated += result.paymentsCreated;
+        // Batch rows are 1-based within the batch — shift them to sheet rows.
+        totals.errors.push(
+          ...result.errors.map((e) => ({ ...e, row: e.row + start })),
+        );
+      }
+      setUploadResult(totals);
     } catch (error) {
       console.error("Bulk upload failed:", error);
+      // Keep whatever succeeded visible instead of losing the whole run.
+      if (totals.success > 0 || totals.errors.length > 0) {
+        setUploadResult(totals);
+      }
     } finally {
       setIsUploading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -535,7 +570,9 @@ export default function BulkUpload() {
               {isUploading ? (
                 <>
                   <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  Uploading...
+                  {uploadProgress
+                    ? `Uploading ${uploadProgress.done}/${uploadProgress.total}...`
+                    : "Uploading..."}
                 </>
               ) : (
                 <>

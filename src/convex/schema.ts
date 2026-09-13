@@ -142,7 +142,9 @@ const schema = defineSchema(
       .index("by_client", ["clientId"])
       .index("by_status", ["contractStatus"])
       .index("by_contractNumber", ["contractNumber"])
-      .index("by_branch", ["branchId"]),
+      .index("by_branch", ["branchId"])
+      // Branch-scoped status lookups (dashboard "needs attention" list).
+      .index("by_branch_status", ["branchId", "contractStatus"]),
 
     // Plan catalog (e.g. Isidore, Gabriel, Raphael, Michael).
     // price = current MONTHLY amortization; oldPrice = legacy monthly rate
@@ -177,7 +179,9 @@ const schema = defineSchema(
       .index("by_client", ["clientId"])
       .index("by_paymentDate", ["paymentDate"])
       .index("by_orNumber", ["orNumber"])
-      .index("by_branch", ["branchId"]),
+      .index("by_branch", ["branchId"])
+      // Newest payment for a contract without reading the whole history.
+      .index("by_contract_paymentDate", ["contractId", "paymentDate"]),
 
     // Audit log
     audit_log: defineTable({
@@ -341,6 +345,7 @@ const schema = defineSchema(
       createdAt: v.number(),
     })
       .index("by_user", ["userId"])
+      .index("by_client", ["clientId"])
       .index("by_status", ["status"])
       .index("by_scheduledAt", ["scheduledAt"]),
 
@@ -388,7 +393,8 @@ const schema = defineSchema(
     })
       .index("by_user", ["userId"])
       .index("by_status", ["status"])
-      .index("by_createdAt", ["createdAt"]),
+      .index("by_createdAt", ["createdAt"])
+      .index("by_branch", ["branchId"]),
   },
   {
     schemaValidation: false,

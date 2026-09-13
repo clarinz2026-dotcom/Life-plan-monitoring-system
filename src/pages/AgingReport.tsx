@@ -18,6 +18,7 @@ import {
   Calendar,
   FileText,
 } from "lucide-react";
+import { Fragment } from "react";
 import { ScrollableTable } from "@/components/ScrollableTable";
 import { useBranch } from "@/hooks/use-branch";
 
@@ -32,7 +33,6 @@ function formatPHP(amount: number) {
 export default function AgingReport() {
   const { queryBranchId } = useBranch();
   const clientsWithStatus = useQuery(api.clients.listWithStatus, { branchId: queryBranchId });
-  const contracts = useQuery(api.contracts.list, { branchId: queryBranchId });
 
   // Group by computed status
   const groups = {
@@ -192,8 +192,8 @@ export default function AgingReport() {
                   { label: "Lapsed", items: groups.lapsed, style: "text-terminal-red" },
                 ].map((group) =>
                   group.items.length > 0 ? (
-                    <>
-                      <TableRow key={`header-${group.label}`}>
+                    <Fragment key={group.label}>
+                      <TableRow>
                         <TableCell colSpan={8} className={`text-xs font-bold ${group.style} bg-muted/30`}>
                           {group.label} ({group.items.length})
                         </TableCell>
@@ -223,7 +223,7 @@ export default function AgingReport() {
                           </TableRow>
                         );
                       })}
-                    </>
+                    </Fragment>
                   ) : null
                 )}
               </TableBody>

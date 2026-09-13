@@ -1,7 +1,11 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { assertCanAccessRecord, resolveBranchFilter } from "./access";
+import {
+  assertCanAccessRecord,
+  assertStaff,
+  resolveBranchFilter,
+} from "./access";
 
 const CLAIM_STATUSES = [
   "filed",
@@ -124,13 +128,14 @@ export const updateStatus = mutation({
       patch.notes = args.notes;
     }
 
-    await ctx.db.patch(args.claimId, patch);
-
-    // If payout completed, update contract status
+    // NOTE: a completed payout is recorded on the claim only. The contract
+    // deliberately keeps its "assigned_death_claim" status so settled plans do
+    // not silently reappear in collection-rate or delinquent totals.
     if (args.status === "payout_completed") {
       patch.payoutDate = Date.now();
-      await ctx.db.patch(args.claimId, { payoutDate: Date.now() });
     }
+
+    await ctx.db.patch(args.claimId, patch);
 
     // Audit log
     const contract = await ctx.db.get(claim.contractId);
@@ -240,6 +245,9 @@ export const list = query({
 export const get = query({
   args: { claimId: v.id("death_claims") },
   handler: async (ctx, args) => {
+    // Claims carry claimant PII — staff only.
+    await assertStaff(ctx);
+
     const claim = await ctx.db.get(args.claimId);
     if (!claim) return null;
 

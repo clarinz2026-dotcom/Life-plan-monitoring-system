@@ -62,15 +62,27 @@ export const list = query({
       payments = await ctx.db.query("payments").order("desc").collect();
     }
 
-    const enriched = await Promise.all(
-      payments.map(async (p) => {
-        const contract = await ctx.db.get(p.contractId);
-        const client = await ctx.db.get(p.clientId);
-        return { ...p, contract, client };
-      })
+    // Resolve the related records with one read per distinct document instead
+    // of two reads for every payment (this list is unpaginated, so the old
+    // version issued thousands of reads on a busy ledger).
+    const contractIds = Array.from(new Set(payments.map((p) => p.contractId)));
+    const clientIds = Array.from(new Set(payments.map((p) => p.clientId)));
+    const [contractDocs, clientDocs] = await Promise.all([
+      Promise.all(contractIds.map((id) => ctx.db.get(id))),
+      Promise.all(clientIds.map((id) => ctx.db.get(id))),
+    ]);
+    const contractById = new Map(
+      contractIds.map((id, i) => [id, contractDocs[i]] as const)
+    );
+    const clientById = new Map(
+      clientIds.map((id, i) => [id, clientDocs[i]] as const)
     );
 
-    return enriched;
+    return payments.map((p) => ({
+      ...p,
+      contract: contractById.get(p.contractId) ?? null,
+      client: clientById.get(p.clientId) ?? null,
+    }));
   },
 });
 
@@ -148,16 +160,29 @@ export const record = mutation({
       timestamp: Date.now(),
     });
 
-    // Generate receipt number: RCP-YYYYMMDD-XXXX
+    // Generate a collision-safe receipt number: RCP-YYYYMMDD-XXXX.
+    // Only that day's receipt numbers are read (index range) instead of the
+    // whole receipts table, and the sequence is derived from the highest
+    // existing number so deletions can never cause a duplicate.
     const now = new Date(args.paymentDate);
     const dateStr =
       now.getFullYear().toString() +
       (now.getMonth() + 1).toString().padStart(2, "0") +
       now.getDate().toString().padStart(2, "0");
 
-    const allReceipts = await ctx.db.query("receipts").collect();
-    const seq = allReceipts.length + 1;
-    const receiptNumber = `RCP-${dateStr}-${seq.toString().padStart(4, "0")}`;
+    const prefix = `RCP-${dateStr}-`;
+    const sameDayReceipts = await ctx.db
+      .query("receipts")
+      .withIndex("by_receiptNumber", (q) =>
+        q.gte("receiptNumber", prefix).lt("receiptNumber", `${prefix}\uffff`)
+      )
+      .collect();
+    let maxSeq = 0;
+    for (const r of sameDayReceipts) {
+      const seq = parseInt(r.receiptNumber.slice(prefix.length), 10);
+      if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+    }
+    const receiptNumber = `${prefix}${(maxSeq + 1).toString().padStart(4, "0")}`;
 
     const fullName = client.middleName
       ? `${client.lastName}, ${client.firstName} ${client.middleName}`

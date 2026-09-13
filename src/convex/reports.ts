@@ -16,10 +16,16 @@ export const collectionSummary = query({
     const weekAgo = today - 7 * 24 * 60 * 60 * 1000;
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
-    const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0).getTime();
     const yearStart = new Date(now.getFullYear(), 0, 1).getTime();
 
-    let payments = await ctx.db.query("payments").collect();
+    // Everything this query reports lives at or after the earliest window
+    // (this year, or last month when we are in January), so read only that
+    // slice through the date index instead of scanning the payments table.
+    const rangeStart = Math.min(yearStart, lastMonthStart);
+    let payments = await ctx.db
+      .query("payments")
+      .withIndex("by_paymentDate", (q) => q.gte("paymentDate", rangeStart))
+      .collect();
     if (branchId) {
       payments = payments.filter((p) => p.branchId === branchId);
     }
@@ -36,9 +42,15 @@ export const collectionSummary = query({
     const monthPayments = payments.filter((p) => p.paymentDate >= monthStart);
     const monthAmount = monthPayments.reduce((sum, p) => sum + p.amount, 0);
 
-    // Last month
+    // Last month (exclusive upper bound so the final day is fully counted)
+    const lastMonthEndExclusive = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1
+    ).getTime();
     const lastMonthPayments = payments.filter(
-      (p) => p.paymentDate >= lastMonthStart && p.paymentDate <= lastMonthEnd
+      (p) =>
+        p.paymentDate >= lastMonthStart && p.paymentDate < lastMonthEndExclusive
     );
     const lastMonthAmount = lastMonthPayments.reduce((sum, p) => sum + p.amount, 0);
 
@@ -52,7 +64,6 @@ export const collectionSummary = query({
       thisMonth: { count: monthPayments.length, amount: monthAmount },
       lastMonth: { count: lastMonthPayments.length, amount: lastMonthAmount },
       yearToDate: { count: yearPayments.length, amount: yearAmount },
-      totalAllTime: { count: payments.length, amount: payments.reduce((sum, p) => sum + p.amount, 0) },
     };
   },
 });
@@ -69,11 +80,16 @@ export const byChannel = query({
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-    let payments = await ctx.db.query("payments").collect();
+    // Read only this month's payments through the date index instead of
+    // scanning the whole payments table on every report load.
+    let payments = await ctx.db
+      .query("payments")
+      .withIndex("by_paymentDate", (q) => q.gte("paymentDate", monthStart))
+      .collect();
     if (branchId) {
       payments = payments.filter((p) => p.branchId === branchId);
     }
-    const monthPayments = payments.filter((p) => p.paymentDate >= monthStart);
+    const monthPayments = payments;
 
     const channels: Record<string, { count: number; amount: number }> = {};
 
@@ -100,11 +116,16 @@ export const byCashier = query({
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
-    let payments = await ctx.db.query("payments").collect();
+    // Read only this month's payments through the date index instead of
+    // scanning the whole payments table on every report load.
+    let payments = await ctx.db
+      .query("payments")
+      .withIndex("by_paymentDate", (q) => q.gte("paymentDate", monthStart))
+      .collect();
     if (branchId) {
       payments = payments.filter((p) => p.branchId === branchId);
     }
-    const monthPayments = payments.filter((p) => p.paymentDate >= monthStart);
+    const monthPayments = payments;
 
     const cashiers: Record<string, { count: number; amount: number; name: string }> = {};
 
@@ -141,11 +162,16 @@ export const dailyCollections = query({
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const monthStart = new Date(year, month, 1).getTime();
 
-    let payments = await ctx.db.query("payments").collect();
+    // Read only this month's payments through the date index instead of
+    // scanning the whole payments table on every report load.
+    let payments = await ctx.db
+      .query("payments")
+      .withIndex("by_paymentDate", (q) => q.gte("paymentDate", monthStart))
+      .collect();
     if (branchId) {
       payments = payments.filter((p) => p.branchId === branchId);
     }
-    const monthPayments = payments.filter((p) => p.paymentDate >= monthStart);
+    const monthPayments = payments;
 
     const daily: Array<{ day: number; amount: number; count: number }> = [];
 
@@ -175,10 +201,12 @@ export const agingReport = query({
   },
   handler: async (ctx, args) => {
     const branchId = await resolveBranchFilter(ctx, args.branchId);
-    let contracts = await ctx.db.query("contracts").collect();
-    if (branchId) {
-      contracts = contracts.filter((c) => c.branchId === branchId);
-    }
+    const contracts = branchId
+      ? await ctx.db
+          .query("contracts")
+          .withIndex("by_branch", (q) => q.eq("branchId", branchId))
+          .collect()
+      : await ctx.db.query("contracts").collect();
 
     const aging = {
       current: { count: 0, amount: 0 },
@@ -235,7 +263,16 @@ export const monthlyTrend = query({
     const now = new Date();
     const months: Array<{ month: string; amount: number; count: number }> = [];
 
-    let allPayments = await ctx.db.query("payments").collect();
+    // Only the last 12 months are needed (index range), not the whole table.
+    const trendStart = new Date(
+      now.getFullYear(),
+      now.getMonth() - 11,
+      1
+    ).getTime();
+    let allPayments = await ctx.db
+      .query("payments")
+      .withIndex("by_paymentDate", (q) => q.gte("paymentDate", trendStart))
+      .collect();
     if (branchId) {
       allPayments = allPayments.filter((p) => p.branchId === branchId);
     }
@@ -243,10 +280,12 @@ export const monthlyTrend = query({
     for (let i = 11; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const monthStart = d.getTime();
-      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 0).getTime();
+      // Exclusive upper bound — the old value stopped at 00:00 of the last day,
+      // silently dropping that day's later payments.
+      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
 
       const monthPayments = allPayments.filter(
-        (p) => p.paymentDate >= monthStart && p.paymentDate <= monthEnd
+        (p) => p.paymentDate >= monthStart && p.paymentDate < monthEnd
       );
 
       months.push({

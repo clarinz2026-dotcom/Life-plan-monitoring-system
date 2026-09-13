@@ -46,13 +46,28 @@ const U = "https://images.unsplash.com/";
 const img = (id: string, w = 1600) =>
   `${U}photo-${id}?q=80&w=${w}&auto=format&fit=crop`;
 
-const HERO_LIFE_IMG = img("1470071459604-3b5ec3a7fe05", 1800);
-const HERO_CHAPEL_IMG = img("1519167758481-83f550bb49b3", 1800);
-const STORY_IMG = img("1470252649378-9c29740c9fa8", 1200);
-const STORY_IMG_2 = img("1495616811223-4d98c6e9c869", 800);
-const CHAPEL_DETAIL_IMG = img("1452860606245-08befc0ff44b", 1400);
-const EBUROL_IMG = img("1519681393784-d120267933ba", 1400);
-const MEADOW_IMG = img("1502082553048-f009c37129b9", 1000);
+/**
+ * Unsplash serves any width, so offer the browser a range of variants and let
+ * it pick one for the device. Previously every image downloaded the full
+ * 1800px file even on phones, which dominated first-load time.
+ */
+const imgSet = (id: string, widths: number[] = [640, 960, 1280, 1800]) =>
+  widths
+    .map((w) => `${U}photo-${id}?q=80&w=${w}&auto=format&fit=crop ${w}w`)
+    .join(", ");
+
+const responsive = (id: string, fallbackWidth = 1200) => ({
+  src: img(id, fallbackWidth),
+  srcSet: imgSet(id),
+});
+
+const HERO_LIFE_IMG = responsive("1470071459604-3b5ec3a7fe05", 1600);
+const HERO_CHAPEL_IMG = responsive("1519167758481-83f550bb49b3", 1600);
+const STORY_IMG = responsive("1470252649378-9c29740c9fa8", 1200);
+const STORY_IMG_2 = responsive("1495616811223-4d98c6e9c869", 800);
+const CHAPEL_DETAIL_IMG = responsive("1452860606245-08befc0ff44b", 1200);
+const EBUROL_IMG = responsive("1519681393784-d120267933ba", 1200);
+const MEADOW_IMG = responsive("1502082553048-f009c37129b9", 960);
 
 /* ────────────────────────────────────────────────────────────────────────────
    Data
@@ -629,10 +644,14 @@ export default function Landing() {
             className="group relative isolate flex min-h-[440px] items-end overflow-hidden rounded-[30px] shadow-xl lg:min-h-[600px]"
           >
             <img
-              src={HERO_LIFE_IMG}
+              src={HERO_LIFE_IMG.src}
+              srcSet={HERO_LIFE_IMG.srcSet}
+              sizes="(max-width: 1024px) 100vw, 50vw"
               alt="Morning light over rolling hills — hope and peace for a family's future"
               className="absolute inset-0 -z-20 h-full w-full object-cover transition-transform duration-[1800ms] ease-out group-hover:scale-[1.06]"
               loading="eager"
+              fetchPriority="high"
+              decoding="async"
             />
             <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
             <figcaption className="w-full p-8 pb-10 sm:p-10 lg:p-14">
@@ -668,10 +687,14 @@ export default function Landing() {
             className="group relative isolate flex min-h-[440px] items-end overflow-hidden rounded-[30px] shadow-xl lg:min-h-[600px]"
           >
             <img
-              src={HERO_CHAPEL_IMG}
+              src={HERO_CHAPEL_IMG.src}
+              srcSet={HERO_CHAPEL_IMG.srcSet}
+              sizes="(max-width: 1024px) 100vw, 50vw"
               alt="Inside one of our dignified memorial chapels lit by warm light"
               className="absolute inset-0 -z-20 h-full w-full object-cover transition-transform duration-[1800ms] ease-out group-hover:scale-[1.06]"
               loading="eager"
+              fetchPriority="high"
+              decoding="async"
             />
             <div className="absolute inset-0 -z-10 bg-gradient-to-t from-black/85 via-black/30 to-black/10" />
             <figcaption className="w-full p-8 pb-10 sm:p-10 lg:p-14">
@@ -782,18 +805,24 @@ export default function Landing() {
           <Reveal delay={0.15} className="relative">
             <div className="overflow-hidden rounded-[30px] shadow-2xl">
               <img
-                src={STORY_IMG}
+                src={STORY_IMG.src}
+                srcSet={STORY_IMG.srcSet}
+                sizes="(max-width: 1024px) 100vw, 50vw"
                 alt="A quiet path leading toward morning light"
                 className="aspect-[4/3] w-full object-cover transition-transform duration-700 hover:scale-[1.03]"
                 loading="lazy"
+                decoding="async"
               />
             </div>
             <div className="absolute -bottom-8 -left-4 hidden w-[230px] overflow-hidden rounded-2xl border-[6px] border-paper shadow-xl sm:block lg:-left-10">
               <img
-                src={STORY_IMG_2}
+                src={STORY_IMG_2.src}
+                srcSet={STORY_IMG_2.srcSet}
+                sizes="230px"
                 alt="White memorial flowers"
                 className="h-40 w-full object-cover"
                 loading="lazy"
+                decoding="async"
               />
             </div>
             <div className="absolute -top-5 -right-3 flex items-center gap-3 rounded-2xl bg-evergreen px-5 py-4 text-white shadow-2xl sm:right-6">
@@ -916,10 +945,13 @@ export default function Landing() {
           <Reveal className="relative order-2 lg:order-1">
             <div className="overflow-hidden rounded-[30px] shadow-2xl">
               <img
-                src={CHAPEL_DETAIL_IMG}
+                src={CHAPEL_DETAIL_IMG.src}
+                srcSet={CHAPEL_DETAIL_IMG.srcSet}
+                sizes="(max-width: 1024px) 100vw, 45vw"
                 alt="A serene, well-kept memorial chapel interior"
                 className="aspect-[4/4.4] w-full object-cover transition-transform duration-700 hover:scale-[1.03] lg:aspect-[4/5]"
                 loading="lazy"
+                decoding="async"
               />
             </div>
             <div className="absolute right-5 -bottom-7 flex items-center gap-3 rounded-2xl bg-pine px-6 py-5 text-white shadow-2xl">
@@ -1072,10 +1104,13 @@ export default function Landing() {
                   </div>
                   <div className="relative">
                     <img
-                      src={EBUROL_IMG}
+                      src={EBUROL_IMG.src}
+                      srcSet={EBUROL_IMG.srcSet}
+                      sizes="(max-width: 1024px) 100vw, 55vw"
                       alt="eBurol live online wake viewing stream"
                       className="aspect-[16/10] w-full object-cover"
                       loading="lazy"
+                      decoding="async"
                     />
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/75 to-transparent px-5 py-4">
                       <p className="text-[12px] font-semibold text-white">
@@ -1160,10 +1195,13 @@ export default function Landing() {
                     </p>
                   </div>
                   <img
-                    src={MEADOW_IMG}
+                    src={MEADOW_IMG.src}
+                    srcSet={MEADOW_IMG.srcSet}
+                    sizes="(max-width: 1024px) 90vw, 360px"
                     alt="Live wake view in the Evangelist app"
                     className="aspect-[16/8] w-full object-cover"
                     loading="lazy"
+                    decoding="async"
                   />
                 </div>
                 <div className="grid grid-cols-3 gap-2.5">

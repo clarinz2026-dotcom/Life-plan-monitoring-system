@@ -127,18 +127,25 @@ export const weeklyTrend = query({
   },
   handler: async (ctx, args) => {
     const branchId = await resolveBranchFilter(ctx, args.branchId);
-    let payments;
+
+    // Only the last 7 days matter — read that slice through the date index
+    // instead of scanning every payment ever recorded.
+    const now = new Date();
+    const windowStart = new Date(now);
+    windowStart.setDate(now.getDate() - 6);
+    windowStart.setHours(0, 0, 0, 0);
+
+    let payments = await ctx.db
+      .query("payments")
+      .withIndex("by_paymentDate", (q) =>
+        q.gte("paymentDate", windowStart.getTime())
+      )
+      .collect();
     if (branchId) {
-      payments = await ctx.db
-        .query("payments")
-        .withIndex("by_branch", (q) => q.eq("branchId", branchId!))
-        .collect();
-    } else {
-      payments = await ctx.db.query("payments").collect();
+      payments = payments.filter((p) => p.branchId === branchId);
     }
 
     const days: Array<{ label: string; amount: number; count: number }> = [];
-    const now = new Date();
 
     for (let i = 6; i >= 0; i--) {
       const dayStart = new Date(now);
@@ -215,20 +222,19 @@ export const delinquentContracts = query({
 
     const results = [];
     for (const status of statuses) {
-      let contracts;
-      if (branchId) {
-        // Fetch all contracts of this status, then filter by branch
-        const all = await ctx.db
-          .query("contracts")
-          .withIndex("by_status", (q) => q.eq("contractStatus", status))
-          .collect();
-        contracts = all.filter((c) => c.branchId === branchId);
-      } else {
-        contracts = await ctx.db
-          .query("contracts")
-          .withIndex("by_status", (q) => q.eq("contractStatus", status))
-          .collect();
-      }
+      // Branch view uses the compound [branchId, contractStatus] index so we
+      // never read other branches' contracts.
+      const contracts = branchId
+        ? await ctx.db
+            .query("contracts")
+            .withIndex("by_branch_status", (q) =>
+              q.eq("branchId", branchId).eq("contractStatus", status)
+            )
+            .collect()
+        : await ctx.db
+            .query("contracts")
+            .withIndex("by_status", (q) => q.eq("contractStatus", status))
+            .collect();
 
       for (const c of contracts) {
         const client = await ctx.db.get(c.clientId);

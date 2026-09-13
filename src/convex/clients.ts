@@ -4,6 +4,7 @@ import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import {
   assertCanAccessRecord,
+  assertStaff,
   getViewer,
   isAdminRole,
   resolveBranchFilter,
@@ -99,6 +100,9 @@ export const list = query({
 export const get = query({
   args: { clientId: v.id("clients") },
   handler: async (ctx, args) => {
+    // Client records hold beneficiary and contact PII — staff only. (This used
+    // to be open to anyone, including anonymous callers, given a client id.)
+    await assertStaff(ctx);
     return await ctx.db.get(args.clientId);
   },
 });
@@ -279,10 +283,11 @@ export const bulkDelete = mutation({
         .collect();
       for (const claim of claims) await ctx.db.delete(claim._id);
 
-      const notifications = await ctx.db.query("notifications").collect();
-      for (const n of notifications) {
-        if (String(n.clientId) === String(clientId)) await ctx.db.delete(n._id);
-      }
+      const notifications = await ctx.db
+        .query("notifications")
+        .withIndex("by_client", (q) => q.eq("clientId", clientId))
+        .collect();
+      for (const n of notifications) await ctx.db.delete(n._id);
 
       await ctx.db.delete(clientId);
     }
@@ -361,14 +366,20 @@ export const listWithStatus = query({
         continue;
       }
 
-      // Find the most recent payment for this contract
-      const payments = await ctx.db
+      // Most recent payment for this contract. Uses the compound
+      // [contractId, paymentDate] index so we read a single row instead of the
+      // contract's entire payment history (the old version also ordered by
+      // creation time, which mis-reported the last payment date for back-dated
+      // entries and skewed the delinquency status).
+      const lastPayment = await ctx.db
         .query("payments")
-        .withIndex("by_contract", (q) => q.eq("contractId", activeContract!._id))
+        .withIndex("by_contract_paymentDate", (q) =>
+          q.eq("contractId", activeContract!._id)
+        )
         .order("desc")
-        .collect();
+        .take(1);
 
-      const lastPaymentDate = payments.length > 0 ? payments[0].paymentDate : null;
+      const lastPaymentDate = lastPayment[0]?.paymentDate ?? null;
       const daysSincePayment = lastPaymentDate
         ? Math.floor((now - lastPaymentDate) / (1000 * 60 * 60 * 24))
         : null;

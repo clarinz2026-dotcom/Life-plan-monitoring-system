@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { assertStaff } from "./access";
 
 /**
  * Log an audit event.
@@ -27,6 +28,10 @@ export const log = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
+
+    // Audit entries are evidence — only staff may append to the trail, so a
+    // planholder account cannot forge entries attributed to other users.
+    await assertStaff(ctx);
 
     const user = await ctx.db.get(userId);
     const userName = user?.name || user?.email || "Unknown";
@@ -56,8 +61,7 @@ export const list = query({
     limit: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    await assertStaff(ctx);
 
     let logs;
 
@@ -96,8 +100,7 @@ export const getEntityTrail = query({
     entityId: v.string(),
   },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
+    await assertStaff(ctx);
 
     return await ctx.db
       .query("audit_log")

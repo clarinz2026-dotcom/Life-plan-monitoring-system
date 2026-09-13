@@ -32,6 +32,34 @@ export async function getViewer(
 export const isAdminRole = (role: string | null) =>
   role === "super_admin" || role === "ceo";
 
+/** Roles that belong to office staff (i.e. may read business records). */
+export const STAFF_ROLES = [
+  "super_admin",
+  "ceo",
+  "manager",
+  "finance_staff",
+  "cashier",
+] as const;
+
+export const isStaffRole = (role: string | null) =>
+  !!role && (STAFF_ROLES as readonly string[]).includes(role);
+
+/**
+ * Require the caller to be signed in as office staff.
+ *
+ * Client-portal accounts (planholders/families) and anonymous callers must not
+ * reach staff-only endpoints such as the audit trail, death claims, payment
+ * schedules, or notification workers.
+ */
+export async function assertStaff(
+  ctx: QueryCtx | MutationCtx
+): Promise<Viewer> {
+  const viewer = await getViewer(ctx);
+  if (!viewer) throw new Error("Not authenticated.");
+  if (!isStaffRole(viewer.role)) throw new Error("Staff access required.");
+  return viewer;
+}
+
 /**
  * Resolve the effective branch filter for a staff list query.
  * Branch staff are always forced to their own branch (server-side isolation);
@@ -45,6 +73,13 @@ export async function resolveBranchFilter(
 ): Promise<Id<"branches"> | undefined> {
   const viewer = await getViewer(ctx);
   if (!viewer || isAdminRole(viewer.role)) return requested ?? undefined;
+  // A signed-in account that is not office staff (for example a planholder
+  // account created from the public sign-up form) must never be able to read
+  // client, contract, or payment data. Previously such accounts received *no*
+  // filter, which returned every branch's records.
+  if (!isStaffRole(viewer.role)) {
+    throw new Error("Staff access required.");
+  }
   return viewer.branchId ?? undefined;
 }
 
