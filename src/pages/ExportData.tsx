@@ -14,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useBranch } from "@/hooks/use-branch";
+import { AirtableSyncCard } from "@/components/AirtableSyncCard";
 
 const XLSX_MIME =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -277,6 +278,9 @@ export default function ExportData() {
           )}
         </CardContent>
       </Card>
+
+      {/* Airtable sync */}
+      <AirtableSyncCard />
     </div>
   );
 }
