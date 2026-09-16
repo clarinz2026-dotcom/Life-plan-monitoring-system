@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -54,12 +54,19 @@ function tsToDateInput(ts: number): string {
   return `${y}-${m}-${day}`;
 }
 
-import { generateSOAPDF } from "@/lib/generateSOA";
+import {
+  deliverPDF,
+  generateSOAPDFBlob,
+  type PreparedSOAPDF,
+} from "@/lib/generateSOA";
+import type { SOAData } from "@/components/SOADocument";
 
 export default function ClientDetail() {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
   const [downloadingSOA, setDownloadingSOA] = useState(false);
+  const [preparedSOA, setPreparedSOA] = useState<PreparedSOAPDF | null>(null);
+  const [soaError, setSoaError] = useState<string | null>(null);
   const client = useQuery(
     api.clients.get,
     clientId ? { clientId: clientId as any } : "skip"
@@ -137,10 +144,16 @@ export default function ClientDetail() {
     });
   };
 
-  const handleDownloadSOA = useCallback(async () => {
-    if (!client) return;
-    setDownloadingSOA(true);
-    try {
+  /**
+   * Build the staff-side statement for this planholder.
+   *
+   * A plain function rather than a callback: the PDF is generated in an effect
+   * keyed on its serialized contents, so holding a stable identity would only
+   * hide genuine changes.
+   */
+  const buildClientSOA = (): SOAData | null => {
+    if (!client) return null;
+    {
       const clientName = client.middleName
         ? `${client.lastName}, ${client.firstName} ${client.middleName}`
         : `${client.lastName}, ${client.firstName}`;
@@ -176,7 +189,7 @@ export default function ClientDetail() {
         }
       }
 
-      await generateSOAPDF({
+      return {
         clientName,
         clientAddress:
           [client.address, client.city, client.province].filter(Boolean).join(", ") || "—",
@@ -209,20 +222,76 @@ export default function ClientDetail() {
           day: "numeric",
         }),
         accountNumber: clientId || "—",
-      });
-      toast.success("Statement of Account downloaded");
-    } catch (error) {
-      console.error("Failed to generate SOA PDF:", error);
-      toast.error("Could not generate the SOA PDF", {
-        description:
-          error instanceof Error
-            ? error.message
-            : "Please try again — if it still fails, the client can download it from the portal instead.",
-      });
-    } finally {
-      setDownloadingSOA(false);
+      };
     }
-  }, [client, contracts, payments, clientId, branch?.name, settings?.logoUrl]);
+  };
+
+  // Serialized contents, so the effect below re-runs only when the statement
+  // itself changes — not on every render of this page.
+  const soaData = buildClientSOA();
+  const soaDataKey = soaData ? JSON.stringify(soaData) : "";
+
+  /**
+   * Pre-build the PDF as soon as this planholder's data has loaded.
+   *
+   * Generation renders off-screen, waits on webfonts and rasterizes the whole
+   * page — seconds, far longer than a browser keeps a click's transient user
+   * activation alive. Building it up-front lets the SOA button hand over a
+   * finished blob synchronously, which is what makes the download land; a
+   * sandboxed preview frame silently drops downloads that arrive late.
+   */
+  useEffect(() => {
+    if (!soaDataKey) return;
+    let cancelled = false;
+    setPreparedSOA(null);
+    setSoaError(null);
+    setDownloadingSOA(true);
+
+    generateSOAPDFBlob(JSON.parse(soaDataKey) as SOAData)
+      .then((result) => {
+        if (!cancelled) setPreparedSOA(result);
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to generate SOA PDF:", error);
+        if (!cancelled) {
+          setSoaError(
+            error instanceof Error ? error.message : "The PDF could not be generated."
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setDownloadingSOA(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [soaDataKey]);
+
+  // Deliberately synchronous: the blob is already built, so the browser still
+  // treats this as a direct result of the user's click.
+  const handleDownloadSOA = () => {
+    if (!preparedSOA) return;
+    try {
+      const mode = deliverPDF(preparedSOA);
+      if (mode === "tab") {
+        toast.success("Statement opened in a new tab", {
+          description: "Use the download icon in the PDF viewer to save a copy.",
+        });
+      } else if (mode === "blocked") {
+        toast.error("Couldn't open the PDF in a new tab", {
+          description: "Use Print / Save as PDF instead — that always works.",
+        });
+      } else {
+        toast.success("Statement of Account downloaded");
+      }
+    } catch (error) {
+      console.error("Failed to open SOA PDF:", error);
+      toast.error("Could not open the PDF", {
+        description: soaError ?? "Please try again.",
+      });
+    }
+  };
 
   const openEditDialog = useCallback(() => {
     if (!client) return;
@@ -309,10 +378,11 @@ export default function ClientDetail() {
             size="sm"
             className="gap-2"
             onClick={handleDownloadSOA}
-            disabled={downloadingSOA}
+            disabled={downloadingSOA || !preparedSOA}
+            title={soaError ?? undefined}
           >
             <Download className="h-4 w-4" />
-            {downloadingSOA ? "Generating..." : "SOA"}
+            {downloadingSOA ? "Preparing..." : "SOA"}
           </Button>
         </div>
       </div>

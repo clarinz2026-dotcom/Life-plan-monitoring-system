@@ -1,4 +1,4 @@
-import { useRef, useState, type ComponentProps } from "react";
+import { useEffect, useRef, useState, type ComponentProps } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,11 @@ import {
 } from "@/components/ui/dialog";
 import { Download, FileText, Loader2, Printer } from "lucide-react";
 import { toast } from "sonner";
-import { generateSOAPDF } from "@/lib/generateSOA";
+import {
+  deliverPDF,
+  generateSOAPDFBlob,
+  type PreparedSOAPDF,
+} from "@/lib/generateSOA";
 import { generateSOAHTML, type SOAData, type SOABeneficiary } from "@/components/SOADocument";
 import type { Doc } from "@/convex/_generated/dataModel";
 
@@ -198,7 +202,9 @@ export function SOAButton({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [downloading, setDownloading] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const [prepared, setPrepared] = useState<PreparedSOAPDF | null>(null);
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
 
   const branches = useQuery(api.branches.list);
@@ -222,6 +228,48 @@ export function SOAButton({
     }
   }
 
+  // `data` is rebuilt on every render, so it can't be an effect dependency.
+  // Its serialized form is compared by value instead, which only changes when
+  // the statement's actual contents change.
+  const dataKey = data ? JSON.stringify(data) : "";
+
+  /**
+   * Build the PDF as soon as the dialog opens, not when the button is clicked.
+   *
+   * Rendering off-screen, waiting on webfonts and rasterizing the whole page
+   * takes seconds. Doing that inside the click handler means the browser's
+   * transient user activation has long expired by the time we call
+   * `deliverPDF`, and browsers drop downloads/popups that arrive late. Warming
+   * it here lets the click deliver a ready blob immediately.
+   */
+  useEffect(() => {
+    if (!open || !dataKey) return;
+    let cancelled = false;
+    setPrepared(null);
+    setPdfError(null);
+    setPreparing(true);
+
+    generateSOAPDFBlob(JSON.parse(dataKey) as SOAData)
+      .then((result) => {
+        if (!cancelled) setPrepared(result);
+      })
+      .catch((err: unknown) => {
+        console.error("Failed to generate SOA PDF:", err);
+        if (!cancelled) {
+          setPdfError(
+            err instanceof Error ? err.message : "The PDF could not be generated."
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setPreparing(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, dataKey]);
+
   const handleOpen = () => {
     if (!data) {
       toast.error("No linked plan records yet", {
@@ -233,20 +281,28 @@ export function SOAButton({
     setOpen(true);
   };
 
-  const handleDownload = async () => {
-    if (!data) return;
-    setDownloading(true);
+  // Deliberately synchronous: the blob is already built, so the browser still
+  // treats this as a direct result of the user's click.
+  const handleDownload = () => {
+    if (!prepared) return;
     try {
-      await generateSOAPDF(data);
-      toast.success("Statement of Account downloaded");
+      const mode = deliverPDF(prepared);
+      if (mode === "tab") {
+        toast.success("Statement opened in a new tab", {
+          description: "Use the download icon in the PDF viewer to save a copy.",
+        });
+      } else if (mode === "blocked") {
+        toast.error("Couldn't open the PDF in a new tab", {
+          description: "Use Print / Save as PDF instead — that always works.",
+        });
+      } else {
+        toast.success("Statement of Account downloaded");
+      }
     } catch (err) {
-      console.error("Failed to generate SOA PDF:", err);
-      toast.error("Could not generate the PDF", {
-        description:
-          err instanceof Error ? err.message : "Use Print instead to save a copy as a PDF.",
+      console.error("Failed to deliver SOA PDF:", err);
+      toast.error("Could not open the PDF", {
+        description: "Use Print / Save as PDF instead.",
       });
-    } finally {
-      setDownloading(false);
     }
   };
 
@@ -257,6 +313,8 @@ export function SOAButton({
       frame.contentWindow.print();
     }
   };
+
+  const preparingLabel = preparing || !prepared;
 
   return (
     <>
@@ -278,18 +336,31 @@ export function SOAButton({
                 srcDoc={generateSOAHTML(data)}
                 className="h-[62vh] w-full rounded-xl border border-line bg-white"
               />
+              {pdfError && (
+                <p className="text-xs text-muted-foreground">
+                  {pdfError} Use <strong>Print / Save as PDF</strong> instead.
+                </p>
+              )}
               <div className="flex flex-wrap items-center justify-end gap-2">
                 <Button variant="outline" onClick={handlePrint}>
                   <Printer className="h-4 w-4" />
                   Print / Save as PDF
                 </Button>
-                <Button onClick={handleDownload} disabled={downloading}>
-                  {downloading ? (
+                <Button
+                  onClick={handleDownload}
+                  disabled={preparingLabel || !prepared}
+                  title={
+                    !prepared && !preparing
+                      ? "The PDF could not be generated — use Print instead"
+                      : undefined
+                  }
+                >
+                  {preparingLabel ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Download className="h-4 w-4" />
                   )}
-                  Download PDF
+                  {preparingLabel ? "Preparing PDF…" : "Download PDF"}
                 </Button>
               </div>
             </>
