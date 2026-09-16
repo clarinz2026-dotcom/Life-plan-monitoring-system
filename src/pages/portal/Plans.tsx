@@ -4,8 +4,6 @@ import { useQuery } from "convex/react";
 import type { ReactNode } from "react";
 import {
   ArrowRight,
-  CalendarDays,
-  Check,
   FileHeart,
   Loader2,
   ReceiptText,
@@ -18,9 +16,7 @@ import {
   EmptyState,
   PortalShell,
   StatusPill,
-  daysUntil,
   fmtDate,
-  fmtDay,
   fmtPeso,
   initials,
 } from "./shared";
@@ -133,9 +129,6 @@ export default function Plans() {
                 const upcoming = cd.schedules.filter(
                   (s) => s.status !== "paid" && s.status !== "waived"
                 );
-                const past = cd.schedules.filter(
-                  (s) => s.status === "paid" || s.status === "waived"
-                );
                 const paidSum = cd.payments.reduce((s, p) => s + p.amount, 0);
                 const nextDueSchedule = upcoming
                   .filter((s) => s.dueDate >= now)
@@ -242,81 +235,8 @@ export default function Plans() {
                       </div>
                     </div>
 
-                    <div className="grid gap-0 border-t border-line lg:grid-cols-2">
-                      {/* Schedules */}
-                      <div className="border-b border-line px-5 py-5 lg:border-r lg:border-b-0 lg:px-7">
-                        <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.16em] text-evergreen">
-                          <CalendarDays className="h-4 w-4 text-gold" />
-                          Payment schedule
-                        </p>
-                        {upcoming.length === 0 && past.length === 0 ? (
-                          <p className="mt-4 text-[12.5px] text-stone">
-                            No schedule has been set up for this contract yet.
-                          </p>
-                        ) : (
-                          <div className="mt-3">
-                            {upcoming.length > 0 ? (
-                              <div className="space-y-1.5">
-                                {upcoming.slice(0, 8).map((s) => {
-                                  const d = daysUntil(s.dueDate);
-                                  const isOverdue = s.dueDate < now;
-                                  return (
-                                    <div
-                                      key={s._id}
-                                      className="flex items-center gap-3 rounded-xl border border-line bg-white px-3.5 py-2.5"
-                                    >
-                                      <span
-                                        className={`text-[12px] font-bold ${
-                                          isOverdue ? "text-red-700" : "text-ink"
-                                        }`}
-                                      >
-                                        {fmtDay(s.dueDate)}
-                                      </span>
-                                      <span className="font-mono text-[12px] font-semibold text-evergreen">
-                                        {fmtPeso(s.amount)}
-                                      </span>
-                                      <span className="ml-auto">
-                                        {s.status === "overdue" || isOverdue ? (
-                                          <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10.5px] font-bold uppercase text-red-700">
-                                            {Math.abs(d) === 0 ? "Due today" : `${Math.abs(d)}d late`}
-                                          </span>
-                                        ) : (
-                                          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10.5px] font-bold uppercase text-emerald-700">
-                                            {d === 0 ? "Due today" : `in ${d}d`}
-                                          </span>
-                                        )}
-                                      </span>
-                                    </div>
-                                  );
-                                })}
-                                {upcoming.length > 8 && (
-                                  <p className="pt-1.5 text-[11.5px] text-stone">
-                                    + {upcoming.length - 8} more installments
-                                  </p>
-                                )}
-                              </div>
-                            ) : (
-                              <div className="mt-3 flex items-center gap-2 rounded-xl bg-evergreen/6 px-4 py-3 text-[13px] font-semibold text-evergreen">
-                                <Check className="h-4 w-4" /> All installments are settled — plan
-                                is {contract.contractStatus === "fully_paid" ? "fully paid" : "up to date"}.
-                              </div>
-                            )}
-                            {past.length > 0 && (
-                              <p className="mt-3 text-[11.5px] text-stone">
-                                {past.length} past installment{past.length > 1 ? "s" : ""}{" "}
-                                marked {past.every((s) => s.status === "paid") ? "paid" : "settled"}.
-                              </p>
-                            )}
-                          </div>
-                        )}
-                        <p className="mt-4 text-[11px] leading-relaxed text-stone/80">
-                          Pay installments in cash, GCash, Maya, bank transfer, or
-                          check at any branch. Overdue accounts may be subject to
-                          standard delinquency terms.
-                        </p>
-                      </div>
-
-                      {/* Payments — matches SOA payment table format */}
+                    {/* Payment history — matches the SOA payment table */}
+                    <div className="grid gap-0 border-t border-line">
                       <div className="px-5 py-5 lg:px-7">
                         <div className="flex items-center justify-between">
                           <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.16em] text-evergreen">
