@@ -220,3 +220,124 @@
     border: 1px solid #166534;
   }
 }
+
+/* ─── Staff workspace theme ──────────────────────────────────────────────── */
+/*
+ * The staff area is assembled from shadcn/ui primitives that read the semantic
+ * tokens below, so re-pointing them here retheme the whole workspace at once —
+ * onto the same warm paper + evergreen palette the landing page and the client
+ * portal use. Page markup stays untouched.
+ */
+.staff-shell {
+  --radius: 0.75rem;
+  --background: #faf8f3;
+  --foreground: #211f1a;
+  --card: #fdfcf8;
+  --card-foreground: #211f1a;
+  --popover: #fdfcf8;
+  --popover-foreground: #211f1a;
+  --primary: #1b4332;
+  --primary-foreground: #ffffff;
+  --secondary: #efe9dc;
+  --secondary-foreground: #211f1a;
+  --muted: #efe9dc;
+  --muted-foreground: #716c60;
+  --accent: #efe9dc;
+  --accent-foreground: #1b4332;
+  --destructive: #b91c1c;
+  --border: #e6dfd1;
+  --input: #d9d1bf;
+  --ring: #2d6a4f;
+  --chart-1: #1b4332;
+  --chart-2: #a9874f;
+  --chart-3: #2d6a4f;
+  --chart-4: #4a6fa5;
+  --chart-5: #b91c1c;
+  --sidebar: #10291d;
+  --sidebar-foreground: #f6f3ea;
+  --sidebar-primary: #f6f3ea;
+  --sidebar-primary-foreground: #10291d;
+  --sidebar-accent: #1b4332;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #23472f;
+  --sidebar-ring: #d9c49c;
+  /* Soft warm shadow instead of the default neutral one. */
+  --shadow-color: 33 31 26;
+}
+
+.dark .staff-shell {
+  --background: #14130f;
+  --foreground: #ece7dd;
+  --card: #1c1a15;
+  --card-foreground: #ece7dd;
+  --popover: #1c1a15;
+  --popover-foreground: #ece7dd;
+  --primary: #74d3a0;
+  --primary-foreground: #14130f;
+  --secondary: #262320;
+  --secondary-foreground: #ece7dd;
+  --muted: #262320;
+  --muted-foreground: #a49d8e;
+  --accent: #262320;
+  --accent-foreground: #ece7dd;
+  --border: #322e26;
+  --input: #322e26;
+  --ring: #74d3a0;
+  --sidebar: #10291d;
+  --sidebar-foreground: #f6f3ea;
+  --sidebar-accent: #1b4332;
+  --sidebar-border: #23472f;
+}
+
+/*
+   * Display serif for headings and card titles, exactly as on the landing page
+   * and in the client portal. `:where()` keeps the specificity at zero so any
+   * utility written on the element (a colour, a size, a weight) still wins.
+   */
+  :where(.staff-shell) :where(h1, h2, h3, [data-slot="card-title"]) {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  /* Page titles take the brand green, like the portal's page headings. */
+  .staff-shell h1 {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: #1b4332;
+  }
+
+  .dark .staff-shell h1 {
+    color: #ece7dd;
+  }
+
+  /* Headline figures read like the client portal's — serif numerals in the
+     brand palette, instead of the UI sans. */
+  :where(.staff-shell)
+    :where(.font-bold, .font-semibold):where(
+      .text-xl,
+      .text-2xl,
+      .text-3xl,
+      .text-4xl,
+      .text-5xl
+    ) {
+    font-family: var(--font-display);
+    letter-spacing: -0.01em;
+  }
+
+  /* Pill controls and cards, matching the portal's rounded language. */
+  :where(.staff-shell) [data-slot="button"] {
+    border-radius: 9999px;
+  }
+
+  :where(.staff-shell) [data-slot="card"] {
+    box-shadow: 0 1px 2px rgba(33, 31, 26, 0.04), 0 8px 24px -18px rgba(33, 31, 26, 0.35);
+  }
+
+/*
+ * NOTE: these live outside any cascade layer on purpose. Tailwind's utilities
+ * are layered, and unlayered rules outrank every layer — which is what lets the
+ * staff theme win over the `rounded-md` / `shadow-sm` / `text-white` utilities
+ * baked into the shadcn components without editing them or every call site.
+ */
+

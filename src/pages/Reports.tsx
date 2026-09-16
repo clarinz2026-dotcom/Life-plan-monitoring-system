@@ -40,7 +40,7 @@ const CHANNEL_COLORS: Record<string, string> = {
   gcash: "#007dfe",
   maya: "#00c4b4",
   bank_transfer: "#b45309",
-  check: "#6b6b6b",
+  check: "#716c60",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -82,7 +82,7 @@ export default function Reports() {
     name: name.replace(/_/g, " ").toUpperCase(),
     value: data.amount,
     count: data.count,
-    color: CHANNEL_COLORS[name] || "#6b6b6b",
+    color: CHANNEL_COLORS[name] || "#716c60",
   }));
 
   const agingData = Object.entries(agingReport)
@@ -91,7 +91,7 @@ export default function Reports() {
       name: STATUS_LABELS[key] || key,
       value: data.amount,
       count: data.count,
-      color: STATUS_COLORS[key] || "#6b6b6b",
+      color: STATUS_COLORS[key] || "#716c60",
     }));
 
   const totalReceivables = agingData.reduce((sum, d) => sum + d.value, 0);
@@ -235,15 +235,15 @@ export default function Reports() {
             {dailyCollections && dailyCollections.some((d) => d.amount > 0) ? (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={dailyCollections}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#d4d2cb" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e6dfd1" />
                   <XAxis
                     dataKey="day"
                     tick={{ fontSize: 12 }}
-                    stroke="#6b6b6b"
+                    stroke="#716c60"
                   />
                   <YAxis
                     tick={{ fontSize: 12 }}
-                    stroke="#6b6b6b"
+                    stroke="#716c60"
                     tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`}
                   />
                   <Tooltip
@@ -328,18 +328,18 @@ export default function Reports() {
             {monthlyTrend && monthlyTrend.some((m) => m.amount > 0) ? (
               <ResponsiveContainer width="100%" height={270}>
                 <LineChart data={monthlyTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#d4d2cb" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e6dfd1" />
                   <XAxis
                     dataKey="month"
                     tick={{ fontSize: 11 }}
-                    stroke="#6b6b6b"
+                    stroke="#716c60"
                     angle={-45}
                     textAnchor="end"
                     height={60}
                   />
                   <YAxis
                     tick={{ fontSize: 12 }}
-                    stroke="#6b6b6b"
+                    stroke="#716c60"
                     tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`}
                   />
                   <Tooltip

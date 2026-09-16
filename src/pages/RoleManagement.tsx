@@ -184,7 +184,7 @@ export default function RoleManagement() {
               {/* Current Role Badge */}
               <Badge
                 variant="outline"
-                className={`w-fit text-xs ${roleInfo?.color || "bg-gray-100 text-gray-800"}`}
+                className={`w-fit text-xs ${roleInfo?.color || "bg-muted text-muted-foreground"}`}
               >
                 {u.role === "super_admin" && <Crown className="h-3 w-3 mr-1" />}
                 {roleInfo?.label || "No Role"}

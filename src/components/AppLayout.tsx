@@ -172,28 +172,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-background overflow-visible">
+    <div className="staff-shell flex min-h-screen flex-col bg-background overflow-visible md:flex-row">
       {/* Desktop sidebar */}
       <aside
-        className={`hidden md:flex flex-col border-r border-sidebar-border bg-sidebar transition-all duration-200 ${
+        className={`hidden shrink-0 flex-col border-r border-sidebar-border bg-gradient-to-b from-[#1b4332] to-[#0f2a1d] transition-all duration-200 md:flex ${
           collapsed ? "w-[72px]" : "w-[260px]"
         }`}
       >
-        {/* Header */}
-        <div className="flex items-center gap-3 border-b border-sidebar-border px-5 py-5">
+        {/* Header — same lockup as the client portal header */}
+        <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
           <div
             className={`flex items-center gap-3 min-w-0 ${
               collapsed ? "flex-1 justify-center px-1" : ""
             }`}
           >
-            <BrandLogo className="h-9 w-9 shrink-0 rounded-lg" />
+            <BrandLogo className="h-9 w-9 shrink-0 rounded-[9px] ring-1 ring-white/15" />
             {!collapsed && (
-              <div className="flex flex-col min-w-0">
-                <span className="font-bold text-[15px] text-white truncate">
-                  Evangelist Funeral Services
+              <div className="flex min-w-0 flex-col leading-tight">
+                <span className="truncate text-[13px] font-bold uppercase tracking-[0.12em] text-white">
+                  Evangelist
                 </span>
-                <span className="text-[11px] text-white/50">
-                  Management System
+                <span className="truncate text-[10px] font-medium uppercase tracking-[0.16em] text-white/45">
+                  Staff Portal
                 </span>
               </div>
             )}
@@ -219,11 +219,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center gap-3 rounded-lg px-4 py-2.5 text-[15px] font-medium transition-colors ${
+                `flex items-center gap-3 rounded-full px-4 py-2.5 text-[14.5px] font-medium transition-colors ${
                   isActive
-                    ? "bg-white/15 text-white"
-                    : "text-white/70 hover:bg-white/10 hover:text-white"
-                } ${collapsed ? "justify-center" : ""}`
+                    ? "bg-cream text-pine shadow-sm"
+                    : "text-white/65 hover:bg-white/10 hover:text-white"
+                } ${collapsed ? "justify-center px-0" : ""}`
               }
             >
               <item.icon className="h-5 w-5 shrink-0" />
@@ -236,16 +236,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="border-t border-sidebar-border px-4 py-4">
           {!collapsed && (
             <div className="mb-3 min-w-0">
-              <p className="text-[14px] font-semibold text-white truncate">
+              <p className="truncate text-[13.5px] font-semibold text-white">
                 {user?.name || user?.email || "User"}
               </p>
-              <p className="text-[12px] text-white/50">
+              <p className="truncate text-[10px] font-bold uppercase tracking-[0.16em] text-gold-soft">
                 {roleLabel}
               </p>
               {isBranchStaff && userBranch && (
-                <div className="mt-1.5 flex items-center gap-1.5 rounded-md bg-white/10 px-2 py-1">
-                  <Building2 className="h-3 w-3 text-white/60" />
-                  <p className="text-[11px] text-white/70 truncate">
+                <div className="mt-2 flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 ring-1 ring-white/10">
+                  <Building2 className="h-3 w-3 text-gold-soft" />
+                  <p className="text-[11px] text-white/75 truncate">
                     {userBranch.name}
                   </p>
                 </div>
@@ -275,13 +275,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Mobile top bar */}        <div className="md:hidden fixed top-0 left-0 right-0 z-[99999] flex items-center justify-between border-b border-border bg-sidebar px-4 py-3.5">
+      {/* Mobile top bar */}
+      <div className="fixed left-0 right-0 top-0 z-[99999] flex items-center justify-between border-b border-white/10 bg-gradient-to-r from-[#1b4332] to-[#0f2a1d] px-4 py-3.5 md:hidden">
         <div className="flex items-center gap-3">
-          <BrandLogo className="h-8 w-8 rounded-lg" />
+          <BrandLogo className="h-8 w-8 rounded-[9px] ring-1 ring-white/15" />
           <div>
-            <span className="font-bold text-[15px] text-white">Evangelist</span>
+            <span className="text-[13px] font-bold uppercase tracking-[0.12em] text-white">Evangelist</span>
             {isBranchStaff && userBranch && (
-              <span className="ml-2 inline-flex items-center gap-1 rounded bg-white/10 px-1.5 py-0.5 text-[10px] text-white/60">
+              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/70 ring-1 ring-white/10">
                 <Building2 className="h-2.5 w-2.5" />
                 {userBranch.name}
               </span>
@@ -289,7 +290,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[12px] text-white/60">{roleLabel}</span>
+          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-gold-soft">{roleLabel}</span>
           <Button
             variant="ghost"
             size="icon"
@@ -308,7 +309,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             className="absolute inset-0 bg-black/40"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="absolute top-[60px] left-0 right-0 bg-sidebar border-b border-sidebar-border shadow-xl overflow-y-auto max-h-[calc(100vh-60px-64px)]">
+          <div className="absolute top-[60px] left-0 right-0 overflow-y-auto border-b border-white/10 bg-gradient-to-b from-[#1b4332] to-[#0f2a1d] shadow-xl max-h-[calc(100vh-60px-64px)]">
             <nav className="py-3 px-3">
               {visibleNav.map((item) => (
                 <NavLink
@@ -316,10 +317,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   to={item.to}
                   onClick={() => setMobileMenuOpen(false)}
                   className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-lg px-4 py-3 text-[15px] font-medium transition-colors ${
+                    `flex items-center gap-3 rounded-full px-4 py-3 text-[14.5px] font-medium transition-colors ${
                       isActive
-                        ? "bg-white/15 text-white"
-                        : "text-white/70 hover:bg-white/10"
+                        ? "bg-cream text-pine"
+                        : "text-white/65 hover:bg-white/10"
                     }`
                   }
                 >
@@ -327,23 +328,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   <span>{item.label}</span>
                 </NavLink>
               ))}
-              <div className="border-t border-sidebar-border mt-2 pt-2">
+              <div className="border-t border-white/10 mt-2 pt-2">
                 <div className="px-4 py-3">
-                  <p className="text-[14px] font-semibold text-white truncate">
+                  <p className="text-[13.5px] font-semibold text-white truncate">
                     {user?.name || user?.email || "User"}
                   </p>
-                  <p className="text-[12px] text-white/50">{roleLabel}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gold-soft">{roleLabel}</p>
                 </div>
                 <button
                   onClick={() => setDarkMode(!darkMode)}
-                  className="flex items-center gap-3 w-full rounded-lg px-4 py-3 text-[15px] font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                  className="flex items-center gap-3 w-full rounded-full px-4 py-3 text-[15px] font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors"
                 >
                   <Moon className="h-5 w-5" />
                   <span>{darkMode ? "Light" : "Dark"} Mode</span>
                 </button>
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center gap-3 w-full rounded-lg px-4 py-3 text-[15px] font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                  className="flex items-center gap-3 w-full rounded-full px-4 py-3 text-[15px] font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors"
                 >
                   <LogOut className="h-5 w-5" />
                   <span>Sign out</span>
@@ -357,13 +358,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
         <div className="md:hidden h-[60px]" />
-        <main className="flex-1 pb-20 md:pb-0">
+        <main className="mx-auto w-full max-w-[1500px] flex-1 pb-20 md:pb-0">
           {canRenderPage ? children : null}
         </main>
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-sidebar">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-gradient-to-r from-[#1b4332] to-[#0f2a1d] md:hidden">
         <div className="flex items-center justify-around py-2 px-1">
           {bottomNavItems.map((item) => {
             const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
@@ -371,9 +372,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <NavLink
                 key={item.to}
                 to={item.to}
-                className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-lg min-w-0 transition-colors ${
+                className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-full min-w-0 transition-colors ${
                   isActive
-                    ? "text-green-400"
+                    ? "text-gold-soft"
                     : "text-white/60"
                 }`}
               >

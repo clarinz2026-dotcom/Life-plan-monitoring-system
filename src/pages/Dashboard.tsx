@@ -56,7 +56,7 @@ const CHANNEL_COLORS: Record<string, string> = {
   gcash: "#007dfe",
   maya: "#00c4b4",
   bank_transfer: "#b45309",
-  check: "#6b6b6b",
+  check: "#716c60",
 };
 
 function formatPHP(amount: number) {
@@ -340,16 +340,16 @@ export default function Dashboard() {
             {trendData.some((d) => d.amount > 0) ? (
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#d4d2cb" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e6dfd1" vertical={false} />
                   <XAxis
                     dataKey="label"
                     tick={{ fontSize: 13 }}
-                    stroke="#6b6b6b"
+                    stroke="#716c60"
                     tickLine={false}
                   />
                   <YAxis
                     tick={{ fontSize: 12 }}
-                    stroke="#6b6b6b"
+                    stroke="#716c60"
                     tickLine={false}
                     tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`}
                   />
@@ -405,7 +405,7 @@ export default function Dashboard() {
                         className="h-full rounded-full transition-all"
                         style={{
                           width: `${Math.max((ch.amount / maxChannelAmount) * 100, 4)}%`,
-                          backgroundColor: CHANNEL_COLORS[ch.name] || "#6b6b6b",
+                          backgroundColor: CHANNEL_COLORS[ch.name] || "#716c60",
                         }}
                       />
                     </div>
