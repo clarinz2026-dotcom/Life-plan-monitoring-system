@@ -149,11 +149,11 @@ export default function Plans() {
                         <p className="font-display text-[20px] font-semibold text-evergreen">
                           {contract.planType || "Memorial Plan"}
                         </p>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] leading-relaxed text-stone">
-                          <span className="font-mono font-semibold tracking-tight text-ink">
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[14.5px] leading-relaxed text-stone">
+                          <span className="font-mono text-[14px] font-semibold tracking-tight text-ink">
                             {contract.contractNumber}
                           </span>
-                          <span aria-hidden className="h-3.5 w-px bg-line" />
+                          <span aria-hidden className="h-4 w-px bg-line" />
                           <span>
                             Effectivity Date:{" "}
                             <strong className="font-semibold text-ink">
@@ -162,7 +162,7 @@ export default function Plans() {
                           </span>
                           {contract.maturityDate ? (
                             <>
-                              <span aria-hidden className="h-3.5 w-px bg-line" />
+                              <span aria-hidden className="h-4 w-px bg-line" />
                               <span>
                                 Maturity Date:{" "}
                                 <strong className="font-semibold text-ink">
