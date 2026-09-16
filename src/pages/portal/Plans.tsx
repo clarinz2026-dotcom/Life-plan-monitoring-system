@@ -150,9 +150,10 @@ export default function Plans() {
                           {contract.planType || "Memorial Plan"}
                         </p>
                         <p className="mt-0.5 font-mono text-[11.5px] text-stone">
-                          {contract.contractNumber} · started {fmtDate(contract.startDate)}
+                          {contract.contractNumber} · Effectivity Date:{" "}
+                          {fmtDate(contract.startDate)}
                           {contract.maturityDate
-                            ? ` · matures ${fmtDate(contract.maturityDate)}`
+                            ? ` · Maturity Date: ${fmtDate(contract.maturityDate)}`
                             : ""}
                         </p>
                       </div>
