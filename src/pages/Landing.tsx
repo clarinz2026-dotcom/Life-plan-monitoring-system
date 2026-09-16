@@ -863,16 +863,16 @@ export default function Landing() {
           <Reveal>
             <div className="rounded-3xl border border-line bg-white p-7 shadow-xl">
               <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gold">
-                Planholder record
+                Sample planholder record
               </p>
               <p className="mt-3 font-display text-[24px] font-semibold text-evergreen">
-                Nasayao, Bren Lee A.
+                Dela Cruz, Juan P.
               </p>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 {[
-                  ["Contact", "0927 503 4686"],
-                  ["Address", "Fortich St., Malaybalay City"],
-                  ["Birthday", "August 22, 1969"],
+                  ["Contact", "0917 000 0000"],
+                  ["Address", "Purok 1, Malaybalay City"],
+                  ["Birthday", "January 1, 1975"],
                   ["Branch", "Malaybalay (main office)"],
                 ].map(([l, v]) => (
                   <div key={l} className="rounded-xl bg-cream px-3.5 py-3">
@@ -889,8 +889,8 @@ export default function Landing() {
               </p>
               <div className="mt-3 space-y-2">
                 {[
-                  ["1. Clariza Nasayao", "42", "Spouse"],
-                  ["2. Bren Lee Nasayao Jr.", "16", "Son"],
+                  ["1. Dela Cruz, Maria P.", "45", "Spouse"],
+                  ["2. Dela Cruz, Jose P.", "17", "Son"],
                 ].map(([n, a, r]) => (
                   <div
                     key={n}
