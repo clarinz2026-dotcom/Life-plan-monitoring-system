@@ -182,7 +182,10 @@ export default function Plans() {
                     </div>
 
                     {/* Account summary — the same figures printed on the SOA */}
-                    <div className="border-t border-line px-5 py-5 lg:px-7">
+                    <div
+                      className="border-t border-line px-5 py-5 lg:px-7"
+                      style={{ fontFamily: "Arial, Helvetica, sans-serif" }}
+                    >
                       <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-evergreen">
                         Account summary
                       </p>
@@ -212,7 +215,7 @@ export default function Plans() {
                               {s.l}
                             </p>
                             <p
-                              className={`mt-0.5 font-display text-[19px] font-semibold ${
+                              className={`mt-1 text-[19px] font-bold ${
                                 s.cls ?? "text-evergreen"
                               }`}
                             >
