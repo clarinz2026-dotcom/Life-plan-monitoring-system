@@ -180,7 +180,7 @@ function Auth() {
   // their code does not briefly see the sign-in form again.
   if (awaitingSession) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-3 px-4">
+      <div className="staff-shell flex min-h-screen flex-col items-center justify-center gap-3 bg-background px-4">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         <p className="text-sm font-mono text-muted-foreground">
           Signing you in…
@@ -193,19 +193,25 @@ function Auth() {
   // role. Explain that instead of redirecting into the client portal.
   if (notStaffAccount) {
     return (
-      <div className="min-h-screen flex flex-col">
+      <div className="staff-shell flex min-h-screen flex-col bg-background">
         <div className="flex-1 flex items-center justify-center px-4">
           <div className="flex items-center justify-center h-full flex-col w-full max-w-[420px]">
             <Card className="w-full border shadow-md">
               <CardHeader className="text-center">
                 <div className="flex justify-center">
                   <BrandLogo
-                    className="h-14 w-14 rounded-lg mb-3 mt-3 cursor-pointer"
+                    className="h-14 w-14 rounded-[9px] ring-1 ring-black/10 mb-3 mt-3 cursor-pointer"
                     onClick={() => navigate("/")}
                     title="Evangelist Funeral Services"
                   />
                 </div>
-                <CardTitle className="text-xl font-mono">
+                <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-evergreen">
+                  Evangelist
+                </p>
+                <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-stone">
+                  Staff portal
+                </p>
+                <CardTitle className="text-xl font-mono mt-1">
                   <span className="text-destructive">&gt;</span> Not a staff
                   account
                 </CardTitle>
@@ -252,7 +258,7 @@ function Auth() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="staff-shell flex min-h-screen flex-col bg-background">
       <div className="flex-1 flex items-center justify-center px-4">
         <div className="flex items-center justify-center h-full flex-col w-full max-w-[400px]">
           <Card className="w-full pb-0 border shadow-md">
@@ -261,12 +267,18 @@ function Auth() {
                 <CardHeader className="text-center">
                   <div className="flex justify-center">
                     <BrandLogo
-                      className="h-14 w-14 rounded-lg mb-3 mt-3 cursor-pointer"
+                      className="h-14 w-14 rounded-[9px] ring-1 ring-black/10 mb-3 mt-3 cursor-pointer"
                       onClick={() => navigate("/")}
                       title="Evangelist Funeral Services"
                     />
                   </div>
-                  <CardTitle className="text-xl font-mono">
+                  <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-evergreen">
+                    Evangelist
+                  </p>
+                  <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-stone">
+                    {staffIntent ? "Staff portal" : "Client portal"}
+                  </p>
+                  <CardTitle className="text-xl font-mono mt-1">
                     <span className="text-terminal-green">&gt;</span>{" "}
                     {staffIntent ? "Staff Sign In" : "Get Started"}
                   </CardTitle>

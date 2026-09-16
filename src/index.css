@@ -334,6 +334,28 @@
     box-shadow: 0 1px 2px rgba(33, 31, 26, 0.04), 0 8px 24px -18px rgba(33, 31, 26, 0.35);
   }
 
+  /* Tables carry the ledger treatment of the client portal's payment history:
+     micro-label headers on warm paper, instead of bold default `th` text. */
+  .staff-shell [data-slot="table-head"] {
+    background: #f3f0e7;
+    color: #716c60;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .staff-shell [data-slot="table-header"] {
+    border-bottom: 1px solid #e6dfd1;
+  }
+
+  .dark .staff-shell [data-slot="table-head"] {
+    background: #221f19;
+    color: #a49d8e;
+  }
+
 /*
  * NOTE: these live outside any cascade layer on purpose. Tailwind's utilities
  * are layered, and unlayered rules outrank every layer — which is what lets the
