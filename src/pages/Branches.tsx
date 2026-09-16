@@ -414,8 +414,8 @@ export default function Branches() {
                 </p>
                 <p className="text-2xl font-bold mt-1">{totalClients}</p>
               </div>
-              <div className="h-11 w-11 rounded-lg bg-green-50 flex items-center justify-center">
-                <Users className="h-5 w-5 text-green-600" />
+              <div className="h-11 w-11 rounded-lg bg-terminal-green/10 flex items-center justify-center">
+                <Users className="h-5 w-5 text-terminal-green" />
               </div>
             </div>
           </CardContent>
@@ -446,8 +446,8 @@ export default function Branches() {
                   {formatPHP(totalCollected)}
                 </p>
               </div>
-              <div className="h-11 w-11 rounded-lg bg-emerald-50 flex items-center justify-center">
-                <Wallet className="h-5 w-5 text-emerald-600" />
+              <div className="h-11 w-11 rounded-lg bg-terminal-green/10 flex items-center justify-center">
+                <Wallet className="h-5 w-5 text-terminal-green" />
               </div>
             </div>
           </CardContent>
@@ -459,12 +459,12 @@ export default function Branches() {
                 <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
                   Collection Rate
                 </p>
-                <p className="text-2xl font-bold mt-1 text-green-600">
+                <p className="text-2xl font-bold mt-1 text-terminal-green">
                   {overallRate}%
                 </p>
               </div>
-              <div className="h-11 w-11 rounded-lg bg-green-50 flex items-center justify-center">
-                <Target className="h-5 w-5 text-green-600" />
+              <div className="h-11 w-11 rounded-lg bg-terminal-green/10 flex items-center justify-center">
+                <Target className="h-5 w-5 text-terminal-green" />
               </div>
             </div>
           </CardContent>
@@ -549,19 +549,19 @@ export default function Branches() {
                           {b.contractCount}
                         </span>
                         {b.fullyPaidCount > 0 && (
-                          <p className="text-[11px] text-green-600">
+                          <p className="text-[11px] text-terminal-green">
                             {b.fullyPaidCount} paid
                           </p>
                         )}
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex flex-col items-center">
-                          <span className="text-[15px] font-bold text-green-600">
+                          <span className="text-[15px] font-bold text-terminal-green">
                             {b.collectionRate}%
                           </span>
                           <div className="w-16 h-1.5 bg-muted rounded-full mt-1 overflow-hidden">
                             <div
-                              className="h-full bg-green-600 rounded-full"
+                              className="h-full bg-terminal-green rounded-full"
                               style={{
                                 width: `${b.collectionRate}%`,
                               }}
@@ -570,7 +570,7 @@ export default function Branches() {
                         </div>
                       </TableCell>
                       <TableCell className="text-center">
-                        <p className="text-[15px] font-bold text-green-600">
+                        <p className="text-[15px] font-bold text-terminal-green">
                           {formatPHP(b.monthAmount)}
                         </p>
                         <p className="text-[11px] text-muted-foreground">
@@ -628,7 +628,7 @@ export default function Branches() {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-[15px] font-semibold flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-green-600" />
+                    <Building2 className="h-4 w-4 text-terminal-green" />
                     {b.code}
                   </CardTitle>
                   <Badge
@@ -680,7 +680,7 @@ export default function Branches() {
                     <span className="text-muted-foreground">
                       Collection Rate
                     </span>
-                    <span className="font-semibold text-green-600">
+                    <span className="font-semibold text-terminal-green">
                       {b.collectionRate}%
                     </span>
                   </div>
@@ -702,7 +702,7 @@ export default function Branches() {
                     <span className="text-muted-foreground">
                       This Month
                     </span>
-                    <span className="font-semibold text-green-600">
+                    <span className="font-semibold text-terminal-green">
                       {formatPHP(b.monthAmount)}
                     </span>
                   </div>

@@ -334,7 +334,7 @@ export default function Payments() {
                       {p.orNumber || "—"}
                     </TableCell>
                     <TableCell className="text-right">
-                      <span className="font-bold text-green-600 text-[15px]">
+                      <span className="font-bold text-terminal-green text-[15px]">
                         {formatPHP(p.amount)}
                       </span>
                     </TableCell>

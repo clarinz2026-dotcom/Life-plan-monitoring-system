@@ -13,11 +13,11 @@ import {
 import { toast } from "sonner";
 
 const ALL_ROLES = [
-  { value: "super_admin", label: "Super Admin", color: "bg-purple-100 text-purple-800 border-purple-200" },
-  { value: "ceo", label: "CEO", color: "bg-amber-100 text-amber-800 border-amber-200" },
-  { value: "manager", label: "Manager", color: "bg-blue-100 text-blue-800 border-blue-200" },
-  { value: "finance_staff", label: "Finance Staff", color: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  { value: "cashier", label: "Cashier", color: "bg-orange-100 text-orange-800 border-orange-200" },
+  { value: "super_admin", label: "Super Admin", color: "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800" },
+  { value: "ceo", label: "CEO", color: "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800" },
+  { value: "manager", label: "Manager", color: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800" },
+  { value: "finance_staff", label: "Finance Staff", color: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800" },
+  { value: "cashier", label: "Cashier", color: "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800" },
 ] as const;
 
 const ROLE_DESCRIPTIONS: Record<string, string> = {
@@ -102,7 +102,7 @@ export default function RoleManagement() {
           </p>
         ) : (
           <p>
-            <span className="font-medium text-amber-600">CEO:</span> You can assign
+            <span className="font-medium text-terminal-amber">CEO:</span> You can assign
             Manager, Finance Staff, Cashier, and Collector roles. Creating another
             CEO or a Super Admin is restricted to the Super Admin.
           </p>
@@ -256,7 +256,7 @@ export default function RoleManagement() {
               {protectedRole && (
                 <div
                   className={`flex items-center gap-1.5 ${
-                    u.role === "super_admin" ? "text-purple-600" : "text-amber-600"
+                    u.role === "super_admin" ? "text-purple-600" : "text-terminal-amber"
                   }`}
                 >
                   <ShieldCheck className="h-4 w-4" />

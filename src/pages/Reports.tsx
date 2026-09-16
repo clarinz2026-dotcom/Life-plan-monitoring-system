@@ -145,7 +145,7 @@ export default function Reports() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-green-600">
+            <p className="text-2xl font-bold text-terminal-green">
               {formatPHP(collectionSummary.thisMonth.amount)}
             </p>
             <p className="text-[13px] text-muted-foreground mt-1">{collectionSummary.thisMonth.count} payments</p>
@@ -403,7 +403,7 @@ export default function Reports() {
                     <tr key={userId} className="border-b border-border/30 last:border-0">
                       <td className="py-3 px-5 font-medium text-[15px]">{data.name}</td>
                       <td className="py-3 px-5 text-right text-[14px]">{data.count}</td>
-                      <td className="py-3 px-5 text-right font-bold text-green-600 text-[15px]">
+                      <td className="py-3 px-5 text-right font-bold text-terminal-green text-[15px]">
                         {formatPHP(data.amount)}
                       </td>
                       <td className="py-3 px-5 text-right text-[14px] text-muted-foreground">
@@ -433,7 +433,7 @@ export default function Reports() {
             </div>
             <div className="space-y-1">
               <p className="text-[13px] text-muted-foreground uppercase font-medium">This Month</p>
-              <p className="text-xl font-bold text-green-600">
+              <p className="text-xl font-bold text-terminal-green">
                 {formatPHP(collectionSummary.thisMonth.amount)}
               </p>
               <p className="text-[13px] text-muted-foreground">{collectionSummary.thisMonth.count} payments</p>
@@ -445,7 +445,7 @@ export default function Reports() {
                 const change = ((collectionSummary.thisMonth.amount - collectionSummary.lastMonth.amount) / collectionSummary.lastMonth.amount) * 100;
                 const isPositive = change >= 0;
                 return (
-                  <p className={`text-[15px] font-medium ${isPositive ? "text-green-600" : "text-red-600"}`}>
+                  <p className={`text-[15px] font-medium ${isPositive ? "text-terminal-green" : "text-terminal-red"}`}>
                     {isPositive ? "↑" : "↓"} {Math.abs(change).toFixed(1)}% vs last month
                   </p>
                 );

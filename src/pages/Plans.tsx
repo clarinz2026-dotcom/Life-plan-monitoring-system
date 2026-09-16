@@ -106,8 +106,8 @@ export default function Plans() {
   return (
     <div className="p-5 md:p-8 space-y-5 md:space-y-6">
       <div className="flex items-center gap-4">
-        <div className="h-12 w-12 rounded-lg bg-green-50 flex items-center justify-center">
-          <Package className="h-6 w-6 text-green-600" />
+        <div className="h-12 w-12 rounded-lg bg-terminal-green/10 flex items-center justify-center">
+          <Package className="h-6 w-6 text-terminal-green" />
         </div>
         <div className="flex-1">
           <h1 className="text-3xl font-bold">Plans</h1>
@@ -127,7 +127,7 @@ export default function Plans() {
         </CardContent></Card>
         <Card className="border-border/60 shadow-sm"><CardContent className="p-5">
           <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">Active Plans</p>
-          <p className="text-2xl font-bold mt-1 text-green-600">{activePlans}</p>
+          <p className="text-2xl font-bold mt-1 text-terminal-green">{activePlans}</p>
         </CardContent></Card>
         <Card className="border-border/60 shadow-sm"><CardContent className="p-5">
           <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">Contracts on Plans</p>
@@ -136,7 +136,7 @@ export default function Plans() {
       </div>
 
       <div className="flex items-start gap-2.5 rounded-lg border border-border bg-muted/40 p-4 text-[14px] text-muted-foreground">
-        <Info className="h-5 w-5 shrink-0 mt-0.5 text-green-600" />
+        <Info className="h-5 w-5 shrink-0 mt-0.5 text-terminal-green" />
         <p>Bulk upload matches the "Plan Type" column against plan names <span className="font-semibold text-foreground">case-insensitively</span> and auto-creates a contract.</p>
       </div>
 
@@ -198,7 +198,7 @@ export default function Plans() {
             <div><Label className="text-[14px]">Monthly Payment (₱) *</Label><Input type="number" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="e.g. 650" className="text-base h-11 mt-1.5" /></div>
             <div className="rounded-lg bg-muted/50 border border-border px-4 py-3 text-[14px] flex items-center justify-between gap-3">
               <span className="text-muted-foreground">Full price (monthly × {PLAN_TERM_MONTHS})</span>
-              <span className="font-bold text-green-600 whitespace-nowrap">{(() => { const monthly = parseFloat(form.price.replace(/,/g, "")); return !isNaN(monthly) && monthly > 0 ? peso(fullPlanPrice(monthly)) : "—"; })()}</span>
+              <span className="font-bold text-terminal-green whitespace-nowrap">{(() => { const monthly = parseFloat(form.price.replace(/,/g, "")); return !isNaN(monthly) && monthly > 0 ? peso(fullPlanPrice(monthly)) : "—"; })()}</span>
             </div>
           </div>
           <DialogFooter>

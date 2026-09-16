@@ -157,13 +157,13 @@ export default function Contracts() {
                       <span className="text-muted-foreground">
                         {formatPHP(c.totalPaid)} / {formatPHP(c.planAmount)}
                       </span>
-                      <span className="text-green-600 font-semibold">
+                      <span className="text-terminal-green font-semibold">
                         {progress.toFixed(0)}%
                       </span>
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-green-600 rounded-full transition-all"
+                        className="h-full bg-terminal-green rounded-full transition-all"
                         style={{ width: `${progress}%` }}
                       />
                     </div>

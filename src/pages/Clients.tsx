@@ -585,7 +585,7 @@ export default function Clients() {
                     <TableRow
                       key={client._id}
                       className={`cursor-pointer hover:bg-muted/50 ${
-                        isSelected ? "bg-green-50 dark:bg-green-950/20" : ""
+                        isSelected ? "bg-terminal-green/10 dark:bg-terminal-green/15" : ""
                       }`}
                       onClick={() => navigate(`/clients/${client._id}`)}
                     >

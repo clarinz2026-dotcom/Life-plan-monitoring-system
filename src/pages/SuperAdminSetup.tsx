@@ -50,8 +50,8 @@ export default function SuperAdminSetup() {
   if (hasSuperAdmin.hasSuperAdmin && wrongEmail) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-4">
-        <div className="h-16 w-16 rounded-2xl bg-red-100 flex items-center justify-center">
-          <ShieldCheck className="h-8 w-8 text-red-600" />
+        <div className="h-16 w-16 rounded-2xl bg-terminal-red/10 flex items-center justify-center">
+          <ShieldCheck className="h-8 w-8 text-terminal-red" />
         </div>
         <h2 className="text-xl font-bold">Wrong Account</h2>
         <p className="text-sm text-muted-foreground text-center max-w-sm">
@@ -79,8 +79,8 @@ export default function SuperAdminSetup() {
     // Same email as locked — try to re-claim
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-4">
-        <div className="h-16 w-16 rounded-2xl bg-amber-100 flex items-center justify-center">
-          <Crown className="h-8 w-8 text-amber-600" />
+        <div className="h-16 w-16 rounded-2xl bg-terminal-amber/15 flex items-center justify-center">
+          <Crown className="h-8 w-8 text-terminal-amber" />
         </div>
         <h2 className="text-xl font-bold">Restore Super Admin</h2>
         <p className="text-sm text-muted-foreground text-center max-w-sm">
@@ -128,8 +128,8 @@ export default function SuperAdminSetup() {
   if (claimed) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-4">
-        <div className="h-16 w-16 rounded-2xl bg-green-100 flex items-center justify-center">
-          <CheckCircle className="h-8 w-8 text-green-600" />
+        <div className="h-16 w-16 rounded-2xl bg-terminal-green/10 flex items-center justify-center">
+          <CheckCircle className="h-8 w-8 text-terminal-green" />
         </div>
         <h2 className="text-xl font-bold">Super Admin Activated!</h2>
         <p className="text-sm text-muted-foreground text-center max-w-sm">
@@ -207,8 +207,8 @@ export default function SuperAdminSetup() {
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="h-5 w-5 rounded bg-red-100 flex items-center justify-center mt-0.5">
-              <Mail className="h-3 w-3 text-red-600" />
+            <div className="h-5 w-5 rounded bg-terminal-red/10 flex items-center justify-center mt-0.5">
+              <Mail className="h-3 w-3 text-terminal-red" />
             </div>
             <div>
               <p className="text-sm font-medium">Permanently Locked to Your Email</p>

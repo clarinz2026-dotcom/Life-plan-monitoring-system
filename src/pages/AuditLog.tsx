@@ -125,7 +125,7 @@ export default function AuditLog() {
                               <span className="text-muted-foreground">
                                 <span className="line-through">{log.oldValues.contractStatus}</span>
                                 {" → "}
-                                <span className="text-green-600 font-medium">
+                                <span className="text-terminal-green font-medium">
                                   {log.newValues.contractStatus}
                                 </span>
                               </span>

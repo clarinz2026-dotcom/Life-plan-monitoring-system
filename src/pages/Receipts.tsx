@@ -142,7 +142,7 @@ export default function Receipts() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <span className="font-bold text-green-600 text-[15px]">
+                      <span className="font-bold text-terminal-green text-[15px]">
                         {formatPHP(r.amount)}
                       </span>
                     </TableCell>
@@ -229,7 +229,7 @@ export default function Receipts() {
                   <p className="text-[12px] text-muted-foreground uppercase">
                     Amount Paid
                   </p>
-                  <p className="text-2xl font-bold text-green-600">
+                  <p className="text-2xl font-bold text-terminal-green">
                     {formatPHP(selectedReceipt.amount)}
                   </p>
                 </div>

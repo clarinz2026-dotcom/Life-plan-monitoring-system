@@ -419,7 +419,7 @@ export default function BulkUpload() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
             <div>
-              <p className="text-[13px] font-semibold mb-2 text-green-600">
+              <p className="text-[13px] font-semibold mb-2 text-terminal-green">
                 Required Columns
               </p>
               <ul className="text-[14px] text-muted-foreground space-y-1.5">
@@ -455,7 +455,7 @@ export default function BulkUpload() {
                 Example
               </p>
               <div className="bg-muted/50 rounded-lg p-4 text-[13px] text-muted-foreground space-y-1.5 overflow-x-auto">
-                <div className="text-green-600 font-medium whitespace-nowrap">
+                <div className="text-terminal-green font-medium whitespace-nowrap">
                   No., Planholder Name, LPA NO, Plan Type, Effectivity Date,
                   Due Date, Installment, Amount, 30, 60, 90, Contact No.,
                   Address
@@ -624,7 +624,7 @@ export default function BulkUpload() {
                       <tr
                         key={i}
                         className={`border-b border-border/30 last:border-0 ${
-                          hasErrors ? "bg-red-50" : ""
+                          hasErrors ? "bg-terminal-red/10" : ""
                         }`}
                       >
                         <td className="py-3 px-3 text-[13px] text-muted-foreground">
@@ -632,9 +632,9 @@ export default function BulkUpload() {
                         </td>
                         <td className="py-3 px-3">
                           {hasErrors ? (
-                            <XCircle className="h-5 w-5 text-red-500" />
+                            <XCircle className="h-5 w-5 text-terminal-red" />
                           ) : (
-                            <CheckCircle className="h-5 w-5 text-green-600" />
+                            <CheckCircle className="h-5 w-5 text-terminal-green" />
                           )}
                         </td>
                         <td className="py-3 px-3 text-[14px] whitespace-nowrap">
@@ -678,7 +678,7 @@ export default function BulkUpload() {
                               className="h-8 w-28 text-[13px]"
                             />
                           ) : plan && months > 0 ? (
-                            <span className="text-[13px] text-green-600 font-medium whitespace-nowrap">
+                            <span className="text-[13px] text-terminal-green font-medium whitespace-nowrap">
                               {suggested !== null ? peso(suggested) : "—"}
                             </span>
                           ) : (
@@ -705,7 +705,7 @@ export default function BulkUpload() {
                         </td>
                         <td className="py-3 px-3">
                           {hasErrors && (
-                            <div className="text-[12px] text-red-600">
+                            <div className="text-[12px] text-terminal-red">
                               {result.errors.map((e, j) => (
                                 <div key={j}>• {e}</div>
                               ))}
@@ -734,9 +734,9 @@ export default function BulkUpload() {
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 {uploadResult.failed === 0 ? (
-                  <CheckCircle className="h-10 w-10 text-green-600" />
+                  <CheckCircle className="h-10 w-10 text-terminal-green" />
                 ) : (
-                  <AlertTriangle className="h-10 w-10 text-amber-600" />
+                  <AlertTriangle className="h-10 w-10 text-terminal-amber" />
                 )}
                 <div>
                   <h3 className="text-xl font-bold">Upload Complete</h3>
@@ -757,10 +757,10 @@ export default function BulkUpload() {
 
               {uploadResult.errors.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-[13px] font-medium text-red-600">Errors:</p>
+                  <p className="text-[13px] font-medium text-terminal-red">Errors:</p>
                   <div className="max-h-40 overflow-y-auto space-y-1">
                     {uploadResult.errors.map((err, i) => (
-                      <div key={i} className="text-[13px] text-red-600">
+                      <div key={i} className="text-[13px] text-terminal-red">
                         Row {err.row}: {err.error}
                       </div>
                     ))}

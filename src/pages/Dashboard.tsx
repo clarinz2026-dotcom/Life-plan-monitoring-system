@@ -212,12 +212,12 @@ export default function Dashboard() {
         <Card className="border-border/60 shadow-sm">
           <CardContent className="p-6 flex flex-col">
             <div className="flex items-center gap-2.5 mb-4">
-              <Target className="h-5 w-5 text-green-600" />
+              <Target className="h-5 w-5 text-terminal-green" />
               <span className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
                 Collection Progress
               </span>
             </div>
-            <p className="text-4xl font-bold text-green-600">
+            <p className="text-4xl font-bold text-terminal-green">
               {summary.collectionRate}%
             </p>
             <p className="text-[13px] text-muted-foreground mt-1">
@@ -227,7 +227,7 @@ export default function Dashboard() {
             <div className="mt-4 pt-4 border-t border-border space-y-2">
               <div className="flex justify-between text-[14px]">
                 <span className="text-muted-foreground">Collected</span>
-                <span className="font-semibold text-green-600">{formatPHP(summary.totalCollected)}</span>
+                <span className="font-semibold text-terminal-green">{formatPHP(summary.totalCollected)}</span>
               </div>
               <div className="flex justify-between text-[14px]">
                 <span className="text-muted-foreground">Total Contract Value</span>
@@ -235,7 +235,7 @@ export default function Dashboard() {
               </div>
               <div className="flex justify-between text-[14px]">
                 <span className="text-muted-foreground">Remaining</span>
-                <span className="font-semibold text-amber-600">
+                <span className="font-semibold text-terminal-amber">
                   {formatPHP(Math.max(summary.totalContractValue - summary.totalCollected, 0))}
                 </span>
               </div>
@@ -255,8 +255,8 @@ export default function Dashboard() {
                 </p>
                 <p className="text-2xl font-bold mt-1">{summary.totalClients}</p>
               </div>
-              <div className="h-11 w-11 rounded-lg bg-green-50 flex items-center justify-center">
-                <Users className="h-5 w-5 text-green-600" />
+              <div className="h-11 w-11 rounded-lg bg-terminal-green/10 flex items-center justify-center">
+                <Users className="h-5 w-5 text-terminal-green" />
               </div>
             </div>
             <p className="text-[12px] text-muted-foreground mt-2 flex items-center gap-1">
@@ -280,7 +280,7 @@ export default function Dashboard() {
               </div>
             </div>
             <p className="text-[12px] text-muted-foreground mt-2 flex items-center gap-1">
-              <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+              <CheckCircle2 className="h-3.5 w-3.5 text-terminal-green" />
               {summary.fullyPaidCount} fully paid
             </p>
           </CardContent>
@@ -293,12 +293,12 @@ export default function Dashboard() {
                 <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
                   Late Accounts
                 </p>
-                <p className={`text-2xl font-bold mt-1 ${delinquentCount > 0 ? "text-amber-600" : ""}`}>
+                <p className={`text-2xl font-bold mt-1 ${delinquentCount > 0 ? "text-terminal-amber" : ""}`}>
                   {delinquentCount}
                 </p>
               </div>
-              <div className="h-11 w-11 rounded-lg bg-amber-50 flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
+              <div className="h-11 w-11 rounded-lg bg-terminal-amber/15 flex items-center justify-center">
+                <AlertTriangle className="h-5 w-5 text-terminal-amber" />
               </div>
             </div>
             <p className="text-[12px] text-muted-foreground mt-2">
@@ -316,8 +316,8 @@ export default function Dashboard() {
                 </p>
                 <p className="text-2xl font-bold mt-1">{formatPHP(summary.totalCollected)}</p>
               </div>
-              <div className="h-11 w-11 rounded-lg bg-emerald-50 flex items-center justify-center">
-                <Wallet className="h-5 w-5 text-emerald-600" />
+              <div className="h-11 w-11 rounded-lg bg-terminal-green/10 flex items-center justify-center">
+                <Wallet className="h-5 w-5 text-terminal-green" />
               </div>
             </div>
             <p className="text-[12px] text-muted-foreground mt-2">
@@ -451,7 +451,7 @@ export default function Dashboard() {
                       </p>
                     </div>
                     <div className="text-right shrink-0 ml-4">
-                      <p className="text-[15px] font-bold text-green-600">
+                      <p className="text-[15px] font-bold text-terminal-green">
                         {formatPHP(p.amount)}
                       </p>
                       <p className="text-[12px] text-muted-foreground">
@@ -499,7 +499,7 @@ export default function Dashboard() {
           <Card className="border-border/60 shadow-sm">
             <CardHeader className="pb-3">
               <CardTitle className="text-[15px] font-semibold flex items-center gap-2.5">
-                <AlertTriangle className="h-5 w-5 text-amber-600" />
+                <AlertTriangle className="h-5 w-5 text-terminal-amber" />
                 Needs Attention
               </CardTitle>
             </CardHeader>

@@ -1,6 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { useMutation, useQuery } from "convex/react";
 import {
   Check,
@@ -130,37 +131,38 @@ export default function AccountLinks() {
   return (
     <div className="space-y-5 p-4 md:p-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Account Linking</h1>
-        <p className="font-mono text-xs text-muted-foreground">
-          &gt; portal.account_link — Verify a planholder and connect their portal
-          account
-        </p>
+      <div className="flex items-center gap-3">
+        <div className="h-9 w-9 rounded bg-terminal-green/10 flex items-center justify-center">
+          <Link2 className="h-4.5 w-4.5 text-terminal-green" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Account Linking</h1>
+          <p className="text-xs text-muted-foreground">
+            Verify a planholder and connect their portal account
+          </p>
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: "Pending", value: counts.pending, color: "text-amber-600" },
-          { label: "Linked", value: counts.linked, color: "text-emerald-600" },
-          { label: "Declined", value: counts.declined, color: "text-red-500" },
+          { label: "Pending", value: counts.pending, color: "text-terminal-amber" },
+          { label: "Linked", value: counts.linked, color: "text-terminal-green" },
+          { label: "Declined", value: counts.declined, color: "text-terminal-red" },
           {
             label: "Total",
             value: (allCounts ?? []).length,
-            color: "text-foreground",
+            color: "",
           },
         ].map((s) => (
-          <div
-            key={s.label}
-            className="rounded-xl border border-border/60 bg-card p-4"
-          >
-            <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-              {s.label}
-            </p>
-            <p className={`mt-1 font-mono text-2xl font-bold ${s.color}`}>
-              {s.value}
-            </p>
-          </div>
+          <Card key={s.label} className="border-border/60 shadow-sm">
+            <CardContent className="p-5">
+              <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
+                {s.label}
+              </p>
+              <p className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</p>
+            </CardContent>
+          </Card>
         ))}
       </div>
 
@@ -180,7 +182,7 @@ export default function AccountLinks() {
           >
             {tab.label}
             {tab.value === "submitted" && pendingCount > 0 && (
-              <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white">
+              <span className="ml-1.5 inline-flex h-4 w-4 items-center justify-center rounded-full bg-terminal-amber text-[9px] font-bold text-white">
                 {pendingCount}
               </span>
             )}
@@ -194,7 +196,7 @@ export default function AccountLinks() {
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       ) : rows.length === 0 ? (
-        <div className="rounded-xl border border-border/60 bg-card p-12 text-center">
+        <div className="rounded-xl border border-border/60 bg-card p-12 text-center shadow-sm">
           <ShieldCheck className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
           <p className="text-sm font-medium text-muted-foreground">
             No requests match this filter
@@ -211,7 +213,7 @@ export default function AccountLinks() {
             return (
               <div
                 key={req._id}
-                className="overflow-hidden rounded-xl border border-border/60 bg-card"
+                className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm"
               >
                 <button
                   type="button"
@@ -232,12 +234,12 @@ export default function AccountLinks() {
                         {req.contactName}
                       </p>
                       <span
-                        className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                        className={`rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide ${
                           req.status === "completed"
-                            ? "bg-emerald-50 text-emerald-700"
+                            ? "border-terminal-green/30 bg-terminal-green/10 text-terminal-green"
                             : req.status === "cancelled"
-                              ? "bg-red-50 text-red-600"
-                              : "bg-amber-50 text-amber-700"
+                              ? "border-terminal-red/30 bg-terminal-red/10 text-terminal-red"
+                              : "border-terminal-amber/40 bg-terminal-amber/15 text-terminal-amber"
                         }`}
                       >
                         {req.status === "completed"
@@ -252,7 +254,7 @@ export default function AccountLinks() {
                       {req.contactEmail ? ` · ${req.contactEmail}` : ""}
                       {req.branch ? ` · ${req.branch.name}, ${req.branch.city}` : ""}
                     </p>
-                    <p className="mt-0.5 font-mono text-[11px] text-muted-foreground/70">
+                    <p className="mt-0.5 text-[11px] text-muted-foreground/70">
                       {fmtDateTime(req.createdAt)}
                       {req.userEmail ? ` · portal: ${req.userEmail}` : ""}
                     </p>
@@ -268,7 +270,7 @@ export default function AccountLinks() {
                   <div className="space-y-4 border-t border-border/60 p-4">
                     {req.message && (
                       <div className="rounded-lg bg-muted/40 p-3 text-xs">
-                        <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                           Message from client
                         </p>
                         <p className="mt-1 text-foreground">{req.message}</p>
@@ -277,7 +279,7 @@ export default function AccountLinks() {
 
                     {req.staffNotes && (
                       <div className="rounded-lg bg-muted/40 p-3 text-xs">
-                        <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                           Office note
                         </p>
                         <p className="mt-1 text-foreground">{req.staffNotes}</p>
@@ -289,7 +291,7 @@ export default function AccountLinks() {
                         <span className="text-muted-foreground">
                           Portal account:{" "}
                         </span>
-                        <span className="font-mono">
+                        <span className="font-medium">
                           {req.userEmail || "— (no email on account)"}
                         </span>
                       </p>
@@ -305,7 +307,7 @@ export default function AccountLinks() {
                       <>
                         {/* Planholder picker */}
                         <div className="space-y-2">
-                          <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                             Link to planholder record
                           </p>
                           <div className="relative">
@@ -371,7 +373,7 @@ export default function AccountLinks() {
                         </div>
 
                         <label className="block">
-                          <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                             Decline reason (optional)
                           </span>
                           <input
@@ -400,7 +402,7 @@ export default function AccountLinks() {
                             variant="outline"
                             disabled={busyId === req._id}
                             onClick={() => handleDecline(req._id)}
-                            className="text-red-600 hover:text-red-700"
+                            className="text-terminal-red hover:text-terminal-red/80"
                           >
                             <X className="h-4 w-4" />
                             Decline
