@@ -195,6 +195,14 @@ export function generateSOAHTML(data: SOAData): string {
 <html>
 <head>
   <meta charset="UTF-8" />
+  <!-- Letterhead face. Georgia is the app's own display font, so it is the
+       fallback if the webfont can't be fetched (offline / blocked network). -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&display=swap"
+    rel="stylesheet"
+  />
   <style>
     @page { size: A4; margin: 14mm; }
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -214,10 +222,22 @@ export function generateSOAHTML(data: SOAData): string {
     .letterhead { display: flex; align-items: center; justify-content: center; gap: 16px; }
     .brand-logo { width: 72px; height: 72px; border-radius: 50%; object-fit: contain; }
     .brand-name {
-      font-family: 'Brush Script MT', 'Segoe Script', 'Lucida Handwriting', cursive;
-      font-size: 32px; font-weight: bold; color: #1f4d3a; line-height: 1.1;
+      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: #1f4d3a;
+      line-height: 1.15;
     }
-    .brand-tagline { font-size: 12px; font-style: italic; color: #4b5563; margin-top: 2px; }
+    .brand-tagline {
+      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+      font-size: 12.5px;
+      font-style: italic;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: #6b7280;
+      margin-top: 4px;
+    }
     .brand-address { text-align: center; font-size: 11.5px; color: #4b5563; margin-top: 8px; }
     .rule { border-top: 2px solid #1f4d3a; margin: 12px 0 0; }
 

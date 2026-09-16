@@ -24,6 +24,65 @@ async function toDataURL(url: string): Promise<string | null> {
   }
 }
 
+/** Resolve `promise`, but never wait longer than `ms`. */
+function withTimeout(promise: Promise<unknown>, ms: number): Promise<void> {
+  return Promise.race([
+    promise.then(() => undefined),
+    new Promise<void>((resolve) => setTimeout(resolve, ms)),
+  ]);
+}
+
+/**
+ * Wait until the document's external stylesheets, webfonts and images have
+ * settled. Without this, html2canvas rasterizes immediately and the letterhead
+ * is captured in its fallback face (or the logo comes out blank).
+ */
+async function waitForAssets(container: HTMLElement): Promise<void> {
+  // 1. Stylesheets declared inside the injected markup (Google Fonts).
+  const links = Array.from(
+    container.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')
+  );
+  await withTimeout(
+    Promise.all(
+      links.map(
+        (link) =>
+          new Promise<void>((resolve) => {
+            if (link.sheet) return resolve();
+            link.addEventListener("load", () => resolve(), { once: true });
+            link.addEventListener("error", () => resolve(), { once: true });
+          })
+      )
+    ),
+    4000
+  );
+
+  // 2. The letterhead face must be fetched before it can be painted.
+  const fonts = document.fonts;
+  if (fonts) {
+    try {
+      await withTimeout(fonts.load('700 30px "Playfair Display"'), 4000);
+      await withTimeout(fonts.ready, 4000);
+    } catch {
+      // Fall through — Georgia is a perfectly good serif fallback.
+    }
+  }
+
+  // 3. Images (the company logo).
+  await withTimeout(
+    Promise.all(
+      Array.from(container.querySelectorAll("img")).map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            if (img.complete) return resolve();
+            img.addEventListener("load", () => resolve(), { once: true });
+            img.addEventListener("error", () => resolve(), { once: true });
+          })
+      )
+    ),
+    4000
+  );
+}
+
 export async function generateSOAPDF(data: SOAData): Promise<void> {
   // Embed the logo as a data URL so it renders reliably inside the PDF.
   const logoUrl = data.logoUrl ? await toDataURL(data.logoUrl) : null;
@@ -43,6 +102,9 @@ export async function generateSOAPDF(data: SOAData): Promise<void> {
   container.style.pointerEvents = "none";
   container.innerHTML = generateSOAHTML(renderData);
   document.body.appendChild(container);
+
+  // Let the letterhead webfont and logo finish loading before rasterizing.
+  await waitForAssets(container);
 
   try {
     // Render HTML to canvas
