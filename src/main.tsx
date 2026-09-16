@@ -385,26 +385,10 @@ createRoot(document.getElementById("root")!).render(
                 }
               />
               <Route
-                path="/export"
-                element={
-                  <ProtectedRoute>
-                    <ExportData />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
                 path="/role-management"
                 element={
                   <ProtectedRoute>
                     <RoleManagement />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/branding"
-                element={
-                  <ProtectedRoute>
-                    <Branding />
                   </ProtectedRoute>
                 }
               />
@@ -415,6 +399,14 @@ createRoot(document.getElementById("root")!).render(
                     <SuperAdminSetup />
                   </ProtectedRoute>
                 }
+              />
+              <Route
+                path="/branding"
+                element={<NotFound />}
+              />
+              <Route
+                path="/export"
+                element={<NotFound />}
               />
 
               {/* Client portal (families & planholders) */}

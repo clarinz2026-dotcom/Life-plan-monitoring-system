@@ -19,12 +19,10 @@ import {
   Calculator,
   AlertTriangle,
   Bell,
-  Download,
   Link2,
   Moon,
   UserCog,
   Crown,
-  Palette,
   Package,
   Building2,
 } from "lucide-react";
@@ -45,18 +43,16 @@ const NAV_ITEMS = [
   { to: "/payments", icon: CreditCard, label: "Payments", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
   { to: "/receipts", icon: Receipt, label: "Receipts", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
   { to: "/plans", icon: Package, label: "Plans", roles: ["super_admin", "ceo"] },
-  { to: "/bulk-upload", icon: Upload, label: "Bulk Upload", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
   { to: "/reports", icon: BarChart3, label: "Reports", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
+
   { to: "/audit", icon: History, label: "Audit Log", roles: ["super_admin", "ceo", "manager"] },
   { to: "/reconciliation", icon: Calculator, label: "Reconciliation", roles: ["super_admin", "ceo", "manager", "cashier"] },
   { to: "/aging-report", icon: AlertTriangle, label: "Aging Report", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
   { to: "/account-links", icon: Link2, label: "Account Linking", roles: ["super_admin", "ceo", "manager"] },
   { to: "/notifications", icon: Bell, label: "Notifications", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
-  { to: "/export", icon: Download, label: "Export Data", roles: ["super_admin", "ceo", "manager"] },
   { to: "/branches", icon: Building2, label: "Branches", roles: ["super_admin", "ceo"] },
   { to: "/role-management", icon: UserCog, label: "Roles", roles: ["super_admin", "ceo"] },
-  { to: "/branding", icon: Palette, label: "Branding", roles: ["super_admin", "ceo"] },
-  { to: "/super-admin-setup", icon: Crown, label: "Setup", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
+
 ];
 
 const ROLE_LABELS: Record<string, string> = {
