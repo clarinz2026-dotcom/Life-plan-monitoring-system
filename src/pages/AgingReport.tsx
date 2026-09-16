@@ -42,7 +42,6 @@ export default function AgingReport() {
     delinquent_90: [] as any[],
     lapsed: [] as any[],
     fully_paid: [] as any[],
-    assigned_death_claim: [] as any[],
   };
 
   clientsWithStatus?.forEach((item) => {

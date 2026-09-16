@@ -21,8 +21,8 @@ function computeDelinquencyStatus(
   planAmount: number,
   contractStartDate: number
 ): string {
-  // If fully paid or death claim, keep stored status
-  if (contractStatus === "fully_paid" || contractStatus === "assigned_death_claim") {
+  // If fully paid, keep the stored status.
+  if (contractStatus === "fully_paid") {
     return contractStatus;
   }
 
@@ -277,13 +277,7 @@ export const bulkDelete = mutation({
         totalPayments++;
       }
 
-      // Death claims, route stops, notifications for this client
-      const claims = await ctx.db
-        .query("death_claims")
-        .withIndex("by_client", (q) => q.eq("clientId", clientId))
-        .collect();
-      for (const claim of claims) await ctx.db.delete(claim._id);
-
+      // Notifications for this client
       const notifications = await ctx.db
         .query("notifications")
         .withIndex("by_client", (q) => q.eq("clientId", clientId))
@@ -350,7 +344,7 @@ export const listWithStatus = query({
 
       // Pick the best active contract (prefer non-fully-paid)
       let activeContract = contracts.find(
-        (c) => c.contractStatus !== "fully_paid" && c.contractStatus !== "assigned_death_claim"
+        (c) => c.contractStatus !== "fully_paid"
       );
       if (!activeContract && contracts.length > 0) {
         activeContract = contracts[0];

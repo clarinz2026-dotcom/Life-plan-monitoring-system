@@ -2,13 +2,11 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import {
-  CalendarPlus,
   FileHeart,
   LayoutDashboard,
-  LifeBuoy,
+  Link2,
   Loader2,
   LogOut,
-  MapPin,
   Phone,
 } from "lucide-react";
 import { NavLink, Outlet, useNavigate } from "react-router";
@@ -16,9 +14,7 @@ import { NavLink, Outlet, useNavigate } from "react-router";
 const NAV = [
   { to: "/portal", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/portal/plans", label: "My Plans", icon: FileHeart, end: false },
-  { to: "/portal/services", label: "Services", icon: CalendarPlus, end: false },
-  { to: "/portal/chapels", label: "Chapels", icon: MapPin, end: false },
-  { to: "/portal/help", label: "Help", icon: LifeBuoy, end: false },
+  { to: "/portal/link-account", label: "Link Account", icon: Link2, end: false },
 ];
 
 function navClass({ isActive }: { isActive: boolean }) {

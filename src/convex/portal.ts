@@ -11,8 +11,9 @@ import { effectiveRole } from "./roles";
  * - Client/planholder records are matched to the signed-in account by email,
  *   case-insensitively. Staff should record the planholder's email exactly as
  *   they use it to sign in.
- * - Signed-out/first-time users can still use the portal to request services;
- *   they simply see no account records until the emails line up.
+ * - When the emails don't line up, the planholder can file an *account linking*
+ *   request here and staff approve it, which sets the client's email to the
+ *   requester's email.
  */
 
 type RequestBranch = {
@@ -23,8 +24,10 @@ type RequestBranch = {
   contactNumber: string | null;
 };
 
-type EnrichedRequest = Doc<"service_requests"> & {
+type EnrichedLinkRequest = Doc<"service_requests"> & {
   branch: RequestBranch | null;
+  userEmail: string | null;
+  userName: string | null;
 };
 
 type ContractDetail = {
@@ -46,27 +49,12 @@ type PortalOverview = {
   isAnonymous: boolean;
   name: string | null;
   records: RecordGroup[];
-  requests: EnrichedRequest[];
+  /** The caller's own account-linking requests, newest first. */
+  linkRequests: Doc<"service_requests">[];
 };
 
-async function enrichRequest(
-  ctx: QueryCtx,
-  req: Doc<"service_requests">
-): Promise<EnrichedRequest> {
-  const branch = req.branchId ? await ctx.db.get(req.branchId) : null;
-  return {
-    ...req,
-    branch: branch
-      ? {
-          name: branch.name,
-          city: branch.city,
-          province: branch.province,
-          address: branch.address,
-          contactNumber: branch.contactNumber ?? null,
-        }
-      : null,
-  };
-}
+/** The only request type the portal still accepts. */
+const ACCOUNT_LINK = "account_link";
 
 const STAFF_ROLES = ["super_admin", "ceo", "manager"] as const;
 
@@ -87,36 +75,26 @@ async function requireStaff(ctx: MutationCtx) {
   return user;
 }
 
-/** Notify office staff (super admin / ceo / manager) of a new client request. */
-async function notifyOffice(
-  ctx: MutationCtx,
-  title: string,
-  message: string
-) {
-  const now = Date.now();
-  for (const role of STAFF_ROLES) {
-    const staff = await ctx.db
-      .query("users")
-      .withIndex("by_role", (q) => q.eq("role", role))
-      .collect();
-    for (const u of staff) {
-      await ctx.db.insert("notifications", {
-        userId: u._id,
-        type: "system",
-        title,
-        message,
-        channel: "in_app",
-        status: "pending",
-        scheduledAt: now,
-        createdAt: now,
-      });
-    }
-  }
+async function toRequestBranch(
+  ctx: QueryCtx,
+  branchId: Id<"branches"> | undefined
+): Promise<RequestBranch | null> {
+  if (!branchId) return null;
+  const branch = await ctx.db.get(branchId);
+  if (!branch) return null;
+  return {
+    name: branch.name,
+    city: branch.city,
+    province: branch.province,
+    address: branch.address,
+    contactNumber: branch.contactNumber ?? null,
+  };
 }
 
 /**
  * Full overview of the signed-in client account: every matched planholder
- * record with its contracts, payments, schedules, and receipts.
+ * record with its contracts, payments, schedules, and receipts — plus the
+ * status of any account-linking requests they filed.
  */
 export const myOverview = query({
   args: {},
@@ -201,11 +179,7 @@ export const myOverview = query({
 
       // Batch-resolve all sales agent names (one read per unique agent).
       const agentIds = Array.from(
-        new Set(
-          allContracts
-            .map((c) => c.assignedAgent)
-            .filter(Boolean)
-        )
+        new Set(allContracts.map((c) => c.assignedAgent).filter(Boolean))
       );
       const agentDocs = await Promise.all(agentIds.map((id) => ctx.db.get(id!)));
       const agentById = new Map(
@@ -216,16 +190,20 @@ export const myOverview = query({
         const contracts = allContracts.filter((c) => c.clientId === client._id);
         const clientPayments = paymentsByClient.get(client._id) ?? [];
         const contractDetails: ContractDetail[] = contracts.map((contract) => {
-          const agent = contract.assignedAgent ? agentById.get(contract.assignedAgent) : null;
+          const agent = contract.assignedAgent
+            ? agentById.get(contract.assignedAgent)
+            : null;
           return {
             contract,
             payments: clientPayments
               .filter((p) => p.contractId === contract._id)
               .sort((a, b) => b.paymentDate - a.paymentDate),
-            schedules: (schedulesByContract.get(contract._id) ?? [])
-              .sort((a, b) => a.dueDate - b.dueDate),
-            receipts: (receiptsByContract.get(contract._id) ?? [])
-              .sort((a, b) => b.createdAt - a.createdAt),
+            schedules: (schedulesByContract.get(contract._id) ?? []).sort(
+              (a, b) => a.dueDate - b.dueDate
+            ),
+            receipts: (receiptsByContract.get(contract._id) ?? []).sort(
+              (a, b) => b.createdAt - a.createdAt
+            ),
             salesAgentName: agent?.name ?? agent?.email ?? null,
           };
         });
@@ -234,7 +212,7 @@ export const myOverview = query({
       }
     }
 
-    const requests = await ctx.db
+    const allRequests = await ctx.db
       .query("service_requests")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .order("desc")
@@ -245,37 +223,22 @@ export const myOverview = query({
       isAnonymous: user.isAnonymous ?? false,
       name: user.name ?? null,
       records,
-      requests: await Promise.all(requests.map((r) => enrichRequest(ctx, r))),
+      linkRequests: allRequests.filter((r) => r.serviceType === ACCOUNT_LINK),
     };
   },
 });
 
-/** The signed-in user's service requests (newest first). */
-export const myRequests = query({
-  args: {},
-  handler: async (ctx): Promise<EnrichedRequest[]> => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) return [];
-
-    const requests = await ctx.db
-      .query("service_requests")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .order("desc")
-      .collect();
-
-    return Promise.all(requests.map((r) => enrichRequest(ctx, r)));
-  },
-});
-
-/** Submit a service request for any of the company's offerings. */
-export const submitRequest = mutation({
+/**
+ * File an account-linking request: "this portal account belongs to planholder
+ * X". Staff approve it on the Account Linking page, which points the client
+ * record's email at this auth account.
+ */
+export const requestAccountLink = mutation({
   args: {
-    serviceType: v.string(),
     branchId: v.optional(v.id("branches")),
     contactName: v.string(),
     contactNumber: v.string(),
     contactEmail: v.optional(v.string()),
-    preferredDate: v.optional(v.number()),
     message: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -288,65 +251,119 @@ export const submitRequest = mutation({
       throw new Error("Contact name and number are required.");
     }
 
+    // One open request at a time — otherwise staff see duplicates to review.
+    const existing = await ctx.db
+      .query("service_requests")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    const alreadyOpen = existing.find(
+      (r) =>
+        r.serviceType === ACCOUNT_LINK &&
+        (r.status === "submitted" || r.status === "under_review")
+    );
+    if (alreadyOpen) {
+      throw new Error(
+        "You already have an account-linking request being reviewed. We'll notify you once it's processed."
+      );
+    }
+
     await ctx.db.insert("service_requests", {
       userId,
-      serviceType: args.serviceType,
+      serviceType: ACCOUNT_LINK,
       branchId: args.branchId,
       contactName,
       contactNumber,
       contactEmail: args.contactEmail?.trim() || undefined,
-      preferredDate: args.preferredDate,
       message: args.message?.trim() || undefined,
       status: "submitted",
       createdAt: Date.now(),
     });
 
-    const branch = args.branchId ? await ctx.db.get(args.branchId) : null;
-    const serviceLabel = args.serviceType.replace(/_/g, " ");
-    const where = branch ? ` at ${branch.name}, ${branch.city}` : "";
-    const when = args.preferredDate
-      ? ` Preferred date: ${new Date(args.preferredDate).toLocaleDateString("en-PH")}.`
-      : "";
-    await notifyOffice(
-      ctx,
-      `New portal request — ${serviceLabel}`,
-      `${contactName} (${contactNumber}) requested ${serviceLabel}${where}.${when}${
-        args.message ? ` Note: ${args.message}` : ""
-      }`
-    );
+    const branch = await toRequestBranch(ctx, args.branchId);
+    const where = branch ? ` (preferred branch: ${branch.name}, ${branch.city})` : "";
+    const now = Date.now();
+    for (const role of STAFF_ROLES) {
+      const staff = await ctx.db
+        .query("users")
+        .withIndex("by_role", (q) => q.eq("role", role))
+        .collect();
+      for (const u of staff) {
+        await ctx.db.insert("notifications", {
+          userId: u._id,
+          type: "system",
+          title: "New account linking request",
+          message: `${contactName} (${contactNumber}) asked to link their portal account${where}.`,
+          channel: "in_app",
+          status: "pending",
+          scheduledAt: now,
+          createdAt: now,
+        });
+      }
+    }
 
     return { success: true };
   },
 });
 
+/** The caller's own account-linking requests, newest first. */
+export const myLinkRequests = query({
+  args: {},
+  handler: async (ctx): Promise<Doc<"service_requests">[]> => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) return [];
+
+    const requests = await ctx.db
+      .query("service_requests")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .collect();
+
+    return requests.filter((r) => r.serviceType === ACCOUNT_LINK);
+  },
+});
+
+/** Cancel your own account-linking request while it is still being reviewed. */
+export const cancelMyLinkRequest = mutation({
+  args: { requestId: v.id("service_requests") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) throw new Error("Please sign in first.");
+
+    const request = await ctx.db.get(args.requestId);
+    if (
+      !request ||
+      request.userId !== userId ||
+      request.serviceType !== ACCOUNT_LINK
+    ) {
+      throw new Error("Request not found.");
+    }
+    if (request.status !== "submitted" && request.status !== "under_review") {
+      throw new Error("This request can no longer be cancelled.");
+    }
+
+    await ctx.db.patch(args.requestId, { status: "cancelled" });
+    return { success: true };
+  },
+});
+
 /**
- * ─── Staff-facing endpoints ────────────────────────────────────────────────
+ * ─── Staff-facing account-linking queue ──────────────────────────────────────
  */
 
-type StaffEnrichedRequest = Doc<"service_requests"> & {
-  branch: RequestBranch | null;
-  userEmail: string | null;
-  userName: string | null;
-};
-
-/**
- * List all service requests (staff view), newest first.
- * Optional `status` filter.
- */
-export const staffListRequests = query({
+/** Account-linking requests (staff view), newest first. Optional status filter. */
+export const staffListLinkRequests = query({
   args: {
     status: v.optional(
       v.union(
         v.literal("submitted"),
         v.literal("under_review"),
-        v.literal("scheduled"),
         v.literal("completed"),
         v.literal("cancelled"),
       )
     ),
     branchId: v.optional(v.id("branches")),
   },
-  handler: async (ctx, args): Promise<StaffEnrichedRequest[]> => {
+  handler: async (ctx, args): Promise<EnrichedLinkRequest[]> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) return [];
     const user = await ctx.db.get(userId);
@@ -358,27 +375,21 @@ export const staffListRequests = query({
 
     const branchId = await resolveBranchFilter(ctx, args.branchId);
 
-    let requests: Doc<"service_requests">[];
+    let requests = await ctx.db
+      .query("service_requests")
+      .withIndex("by_createdAt")
+      .order("desc")
+      .collect();
+
+    requests = requests.filter((r) => r.serviceType === ACCOUNT_LINK);
     if (branchId) {
-      // Branch staff read only their own branch's requests (indexed).
-      requests = await ctx.db
-        .query("service_requests")
-        .withIndex("by_branch", (q) => q.eq("branchId", branchId))
-        .order("desc")
-        .collect();
-      if (args.status) requests = requests.filter((r) => r.status === args.status);
-    } else if (args.status) {
-      requests = await ctx.db
-        .query("service_requests")
-        .withIndex("by_status", (q) => q.eq("status", args.status!))
-        .order("desc")
-        .collect();
-    } else {
-      requests = await ctx.db
-        .query("service_requests")
-        .withIndex("by_createdAt")
-        .order("desc")
-        .collect();
+      // Branch staff only see requests for their own branch (and unassigned ones).
+      requests = requests.filter(
+        (r) => !r.branchId || r.branchId === branchId
+      );
+    }
+    if (args.status) {
+      requests = requests.filter((r) => r.status === args.status);
     }
 
     // Batch the lookups so we do one read per branch / per requesting user
@@ -418,105 +429,6 @@ export const staffListRequests = query({
 });
 
 /**
- * Approve or decline a service request (staff action).
- * Sets status to `under_review` (approve) or `cancelled` (decline).
- * Optionally sets staffNotes.
- */
-export const staffResolveRequest = mutation({
-  args: {
-    requestId: v.id("service_requests"),
-    action: v.union(v.literal("approve"), v.literal("decline")),
-    staffNotes: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    await requireStaff(ctx);
-
-    const request = await ctx.db.get(args.requestId);
-    if (!request) throw new Error("Request not found.");
-    if (request.status !== "submitted" && request.status !== "under_review") {
-      throw new Error("This request has already been resolved.");
-    }
-
-    const newStatus = args.action === "approve" ? "under_review" : "cancelled";
-    const updates: { status: typeof newStatus; staffNotes?: string } = { status: newStatus };
-    if (args.staffNotes) updates.staffNotes = args.staffNotes.trim();
-
-    await ctx.db.patch(args.requestId, updates);
-
-    // Notify the requesting client
-    const label = request.serviceType.replace(/_/g, " ");
-    const actionWord = args.action === "approve" ? "approved" : "declined";
-    await ctx.db.insert("notifications", {
-      userId: request.userId,
-      type: "system",
-      title: `Request ${actionWord}: ${label}`,
-      message:
-        args.action === "approve"
-          ? `Your ${label} request has been approved. Our staff will contact you shortly.`
-          : `Your ${label} request has been declined.${args.staffNotes ? ` Reason: ${args.staffNotes}` : ""}`,
-      channel: "in_app",
-      status: "pending",
-      scheduledAt: Date.now(),
-      createdAt: Date.now(),
-    });
-
-    return { success: true };
-  },
-});
-
-/**
- * Progress a request forward: under_review → scheduled → completed.
- */
-export const staffProgressRequest = mutation({
-  args: {
-    requestId: v.id("service_requests"),
-    action: v.union(v.literal("schedule"), v.literal("complete")),
-    staffNotes: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    await requireStaff(ctx);
-
-    const request = await ctx.db.get(args.requestId);
-    if (!request) throw new Error("Request not found.");
-
-    let newStatus: "scheduled" | "completed";
-    if (args.action === "schedule") {
-      if (request.status !== "under_review") {
-        throw new Error("Only approved requests can be scheduled.");
-      }
-      newStatus = "scheduled";
-    } else {
-      if (request.status !== "scheduled") {
-        throw new Error("Only scheduled requests can be marked as completed.");
-      }
-      newStatus = "completed";
-    }
-
-    const updates: { status: typeof newStatus; staffNotes?: string } = { status: newStatus };
-    if (args.staffNotes) updates.staffNotes = args.staffNotes.trim();
-    await ctx.db.patch(args.requestId, updates);
-
-    const label = request.serviceType.replace(/_/g, " ");
-    const actionWord = args.action === "schedule" ? "scheduled" : "completed";
-    await ctx.db.insert("notifications", {
-      userId: request.userId,
-      type: "system",
-      title: `Request ${actionWord}: ${label}`,
-      message:
-        args.action === "schedule"
-          ? `Your ${label} request has been scheduled. Our staff will contact you with the details.`
-          : `Your ${label} request has been completed. Thank you for choosing Evangelist Funeral Services.`,
-      channel: "in_app",
-      status: "pending",
-      scheduledAt: Date.now(),
-      createdAt: Date.now(),
-    });
-
-    return { success: true };
-  },
-});
-
-/**
  * Link a portal user to a client record (account linking).
  * Updates the client's email to match the requesting user's auth email,
  * marks the request as completed, and notifies the client.
@@ -531,7 +443,7 @@ export const staffLinkAccount = mutation({
 
     const request = await ctx.db.get(args.requestId);
     if (!request) throw new Error("Request not found.");
-    if (request.serviceType !== "account_link") {
+    if (request.serviceType !== ACCOUNT_LINK) {
       throw new Error("This request is not an account linking request.");
     }
 
@@ -582,22 +494,42 @@ export const staffLinkAccount = mutation({
   },
 });
 
-/** Cancel one of your own requests while it is still being reviewed. */
-export const cancelMyRequest = mutation({
-  args: { requestId: v.id("service_requests") },
+/** Decline an account-linking request (staff action). */
+export const staffDeclineLinkRequest = mutation({
+  args: {
+    requestId: v.id("service_requests"),
+    staffNotes: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) throw new Error("Please sign in first.");
+    await requireStaff(ctx);
 
     const request = await ctx.db.get(args.requestId);
-    if (!request || request.userId !== userId) {
-      throw new Error("Request not found.");
+    if (!request) throw new Error("Request not found.");
+    if (request.serviceType !== ACCOUNT_LINK) {
+      throw new Error("This request is not an account linking request.");
     }
-    if (request.status !== "submitted" && request.status !== "under_review") {
-      throw new Error("This request can no longer be cancelled.");
+    if (request.status === "completed") {
+      throw new Error("This request has already been linked.");
     }
 
-    await ctx.db.patch(args.requestId, { status: "cancelled" });
+    await ctx.db.patch(args.requestId, {
+      status: "cancelled",
+      ...(args.staffNotes ? { staffNotes: args.staffNotes.trim() } : {}),
+    });
+
+    await ctx.db.insert("notifications", {
+      userId: request.userId,
+      type: "system",
+      title: "Account linking request declined",
+      message: `We could not link your account to a plan record.${
+        args.staffNotes ? ` Reason: ${args.staffNotes}` : ""
+      } Please visit any branch with a valid ID so we can verify your records.`,
+      channel: "in_app",
+      status: "pending",
+      scheduledAt: Date.now(),
+      createdAt: Date.now(),
+    });
+
     return { success: true };
   },
 });

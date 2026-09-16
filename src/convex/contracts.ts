@@ -22,7 +22,6 @@ const contractStatusValidator = v.union(
   v.literal("delinquent_90"),
   v.literal("lapsed"),
   v.literal("fully_paid"),
-  v.literal("assigned_death_claim"),
 );
 
 /**

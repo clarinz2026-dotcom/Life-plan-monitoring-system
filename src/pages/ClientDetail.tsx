@@ -35,7 +35,6 @@ const STATUS_COLORS: Record<string, string> = {
   delinquent_90: "terminal-status-claim",
   lapsed: "terminal-status-claim",
   fully_paid: "terminal-status-paid",
-  assigned_death_claim: "terminal-status-claim",
 };
 
 function formatPHP(amount: number) {

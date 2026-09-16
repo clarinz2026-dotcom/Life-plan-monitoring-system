@@ -64,8 +64,8 @@ export const updateAllContractStatuses = mutation({
     const updated: Array<{ contractId: string; oldStatus: string; newStatus: string }> = [];
 
     for (const contract of contracts) {
-      // Skip contracts that are already fully paid or death claim
-      if (contract.contractStatus === "fully_paid" || contract.contractStatus === "assigned_death_claim") {
+      // Skip contracts that are already fully paid.
+      if (contract.contractStatus === "fully_paid") {
         continue;
       }
 
@@ -141,7 +141,6 @@ export const summary = query({
       delinquent_90: statuses["delinquent_90"] || 0,
       lapsed: statuses["lapsed"] || 0,
       fully_paid: statuses["fully_paid"] || 0,
-      assigned_death_claim: statuses["assigned_death_claim"] || 0,
     };
   },
 });

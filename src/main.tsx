@@ -28,21 +28,18 @@ const AuditLog = lazy(() => import("./pages/AuditLog.tsx"));
 const BulkUpload = lazy(() => import("./pages/BulkUpload.tsx"));
 const Plans = lazy(() => import("./pages/Plans.tsx"));
 const Reconciliation = lazy(() => import("./pages/Reconciliation.tsx"));
-const DeathClaims = lazy(() => import("./pages/DeathClaims.tsx"));
 const AgingReport = lazy(() => import("./pages/AgingReport.tsx"));
 const Notifications = lazy(() => import("./pages/Notifications.tsx"));
 const ExportData = lazy(() => import("./pages/ExportData.tsx"));
 const RoleManagement = lazy(() => import("./pages/RoleManagement.tsx"));
 const Branding = lazy(() => import("./pages/Branding.tsx"));
 const SuperAdminSetup = lazy(() => import("./pages/SuperAdminSetup.tsx"));
-const ServiceRequests = lazy(() => import("./pages/ServiceRequests.tsx"));
+const AccountLinks = lazy(() => import("./pages/AccountLinks.tsx"));
 const Branches = lazy(() => import("./pages/Branches.tsx"));
 const PortalLayout = lazy(() => import("./pages/portal/PortalLayout.tsx"));
 const PortalOverview = lazy(() => import("./pages/portal/Overview.tsx"));
 const PortalPlans = lazy(() => import("./pages/portal/Plans.tsx"));
-const PortalServices = lazy(() => import("./pages/portal/Services.tsx"));
-const PortalChapels = lazy(() => import("./pages/portal/Chapels.tsx"));
-const PortalHelp = lazy(() => import("./pages/portal/Help.tsx"));
+const PortalLinkAccount = lazy(() => import("./pages/portal/LinkAccount.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 // Lightweight, on-brand fallback for route transitions
@@ -278,18 +275,10 @@ createRoot(document.getElementById("root")!).render(
                 }
               />
               <Route
-                path="/death-claims"
+                path="/account-links"
                 element={
                   <ProtectedRoute>
-                    <DeathClaims />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/service-requests"
-                element={
-                  <ProtectedRoute>
-                    <ServiceRequests />
+                    <AccountLinks />
                   </ProtectedRoute>
                 }
               />
@@ -361,9 +350,7 @@ createRoot(document.getElementById("root")!).render(
               >
                 <Route index element={<PortalOverview />} />
                 <Route path="plans" element={<PortalPlans />} />
-                <Route path="services" element={<PortalServices />} />
-                <Route path="chapels" element={<PortalChapels />} />
-                <Route path="help" element={<PortalHelp />} />
+                <Route path="link-account" element={<PortalLinkAccount />} />
               </Route>
 
               <Route path="*" element={<NotFound />} />

@@ -47,7 +47,6 @@ const STATUS_LABELS: Record<string, string> = {
   delinquent_90: "90 Days Late",
   lapsed: "Lapsed",
   fully_paid: "Fully Paid",
-  assigned_death_claim: "Death Claim",
   no_contract: "No Contract",
 };
 
@@ -58,7 +57,6 @@ const STATUS_COLORS: Record<string, string> = {
   delinquent_90: "terminal-status-claim",
   lapsed: "terminal-status-claim",
   fully_paid: "terminal-status-paid",
-  assigned_death_claim: "terminal-status-claim",
   no_contract: "text-muted-foreground",
 };
 
@@ -70,7 +68,6 @@ const FILTER_TABS = [
   { key: "delinquent_90", label: "90 Days Late" },
   { key: "lapsed", label: "Lapsed" },
   { key: "fully_paid", label: "Fully Paid" },
-  { key: "assigned_death_claim", label: "Death Claim" },
 ];
 
 function formatPHP(amount: number) {

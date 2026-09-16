@@ -39,7 +39,6 @@ export const CONTRACT_STATUSES = [
   "delinquent_90",
   "lapsed",
   "fully_paid",
-  "assigned_death_claim",
 ] as const;
 
 export const PAYMENT_CHANNELS = [
@@ -60,7 +59,6 @@ const contractStatusValidator = v.union(
   v.literal("delinquent_90"),
   v.literal("lapsed"),
   v.literal("fully_paid"),
-  v.literal("assigned_death_claim"),
 );
 
 const paymentChannelValidator = v.union(
@@ -289,42 +287,6 @@ const schema = defineSchema(
     })
       .index("by_cashier", ["cashierId"])
       .index("by_date", ["reconciliationDate"])
-      .index("by_status", ["status"]),
-
-    // ─── NEW: Death Claims ───────────────────────────────────────────────
-    death_claims: defineTable({
-      contractId: v.id("contracts"),
-      clientId: v.id("clients"),
-      claimantName: v.string(),
-      claimantRelationship: v.string(),
-      claimantContact: v.string(),
-      claimantAddress: v.optional(v.string()),
-      dateOfDeath: v.number(),
-      deathCertificateNo: v.optional(v.string()),
-      causeOfDeath: v.optional(v.string()),
-      documentsRequired: v.array(v.string()), // list of required docs
-      documentsSubmitted: v.array(v.string()), // list of submitted docs
-      status: v.union(
-        v.literal("filed"),
-        v.literal("under_review"),
-        v.literal("documents_incomplete"),
-        v.literal("documents_complete"),
-        v.literal("approved"),
-        v.literal("rejected"),
-        v.literal("payout_pending"),
-        v.literal("payout_completed"),
-      ),
-      payoutAmount: v.number(),
-      payoutDate: v.optional(v.number()),
-      processedBy: v.optional(v.id("users")),
-      reviewedBy: v.optional(v.id("users")),
-      notes: v.optional(v.string()),
-      filedBy: v.id("users"),
-      createdAt: v.number(),
-      updatedAt: v.number(),
-    })
-      .index("by_contract", ["contractId"])
-      .index("by_client", ["clientId"])
       .index("by_status", ["status"]),
 
     // ─── NEW: Notifications ──────────────────────────────────────────────

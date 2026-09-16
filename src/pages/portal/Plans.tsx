@@ -61,7 +61,7 @@ export default function Plans() {
           title="No plan records linked to this account"
           subtitle="Records are matched by the email registered with the office. Request help below and we’ll connect your plan to this portal."
         >
-          <Link to="/portal/services?type=account_link">
+          <Link to="/portal/link-account">
             <Button className="h-10 rounded-full px-6 text-[13.5px]">
               Request account linking <ArrowRight className="h-4 w-4" />
             </Button>
@@ -415,14 +415,15 @@ export default function Plans() {
                           ))}
                         </div>
                         <p className="mt-3 text-[11.5px] text-stone">
-                          Need a certified copy or a full Statement of Account?{" "}
-                          <Link
-                            to="/portal/services?type=receipt_copy"
+                          Need a certified copy of a receipt? Call our 24/7
+                          hotline at{" "}
+                          <a
+                            href="tel:+63287000000"
                             className="font-bold text-evergreen underline underline-offset-2 hover:text-gold"
                           >
-                            Request a copy by email
-                          </Link>
-                          .
+                            (02) 8-700-0000
+                          </a>{" "}
+                          or visit any branch — we can print it on the spot.
                         </p>
                       </div>
                     )}
