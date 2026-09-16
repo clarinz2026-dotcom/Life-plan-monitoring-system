@@ -11,7 +11,7 @@ import {
 import { Download, FileText, Loader2, Printer } from "lucide-react";
 import { toast } from "sonner";
 import { generateSOAPDF } from "@/lib/generateSOA";
-import { generateSOAHTML, type SOAData } from "@/components/SOADocument";
+import { generateSOAHTML, type SOAData, type SOABeneficiary } from "@/components/SOADocument";
 import type { Doc } from "@/convex/_generated/dataModel";
 
 export type PortalContractDetail = {
@@ -19,6 +19,7 @@ export type PortalContractDetail = {
   payments: Doc<"payments">[];
   schedules: Doc<"payment_schedules">[];
   receipts: Doc<"receipts">[];
+  salesAgentName: string | null;
 };
 
 export type PortalRecordGroup = {
@@ -26,7 +27,94 @@ export type PortalRecordGroup = {
   contracts: PortalContractDetail[];
 };
 
-/** Build a Statement of Account from portal overview records (all linked planholders). */
+/** Compute age in years from a timestamp. */
+function computeAge(dob: number): number {
+  const now = new Date();
+  const birth = new Date(dob);
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+/** Get beneficiaries array from client, falling back to single beneficiary. */
+function getBeneficiaries(client: Doc<"clients">): SOABeneficiary[] {
+  if (client.beneficiaries && client.beneficiaries.length > 0) {
+    return client.beneficiaries;
+  }
+  return [
+    {
+      name: client.beneficiaryName || "\u2014",
+      relationship: client.beneficiaryRelationship || "\u2014",
+    },
+  ];
+}
+
+/**
+ * Build SOA data for a SINGLE contract (per-plan SOA).
+ */
+export function buildSingleContractSOA(
+  group: PortalRecordGroup,
+  contractDetail: PortalContractDetail,
+  branchName?: string,
+  logoUrl?: string
+): SOAData | null {
+  const client = group.client;
+  const fullName = `${client.lastName}, ${client.firstName}${client.middleName ? ` ${client.middleName}` : ""}`;
+
+  const contract = contractDetail.contract;
+  const contractPayments = contractDetail.payments.map((p) => ({
+    paymentDate: p.paymentDate,
+    amount: p.amount,
+    paymentChannel: p.paymentChannel,
+    orNumber: p.orNumber ?? undefined,
+    contractNumber: contract.contractNumber,
+    remarks: p.remarks ?? undefined,
+  }));
+
+  return {
+    clientName: fullName,
+    clientAddress:
+      [client.address, client.city, client.province].filter(Boolean).join(", ") || "\u2014",
+    clientContact: client.contactNumber || "\u2014",
+    clientEmail: client.email || undefined,
+    clientAge: client.dateOfBirth ? computeAge(client.dateOfBirth) : undefined,
+    clientBirthDate: client.dateOfBirth
+      ? new Date(client.dateOfBirth).toLocaleDateString("en-PH", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })
+      : undefined,
+    beneficiaries: getBeneficiaries(client),
+    branchName,
+    salesAgent: contractDetail.salesAgentName ?? undefined,
+    logoUrl,
+    contracts: [
+      {
+        contractNumber: contract.contractNumber,
+        planType: contract.planType,
+        planAmount: contract.planAmount,
+        monthlyAmortization: contract.monthlyAmortization,
+        totalPaid: contract.totalPaid,
+        contractStatus: contract.contractStatus,
+        startDate: contract.startDate,
+      },
+    ],
+    payments: contractPayments,
+    generatedDate: new Date().toLocaleDateString("en-PH", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    }),
+    accountNumber: client._id,
+  };
+}
+
+/**
+ * Build SOA data from portal overview records (all linked planholders).
+ * Used by the staff-side ClientDetail SOA button.
+ */
 export function buildSOAData(
   records: PortalRecordGroup[],
   branchName?: string,
@@ -34,9 +122,7 @@ export function buildSOAData(
 ): SOAData | null {
   if (records.length === 0) return null;
   const client = records[0].client;
-  const fullName = `${client.lastName}, ${client.firstName}${
-    client.middleName ? ` ${client.middleName}` : ""
-  }`;
+  const fullName = `${client.lastName}, ${client.firstName}${client.middleName ? ` ${client.middleName}` : ""}`;
 
   const contracts = records.flatMap((g) =>
     g.contracts.map((cd) => ({
@@ -66,12 +152,10 @@ export function buildSOAData(
   return {
     clientName: fullName,
     clientAddress:
-      [client.address, client.city, client.province].filter(Boolean).join(", ") || "—",
-    clientContact: client.contactNumber || "—",
+      [client.address, client.city, client.province].filter(Boolean).join(", ") || "\u2014",
+    clientContact: client.contactNumber || "\u2014",
     clientEmail: client.email || undefined,
-    beneficiaryName: client.beneficiaryName,
-    beneficiaryRelationship: client.beneficiaryRelationship,
-    branchName,
+    clientAge: client.dateOfBirth ? computeAge(client.dateOfBirth) : undefined,
     clientBirthDate: client.dateOfBirth
       ? new Date(client.dateOfBirth).toLocaleDateString("en-PH", {
           year: "numeric",
@@ -79,6 +163,9 @@ export function buildSOAData(
           day: "numeric",
         })
       : undefined,
+    beneficiaries: getBeneficiaries(client),
+    branchName,
+    salesAgent: records[0].contracts[0]?.salesAgentName ?? undefined,
     logoUrl,
     contracts,
     payments,
@@ -92,18 +179,19 @@ export function buildSOAData(
 }
 
 /**
- * Self-service Statement of Account for the client portal:
- * opens an on-screen preview (so clients can always *see* it), with
- * Download PDF and Print / Save-as-PDF actions.
+ * Self-service Statement of Account for the client portal.
+ * Per-contract: generates SOA for ONE selected plan.
  */
 export function SOAButton({
   records,
+  contractId,
   label = "Statement of Account",
   variant = "outline",
   size = "default",
   className,
 }: {
   records: PortalRecordGroup[];
+  contractId?: string;
   label?: string;
   variant?: ComponentProps<typeof Button>["variant"];
   size?: ComponentProps<typeof Button>["size"];
@@ -114,19 +202,31 @@ export function SOAButton({
   const frameRef = useRef<HTMLIFrameElement | null>(null);
 
   const branches = useQuery(api.branches.list);
-  const branchName =
-    records.length === 1 && records[0].client.branchId
-      ? branches?.find((b) => b._id === records[0].client.branchId)?.name
-      : undefined;
   const settings = useQuery(api.settings.get);
 
-  const data = buildSOAData(records, branchName, settings?.logoUrl ?? undefined);
+  const group = records[0];
+  const branchName =
+    group?.client.branchId
+      ? branches?.find((b) => b._id === group.client.branchId)?.name
+      : undefined;
+
+  let data: SOAData | null = null;
+  if (group) {
+    if (contractId) {
+      const cd = group.contracts.find((c) => c.contract._id === contractId);
+      if (cd) {
+        data = buildSingleContractSOA(group, cd, branchName, settings?.logoUrl ?? undefined);
+      }
+    } else {
+      data = buildSOAData(records, branchName, settings?.logoUrl ?? undefined);
+    }
+  }
 
   const handleOpen = () => {
     if (!data) {
       toast.error("No linked plan records yet", {
         description:
-          "Once your plan is linked to this account your statement will appear here — or ask the office to email you a copy.",
+          "Once your plan is linked to this account your statement will appear here.",
       });
       return;
     }
@@ -143,9 +243,7 @@ export function SOAButton({
       console.error("Failed to generate SOA PDF:", err);
       toast.error("Could not generate the PDF", {
         description:
-          err instanceof Error
-            ? err.message
-            : "Use Print instead to save a copy as a PDF.",
+          err instanceof Error ? err.message : "Use Print instead to save a copy as a PDF.",
       });
     } finally {
       setDownloading(false);

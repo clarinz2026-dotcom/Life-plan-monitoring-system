@@ -171,8 +171,8 @@ export default function ClientDetail() {
           [client.address, client.city, client.province].filter(Boolean).join(", ") || "—",
         clientContact: client.contactNumber || "—",
         clientEmail: client.email || undefined,
-        beneficiaryName: client.beneficiaryName,
-        beneficiaryRelationship: client.beneficiaryRelationship,
+        clientAge: undefined,
+        beneficiaries: [{ name: client.beneficiaryName || "—", relationship: client.beneficiaryRelationship || "—" }],
         branchName: branch?.name,
         clientBirthDate: client.dateOfBirth
           ? new Date(client.dateOfBirth).toLocaleDateString("en-PH", {

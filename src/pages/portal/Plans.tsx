@@ -275,38 +275,72 @@ export default function Plans() {
                         </p>
                       </div>
 
-                      {/* Payments */}
+                      {/* Payments — matches SOA payment table format */}
                       <div className="px-5 py-5 lg:px-7">
-                        <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.16em] text-evergreen">
-                          <Wallet className="h-4 w-4 text-gold" />
-                          Payment history
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <p className="flex items-center gap-2 text-[12px] font-bold uppercase tracking-[0.16em] text-evergreen">
+                            <Wallet className="h-4 w-4 text-gold" />
+                            Payment history
+                          </p>
+                          <SOAButton
+                            records={[group]}
+                            contractId={contract._id}
+                            label="View SOA"
+                            variant="ghost"
+                            size="sm"
+                          />
+                        </div>
                         {cd.payments.length === 0 ? (
                           <p className="mt-4 text-[12.5px] text-stone">
                             No payments recorded yet.
                           </p>
                         ) : (
-                          <div className="mt-3 space-y-1.5">
-                            {cd.payments.slice(0, 6).map((p) => (
-                              <div
-                                key={p._id}
-                                className="flex items-center gap-3 rounded-xl border border-line bg-white px-3.5 py-2.5 text-[12px]"
-                              >
-                                <span className="font-mono text-[12px] font-bold text-ink">
-                                  {fmtPeso(p.amount)}
-                                </span>
-                                <span className="text-stone">{fmtDate(p.paymentDate)}</span>
-                                <span className="rounded-full bg-cream px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-stone">
-                                  {CHANNEL_LABEL[p.paymentChannel] ?? p.paymentChannel}
-                                </span>
-                                <span className="ml-auto truncate font-mono text-[11px] text-stone">
-                                  {p.orNumber ? `OR ${p.orNumber}` : p.referenceNumber ? `REF ${p.referenceNumber}` : "—"}
-                                </span>
-                              </div>
-                            ))}
-                            {cd.payments.length > 6 && (
-                              <p className="pt-1 text-[11.5px] text-stone">
-                                Showing 6 of {cd.payments.length} payments
+                          <div className="mt-3 overflow-x-auto">
+                            <table className="w-full text-[11.5px]">
+                              <thead>
+                                <tr className="border-b border-line text-left">
+                                  <th className="pb-2 pr-2 font-bold uppercase tracking-wider text-stone">Date</th>
+                                  <th className="pb-2 pr-2 font-bold uppercase tracking-wider text-stone">O.R. No.</th>
+                                  <th className="pb-2 pr-2 text-right font-bold uppercase tracking-wider text-stone">Amount</th>
+                                  <th className="pb-2 pr-2 text-center font-bold uppercase tracking-wider text-stone">Installment</th>
+                                  <th className="pb-2 pr-2 text-right font-bold uppercase tracking-wider text-stone">Balance</th>
+                                  <th className="pb-2 font-bold uppercase tracking-wider text-stone">Remarks</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {(() => {
+                                  // Sort oldest first for installment numbering + running balance
+                                  const sorted = [...cd.payments].sort((a, b) => a.paymentDate - b.paymentDate);
+                                  let runningBalance = contract.planAmount;
+                                  let installmentNo = 0;
+                                  return sorted.map((p) => {
+                                    runningBalance = Math.max(0, runningBalance - p.amount);
+                                    installmentNo += 1;
+                                    return (
+                                      <tr key={p._id} className="border-b border-line/30">
+                                        <td className="py-2 pr-2 font-mono">{fmtDate(p.paymentDate)}</td>
+                                        <td className="py-2 pr-2 font-mono text-stone">
+                                          {p.orNumber || "—"}
+                                        </td>
+                                        <td className="py-2 pr-2 text-right font-mono font-bold text-evergreen">
+                                          {fmtPeso(p.amount)}
+                                        </td>
+                                        <td className="py-2 pr-2 text-center font-mono">{installmentNo}</td>
+                                        <td className="py-2 pr-2 text-right font-mono text-stone">
+                                          {fmtPeso(runningBalance)}
+                                        </td>
+                                        <td className="py-2 text-stone">
+                                          {CHANNEL_LABEL[p.paymentChannel] ?? p.paymentChannel}
+                                        </td>
+                                      </tr>
+                                    );
+                                  });
+                                })()}
+                              </tbody>
+                            </table>
+                            {cd.payments.length > 10 && (
+                              <p className="pt-2 text-[11.5px] text-stone">
+                                Showing all {cd.payments.length} payments
                               </p>
                             )}
                           </div>

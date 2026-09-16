@@ -113,6 +113,17 @@ const schema = defineSchema(
       beneficiaryName: v.string(),
       beneficiaryRelationship: v.string(),
       beneficiaryContact: v.optional(v.string()),
+      // Up to 4 beneficiaries — falls back to single beneficiary fields above
+      // when this array is empty or absent (backward-compatible).
+      beneficiaries: v.optional(
+        v.array(
+          v.object({
+            name: v.string(),
+            age: v.optional(v.number()),
+            relationship: v.string(),
+          })
+        )
+      ),
       notes: v.optional(v.string()),
       branchId: v.optional(v.id("branches")),
       createdAt: v.number(),

@@ -32,6 +32,8 @@ type ContractDetail = {
   payments: Doc<"payments">[];
   schedules: Doc<"payment_schedules">[];
   receipts: Doc<"receipts">[];
+  /** Resolved sales agent display name (from users table). */
+  salesAgentName: string | null;
 };
 
 type RecordGroup = {
@@ -197,19 +199,36 @@ export const myOverview = query({
         receiptsByContract.set(r.contractId, list);
       }
 
+      // Batch-resolve all sales agent names (one read per unique agent).
+      const agentIds = Array.from(
+        new Set(
+          allContracts
+            .map((c) => c.assignedAgent)
+            .filter(Boolean)
+        )
+      );
+      const agentDocs = await Promise.all(agentIds.map((id) => ctx.db.get(id!)));
+      const agentById = new Map(
+        agentIds.map((id, i) => [id!, agentDocs[i]] as const)
+      );
+
       for (const client of matched.values()) {
         const contracts = allContracts.filter((c) => c.clientId === client._id);
         const clientPayments = paymentsByClient.get(client._id) ?? [];
-        const contractDetails: ContractDetail[] = contracts.map((contract) => ({
-          contract,
-          payments: clientPayments
-            .filter((p) => p.contractId === contract._id)
-            .sort((a, b) => b.paymentDate - a.paymentDate),
-          schedules: (schedulesByContract.get(contract._id) ?? [])
-            .sort((a, b) => a.dueDate - b.dueDate),
-          receipts: (receiptsByContract.get(contract._id) ?? [])
-            .sort((a, b) => b.createdAt - a.createdAt),
-        }));
+        const contractDetails: ContractDetail[] = contracts.map((contract) => {
+          const agent = contract.assignedAgent ? agentById.get(contract.assignedAgent) : null;
+          return {
+            contract,
+            payments: clientPayments
+              .filter((p) => p.contractId === contract._id)
+              .sort((a, b) => b.paymentDate - a.paymentDate),
+            schedules: (schedulesByContract.get(contract._id) ?? [])
+              .sort((a, b) => a.dueDate - b.dueDate),
+            receipts: (receiptsByContract.get(contract._id) ?? [])
+              .sort((a, b) => b.createdAt - a.createdAt),
+            salesAgentName: agent?.name ?? agent?.email ?? null,
+          };
+        });
 
         records.push({ client, contracts: contractDetails });
       }
