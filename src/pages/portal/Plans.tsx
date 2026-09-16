@@ -149,13 +149,29 @@ export default function Plans() {
                         <p className="font-display text-[20px] font-semibold text-evergreen">
                           {contract.planType || "Memorial Plan"}
                         </p>
-                        <p className="mt-0.5 font-mono text-[11.5px] text-stone">
-                          {contract.contractNumber} · Effectivity Date:{" "}
-                          {fmtDate(contract.startDate)}
-                          {contract.maturityDate
-                            ? ` · Maturity Date: ${fmtDate(contract.maturityDate)}`
-                            : ""}
-                        </p>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] leading-relaxed text-stone">
+                          <span className="font-mono font-semibold tracking-tight text-ink">
+                            {contract.contractNumber}
+                          </span>
+                          <span aria-hidden className="h-3.5 w-px bg-line" />
+                          <span>
+                            Effectivity Date:{" "}
+                            <strong className="font-semibold text-ink">
+                              {fmtDate(contract.startDate)}
+                            </strong>
+                          </span>
+                          {contract.maturityDate ? (
+                            <>
+                              <span aria-hidden className="h-3.5 w-px bg-line" />
+                              <span>
+                                Maturity Date:{" "}
+                                <strong className="font-semibold text-ink">
+                                  {fmtDate(contract.maturityDate)}
+                                </strong>
+                              </span>
+                            </>
+                          ) : null}
+                        </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-[12px] font-semibold text-stone">
