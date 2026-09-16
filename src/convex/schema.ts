@@ -212,12 +212,16 @@ const schema = defineSchema(
       description: v.string(),
       oldValues: v.optional(v.any()),
       newValues: v.optional(v.any()),
+      // Branch the action happened under, so the trail can be filtered per
+      // branch for branch staff and sliced per branch by Head Office.
+      branchId: v.optional(v.id("branches")),
       timestamp: v.number(),
     })
       .index("by_entity", ["entityType", "entityId"])
       .index("by_user", ["userId"])
       .index("by_timestamp", ["timestamp"])
-      .index("by_action", ["action"]),
+      .index("by_action", ["action"])
+      .index("by_branch", ["branchId"]),
 
     // Receipts
     receipts: defineTable({
@@ -283,11 +287,15 @@ const schema = defineSchema(
       notes: v.optional(v.string()),
       reviewedBy: v.optional(v.id("users")),
       reviewedAt: v.optional(v.number()),
+      // Branch whose collections were counted (branch staff are forced to
+      // their own; Head Office can filter reconciliations per branch).
+      branchId: v.optional(v.id("branches")),
       createdAt: v.number(),
     })
       .index("by_cashier", ["cashierId"])
       .index("by_date", ["reconciliationDate"])
-      .index("by_status", ["status"]),
+      .index("by_status", ["status"])
+      .index("by_branch", ["branchId"]),
 
     // ─── NEW: Notifications ──────────────────────────────────────────────
     notifications: defineTable({
@@ -343,6 +351,26 @@ const schema = defineSchema(
       createdAt: v.number(),
     })
       .index("by_code", ["code"]),
+
+    // ─── NEW: Branch transfer history ────────────────────────────────────
+    // One row per client moved between branches. Payments are never rewritten
+    // by a transfer, so the financial history stays under the branch that
+    // actually recorded it; this table is the audit trail of the move.
+    branch_transfer_history: defineTable({
+      clientId: v.id("clients"),
+      fromBranchId: v.optional(v.id("branches")),
+      toBranchId: v.id("branches"),
+      reason: v.optional(v.string()),
+      movedContracts: v.number(),
+      movedReceipts: v.number(),
+      retainedPayments: v.number(),
+      requestedBy: v.id("users"),
+      requestedByName: v.optional(v.string()),
+      createdAt: v.number(),
+    })
+      .index("by_client", ["clientId"])
+      .index("by_to_branch", ["toBranchId"])
+      .index("by_createdAt", ["createdAt"]),
 
     // ─── Client portal: service requests ────────────────────────────────
     service_requests: defineTable({

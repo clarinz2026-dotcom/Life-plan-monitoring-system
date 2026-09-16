@@ -2,6 +2,18 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { assertCanAccessRecord, resolveBranchFilter } from "./access";
+import type { Id } from "./_generated/dataModel";
+
+/**
+ * Legacy rows that carry no branch yet count as belonging to the viewer's own
+ * branch, so branch staff never lose sight of their own history.
+ */
+function isRecordInBranch(
+  recordBranchId: Id<"branches"> | undefined | null,
+  viewerBranchId: Id<"branches">
+) {
+  return !recordBranchId || recordBranchId === viewerBranchId;
+}
 
 function formatPHP(amount: number) {
   return new Intl.NumberFormat("en-PH", {
@@ -32,18 +44,35 @@ export const list = query({
     const branchId = await resolveBranchFilter(ctx, args.branchId);
     let payments;
 
-    if (branchId) {
+    if (branchId && (args.contractId || args.clientId)) {
+      // A plan's own ledger is read through the plan/planholder it belongs to,
+      // not by the branch that booked each payment. That keeps the full history
+      // (and the SOA) visible to the branch that now services a transferred
+      // planholder, while access is still checked against the contract's own
+      // branch — so this cannot be used to read another branch's ledger.
+      if (args.contractId) {
+        const contract = await ctx.db.get(args.contractId);
+        if (!contract || !isRecordInBranch(contract.branchId, branchId)) return [];
+        payments = await ctx.db
+          .query("payments")
+          .withIndex("by_contract", (q) => q.eq("contractId", args.contractId!))
+          .order("desc")
+          .collect();
+      } else {
+        const client = await ctx.db.get(args.clientId!);
+        if (!client || !isRecordInBranch(client.branchId, branchId)) return [];
+        payments = await ctx.db
+          .query("payments")
+          .withIndex("by_client", (q) => q.eq("clientId", args.clientId!))
+          .order("desc")
+          .collect();
+      }
+    } else if (branchId) {
       payments = await ctx.db
         .query("payments")
         .withIndex("by_branch", (q) => q.eq("branchId", branchId!))
         .order("desc")
         .collect();
-      if (args.contractId) {
-        payments = payments.filter((p) => String(p.contractId) === String(args.contractId));
-      }
-      if (args.clientId) {
-        payments = payments.filter((p) => String(p.clientId) === String(args.clientId));
-      }
     } else if (args.contractId) {
       payments = await ctx.db
         .query("payments")

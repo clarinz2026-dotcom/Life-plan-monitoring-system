@@ -87,6 +87,43 @@ export async function resolveBranchFilter(
 }
 
 /**
+ * Read guard for a single branch-owned record (client, contract, payment,
+ * receipt, document).
+ *
+ * This is the counterpart to `assertCanAccessRecord` for reads: without it a
+ * branch user could open /clients/<another-branch-client-id> directly and read
+ * beneficiary and payment data belonging to a different branch.
+ *
+ * Staff only (planholder accounts and guests are rejected), admins may read any
+ * branch, branch staff may read their own. Records that carry no branch yet
+ * (legacy rows awaiting backfill) stay readable so a branch never loses access
+ * to its own history.
+ */
+export async function assertRecordVisible(
+  ctx: QueryCtx | MutationCtx,
+  recordBranchId: Id<"branches"> | undefined | null
+): Promise<Viewer> {
+  const viewer = await assertStaff(ctx);
+  if (isAdminRole(viewer.role)) return viewer;
+  if (!recordBranchId || viewer.branchId === recordBranchId) return viewer;
+  throw new Error("This record belongs to another branch.");
+}
+
+/**
+ * Read guard for a branch itself. Admins may read any branch; branch staff may
+ * read only the branch they are assigned to.
+ */
+export async function assertBranchVisible(
+  ctx: QueryCtx | MutationCtx,
+  branchId: Id<"branches">
+): Promise<Viewer> {
+  const viewer = await assertStaff(ctx);
+  if (isAdminRole(viewer.role)) return viewer;
+  if (viewer.branchId === branchId) return viewer;
+  throw new Error("This branch is outside your access.");
+}
+
+/**
  * Require the caller to be signed in and (unless CEO/Super Admin) assigned to
  * the same branch as the record being written. Throws otherwise.
  *

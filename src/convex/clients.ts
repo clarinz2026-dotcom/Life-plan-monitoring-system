@@ -4,6 +4,7 @@ import { mutation, query } from "./_generated/server";
 import { Id } from "./_generated/dataModel";
 import {
   assertCanAccessRecord,
+  assertRecordVisible,
   assertStaff,
   getViewer,
   isAdminRole,
@@ -101,10 +102,13 @@ export const list = query({
 export const get = query({
   args: { clientId: v.id("clients") },
   handler: async (ctx, args) => {
-    // Client records hold beneficiary and contact PII — staff only. (This used
-    // to be open to anyone, including anonymous callers, given a client id.)
-    await assertStaff(ctx);
-    return await ctx.db.get(args.clientId);
+    // Client records hold beneficiary and contact PII — staff only, and only
+    // the branch that owns the record. Without the branch check a branch user
+    // could read another branch's planholder by pasting its id into the URL.
+    const client = await ctx.db.get(args.clientId);
+    if (!client) return null;
+    await assertRecordVisible(ctx, client.branchId);
+    return client;
   },
 });
 

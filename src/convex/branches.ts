@@ -1,7 +1,13 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-import { assertCanAccessRecord, getViewer, isAdminRole } from "./access";
+import { mutation, query, type QueryCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import {
+  assertBranchVisible,
+  assertStaff,
+  getViewer,
+  isAdminRole,
+} from "./access";
 
 /**
  * Create a branch.
@@ -24,10 +30,34 @@ export const create = mutation({
       throw new Error("Only the Super Admin or CEO can create branches.");
     }
 
+    // Branch codes identify a branch everywhere (receipts, reports, exports),
+    // so they are normalised and must stay unique.
+    const code = args.code.trim().toUpperCase();
+    if (!code) throw new Error("A branch code is required.");
+    const clash = await findBranchByCode(ctx, code);
+    if (clash) {
+      throw new Error(
+        `Branch code ${code} is already used by "${clash.name}". Pick another code.`
+      );
+    }
+
     const branchId = await ctx.db.insert("branches", {
       ...args,
+      code,
       isActive: true,
       createdAt: Date.now(),
+    });
+
+    await ctx.db.insert("audit_log", {
+      action: "create",
+      entityType: "client", // reused as the generic system-event entity type
+      entityId: branchId,
+      userId,
+      userName: user?.name ?? user?.email ?? "Unknown",
+      description: `Branch created: ${args.name} (${code}) in ${args.city}, ${args.province}`,
+      newValues: { name: args.name, code, city: args.city, province: args.province },
+      branchId,
+      timestamp: Date.now(),
     });
 
     return { branchId };
@@ -58,10 +88,15 @@ export const MAIN_OFFICE = {
 export const list = query({
   args: {},
   handler: async (ctx) => {
-    const viewer = await getViewer(ctx);
-    if (!viewer) throw new Error("Not authenticated");
+    // Staff only (this used to be readable by any signed-in account, including
+    // planholder portal logins). Branch staff only ever see their own branch;
+    // Head Office sees the full roster.
+    const viewer = await assertStaff(ctx);
 
-    const branches = await ctx.db.query("branches").collect();
+    let branches = await ctx.db.query("branches").collect();
+    if (!isAdminRole(viewer.role)) {
+      branches = branches.filter((b) => b._id === viewer.branchId);
+    }
 
     // Resolve manager names with one read per distinct manager instead of one
     // db.get per branch.
@@ -107,9 +142,37 @@ export const update = mutation({
     const clean = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
     );
+
+    if (typeof clean.code === "string") {
+      const code = clean.code.trim().toUpperCase();
+      if (!code) throw new Error("A branch code is required.");
+      const clash = await findBranchByCode(ctx, code);
+      if (clash && clash._id !== branchId) {
+        throw new Error(
+          `Branch code ${code} is already used by "${clash.name}". Pick another code.`
+        );
+      }
+      clean.code = code;
+    }
+
     if (Object.keys(clean).length === 0) return;
 
+    const before = await ctx.db.get(branchId);
     await ctx.db.patch(branchId, clean);
+
+    await ctx.db.insert("audit_log", {
+      action: "update",
+      entityType: "client",
+      entityId: branchId,
+      userId,
+      userName: user?.name ?? user?.email ?? "Unknown",
+      description: `Branch updated: ${before?.name ?? branchId}`,
+      oldValues: before ? { name: before.name, code: before.code, isActive: before.isActive } : undefined,
+      newValues: clean,
+      branchId,
+      timestamp: Date.now(),
+    });
+
     return { success: true };
   },
 });
@@ -120,8 +183,8 @@ export const update = mutation({
 export const get = query({
   args: { branchId: v.id("branches") },
   handler: async (ctx, args) => {
-    const viewer = await getViewer(ctx);
-    if (!viewer) throw new Error("Not authenticated");
+    // Admins may read any branch; branch staff only their own.
+    await assertBranchVisible(ctx, args.branchId);
     return await ctx.db.get(args.branchId);
   },
 });
@@ -232,13 +295,13 @@ export const remove = mutation({
       throw new Error("Only Super Admin or CEO can delete branches.");
     }
 
-    // Check if any clients are assigned
-    const clients = await ctx.db
-      .query("clients")
-      .withIndex("by_branch", (q) => q.eq("branchId", args.branchId))
-      .first();
-    if (clients) {
-      throw new Error("Cannot delete a branch that still has assigned clients. Reassign them first.");
+    // A branch that carries history is never hard-deleted — deactivate it
+    // instead so payments, receipts and reports keep their branch context.
+    const held = await branchHistoryCounts(ctx, args.branchId);
+    if (held.total > 0) {
+      throw new Error(
+        `This branch still holds records (${held.clients} clients, ${held.contracts} contracts, ${held.payments} payments, ${held.receipts} receipts). Deactivate it instead of deleting it.`
+      );
     }
 
     // Unassign any users from this branch (also clears their position)
@@ -252,6 +315,216 @@ export const remove = mutation({
 
     await ctx.db.delete(args.branchId);
     return { success: true };
+  },
+});
+
+/**
+ * Look a branch up by its (normalised) code. Codes are compared
+ * case-insensitively so "mbs-001" and "MBS-001" are the same branch.
+ */
+async function findBranchByCode(
+  ctx: { db: QueryCtx["db"] },
+  code: string
+) {
+  const branches = await ctx.db.query("branches").collect();
+  return (
+    branches.find((b) => b.code.trim().toUpperCase() === code) ?? null
+  );
+}
+
+/** How many branch-owned records a branch still holds. */
+async function branchHistoryCounts(
+  ctx: { db: QueryCtx["db"] },
+  branchId: Id<"branches">
+) {
+  const [clients, contracts, payments, receipts] = await Promise.all([
+    ctx.db
+      .query("clients")
+      .withIndex("by_branch", (q) => q.eq("branchId", branchId))
+      .collect(),
+    ctx.db
+      .query("contracts")
+      .withIndex("by_branch", (q) => q.eq("branchId", branchId))
+      .collect(),
+    ctx.db
+      .query("payments")
+      .withIndex("by_branch", (q) => q.eq("branchId", branchId))
+      .collect(),
+    ctx.db
+      .query("receipts")
+      .withIndex("by_branch", (q) => q.eq("branchId", branchId))
+      .collect(),
+  ]);
+  return {
+    clients: clients.length,
+    contracts: contracts.length,
+    payments: payments.length,
+    receipts: receipts.length,
+    total: clients.length + contracts.length + payments.length + receipts.length,
+  };
+}
+
+/**
+ * Transfer a planholder to another branch (Head Office only).
+ *
+ * What moves: the client record and the contracts they still hold, so the live
+ * plan is serviced by the receiving branch from now on. A
+ * `branch_transfer_history` row records who moved it, from where, and why.
+ *
+ * What deliberately does not move: `payments` and `receipts`. Collections stay
+ * under the branch that actually recorded them, so no branch's historical
+ * totals or reconciliation change because a planholder relocated. The full
+ * ledger remains readable by the new branch because payment reads follow the
+ * contract (see payments.list).
+ */
+export const transferClient = mutation({
+  args: {
+    clientId: v.id("clients"),
+    toBranchId: v.id("branches"),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    const user = await ctx.db.get(userId);
+    if (!isAdminRole(user?.role ?? null)) {
+      throw new Error(
+        "Only the Super Admin or CEO can transfer a planholder between branches."
+      );
+    }
+
+    const client = await ctx.db.get(args.clientId);
+    if (!client) throw new Error("Client not found.");
+    const target = await ctx.db.get(args.toBranchId);
+    if (!target) throw new Error("Branch not found.");
+    if (!target.isActive) {
+      throw new Error(`"${target.name}" is inactive, so it cannot receive records.`);
+    }
+    if (client.branchId === args.toBranchId) {
+      throw new Error("This planholder already belongs to that branch.");
+    }
+
+    const contracts = await ctx.db
+      .query("contracts")
+      .withIndex("by_client", (q) => q.eq("clientId", args.clientId))
+      .collect();
+    for (const contract of contracts) {
+      await ctx.db.patch(contract._id, { branchId: args.toBranchId });
+    }
+
+    const payments = await ctx.db
+      .query("payments")
+      .withIndex("by_client", (q) => q.eq("clientId", args.clientId))
+      .collect();
+    let retainedReceipts = 0;
+    for (const payment of payments) {
+      const receiptRows = await ctx.db
+        .query("receipts")
+        .withIndex("by_payment", (q) => q.eq("paymentId", payment._id))
+        .collect();
+      retainedReceipts += receiptRows.length;
+    }
+
+    await ctx.db.patch(args.clientId, { branchId: args.toBranchId });
+
+    const historyId = await ctx.db.insert("branch_transfer_history", {
+      clientId: args.clientId,
+      fromBranchId: client.branchId,
+      toBranchId: args.toBranchId,
+      reason: args.reason,
+      movedContracts: contracts.length,
+      movedReceipts: 0,
+      retainedPayments: payments.length,
+      requestedBy: userId,
+      requestedByName: user?.name ?? user?.email ?? "Unknown",
+      createdAt: Date.now(),
+    });
+
+    await ctx.db.insert("audit_log", {
+      action: "update",
+      entityType: "client",
+      entityId: args.clientId,
+      userId,
+      userName: user?.name ?? user?.email ?? "Unknown",
+      description: `Planholder transferred: ${client.lastName}, ${client.firstName} → "${target.name}" (${contracts.length} contract(s) moved, ${payments.length} payment(s) kept with the recording branch)${args.reason ? ` — ${args.reason}` : ""}`,
+      oldValues: { branchId: client.branchId ?? null },
+      newValues: { branchId: args.toBranchId, reason: args.reason ?? null },
+      branchId: args.toBranchId,
+      timestamp: Date.now(),
+    });
+
+    return {
+      historyId,
+      movedContracts: contracts.length,
+      retainedPayments: payments.length,
+      retainedReceipts,
+    };
+  },
+});
+
+/**
+ * Transfer trail — per client, or the most recent moves in the viewer's scope.
+ * Branch staff only see moves into or out of their own branch.
+ */
+export const transferHistory = query({
+  args: {
+    clientId: v.optional(v.id("clients")),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await assertStaff(ctx);
+    const rows = args.clientId
+      ? await ctx.db
+          .query("branch_transfer_history")
+          .withIndex("by_client", (q) => q.eq("clientId", args.clientId!))
+          .collect()
+      : await ctx.db
+          .query("branch_transfer_history")
+          .withIndex("by_createdAt")
+          .order("desc")
+          .take(args.limit ?? 50);
+
+    const scoped = isAdminRole(viewer.role)
+      ? rows
+      : rows.filter(
+          (r) =>
+            r.toBranchId === viewer.branchId ||
+            r.fromBranchId === viewer.branchId
+        );
+
+    // Resolve branch names and planholder names once per distinct id.
+    const branchIds = Array.from(
+      new Set(
+        scoped
+          .flatMap((r) => [r.fromBranchId, r.toBranchId])
+          .filter(Boolean) as Id<"branches">[]
+      )
+    );
+    const clientIds = Array.from(new Set(scoped.map((r) => r.clientId)));
+    const [branches, clients] = await Promise.all([
+      Promise.all(branchIds.map((id) => ctx.db.get(id))),
+      Promise.all(clientIds.map((id) => ctx.db.get(id))),
+    ]);
+    const branchName = new Map(
+      branchIds.map((id, i) => [id, branches[i]?.name ?? "Unknown branch"])
+    );
+    const clientName = new Map(
+      clientIds.map((id, i) => {
+        const c = clients[i];
+        return [id, c ? `${c.lastName}, ${c.firstName}` : "Unknown planholder"];
+      })
+    );
+
+    return scoped
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .map((r) => ({
+        ...r,
+        fromBranchName: r.fromBranchId
+          ? branchName.get(r.fromBranchId) ?? null
+          : null,
+        toBranchName: branchName.get(r.toBranchId) ?? "Unknown branch",
+        clientName: clientName.get(r.clientId) ?? "Unknown planholder",
+      }));
   },
 });
 

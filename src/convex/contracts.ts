@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import {
   assertCanAccessRecord,
+  assertRecordVisible,
   assertStaff,
   resolveBranchFilter,
 } from "./access";
@@ -89,11 +90,13 @@ export const list = query({
 export const get = query({
   args: { contractId: v.id("contracts") },
   handler: async (ctx, args) => {
-    await assertStaff(ctx);
     const contract = await ctx.db.get(args.contractId);
     if (!contract) return null;
 
     const client = await ctx.db.get(contract.clientId);
+    // The contract's own branch, falling back to its planholder's for rows
+    // written before branch backfill.
+    await assertRecordVisible(ctx, contract.branchId ?? client?.branchId);
     return { ...contract, client };
   },
 });
