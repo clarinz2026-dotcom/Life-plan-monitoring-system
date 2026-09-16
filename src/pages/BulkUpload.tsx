@@ -18,6 +18,7 @@ import {
 import { useState, useRef, useCallback } from "react";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import { useBranch } from "@/hooks/use-branch";
 
 interface UploadRow {
   no: string;
@@ -161,6 +162,10 @@ export default function BulkUpload() {
   const bulkCreateClients = useMutation(api.bulk.bulkCreateClients);
   const plans = useQuery(api.plans.list) ?? [];
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Head Office can import into a chosen branch; branch staff always import
+  // into their own. Without this, a Head Office import produced records with no
+  // branch, which every branch could then see.
+  const { queryBranchId, isCeoOrAdmin } = useBranch();
 
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<UploadRow[]>([]);
@@ -323,6 +328,7 @@ export default function BulkUpload() {
       for (let start = 0; start < validRows.length; start += BATCH_SIZE) {
         setUploadProgress({ done: start, total: validRows.length });
         const result = await bulkCreateClients({
+          branchId: queryBranchId,
           clients: validRows.slice(start, start + BATCH_SIZE),
         });
         totals.success += result.success;

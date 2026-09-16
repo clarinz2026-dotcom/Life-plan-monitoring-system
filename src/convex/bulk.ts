@@ -7,6 +7,7 @@ import {
   fullPlanPrice,
   resolveMonthlyPrice,
 } from "./plans";
+import { getViewer, isAdminRole } from "./access";
 
 /**
  * Bulk create clients (and optionally contracts) from parsed CSV/XLSX data.
@@ -28,6 +29,15 @@ import {
  */
 export const bulkCreateClients = mutation({
   args: {
+    /**
+     * Target branch for the imported records. Head Office may choose one (for
+     * example "import this sheet into Branch 002"); branch staff may not, and
+     * whatever they send is ignored in favour of their own branch.
+     *
+     * Without this, an import run by Head Office produced records with no
+     * branch at all — and unassigned records are readable by every branch.
+     */
+    branchId: v.optional(v.id("branches")),
     clients: v.array(
       v.object({
         no: v.optional(v.string()),
@@ -52,9 +62,16 @@ export const bulkCreateClients = mutation({
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    const viewer = await getViewer(ctx);
+    if (!viewer) throw new Error("Not authenticated");
+
     const user = await ctx.db.get(userId);
     const userName = user?.name || user?.email || "Unknown";
-    const branchId = user?.branchId;
+    // Branch always comes from the authenticated account; Head Office may pick
+    // one explicitly. Never from an unauthenticated or branch-supplied value.
+    const branchId = isAdminRole(viewer.role)
+      ? args.branchId ?? user?.branchId
+      : user?.branchId;
 
     const results = {
       success: 0,
@@ -114,6 +131,7 @@ export const bulkCreateClients = mutation({
             contactNumber: contactNumber || "",
             address: address || "",
           },
+          branchId,
           timestamp: Date.now(),
         });
 
@@ -244,6 +262,7 @@ async function createContractWithBackdatedPayments(
     userId: opts.userId,
     userName: opts.userName,
     description: `Contract ${contractNumber} auto-created for plan "${opts.plan.name}" (₱${monthly.toLocaleString()}/mo, ${monthsPaid} backdated month${monthsPaid !== 1 ? "s" : ""}) via bulk upload`,
+    branchId: opts.branchId,
     newValues: {
       contractNumber,
       planType: opts.plan.name,

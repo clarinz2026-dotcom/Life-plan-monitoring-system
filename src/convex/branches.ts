@@ -4,10 +4,11 @@ import { mutation, query, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import {
   assertBranchVisible,
+  assertCanManageBranch,
   assertStaff,
-  getViewer,
   isAdminRole,
 } from "./access";
+import { manilaMonthStart } from "./datetime";
 
 /**
  * Create a branch.
@@ -20,6 +21,10 @@ export const create = mutation({
     city: v.string(),
     province: v.string(),
     contactNumber: v.optional(v.string()),
+    email: v.optional(v.string()),
+    operatingHours: v.optional(v.string()),
+    receiptPrefix: v.optional(v.string()),
+    openingDate: v.optional(v.number()),
     managerId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
@@ -46,6 +51,7 @@ export const create = mutation({
       code,
       isActive: true,
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     });
 
     await ctx.db.insert("audit_log", {
@@ -61,6 +67,91 @@ export const create = mutation({
     });
 
     return { branchId };
+  },
+});
+
+/**
+ * Branch settings update (Head Office: any branch; Branch Manager: their own).
+ *
+ * The fields a branch controls for itself are profile/operational data —
+ * address, contact details, hours, receipt prefix. Anything that changes the
+ * *shape* of the system (creating branches, moving people between branches,
+ * plans, security) stays with Head Office.
+ */
+export const updateSettings = mutation({
+  args: {
+    branchId: v.id("branches"),
+    address: v.optional(v.string()),
+    city: v.optional(v.string()),
+    province: v.optional(v.string()),
+    contactNumber: v.optional(v.string()),
+    email: v.optional(v.string()),
+    operatingHours: v.optional(v.string()),
+    receiptPrefix: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await assertCanManageBranch(ctx, args.branchId);
+    const { branchId, ...updates } = args;
+    const clean = Object.fromEntries(
+      Object.entries(updates).filter(([, value]) => value !== undefined)
+    ) as Record<string, unknown>;
+    if (Object.keys(clean).length === 0) return { success: true };
+
+    const before = await ctx.db.get(branchId);
+    if (!before) throw new Error("Branch not found.");
+    await ctx.db.patch(branchId, { ...clean, updatedAt: Date.now() });
+
+    const actor = await ctx.db.get(viewer.userId);
+
+    await ctx.db.insert("audit_log", {
+      action: "update",
+      entityType: "client", // reused as the generic system-event entity type
+      entityId: branchId,
+      userId: viewer.userId,
+      userName: actor?.name || actor?.email || "Unknown",
+      description: `Branch settings updated for ${before.name} (${before.code})`,
+      oldValues: {
+        address: before.address,
+        contactNumber: before.contactNumber ?? null,
+        email: before.email ?? null,
+        operatingHours: before.operatingHours ?? null,
+        receiptPrefix: before.receiptPrefix ?? null,
+      },
+      newValues: clean,
+      branchId,
+      timestamp: Date.now(),
+    });
+
+    return { success: true };
+  },
+});
+
+/**
+ * Public branch directory for the client portal.
+ *
+ * The portal runs as a planholder account, which is not staff, so it can never
+ * call the staff-only `branches.list`. This exposes the minimum a planholder
+ * legitimately needs — active branches and where they are — and nothing about
+ * staff, managers, or branch performance.
+ */
+export const publicList = query({
+  args: {},
+  handler: async (ctx) => {
+    const branches = await ctx.db.query("branches").collect();
+    return branches
+      .filter((b) => b.isActive)
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((b) => ({
+        _id: b._id,
+        name: b.name,
+        code: b.code,
+        address: b.address,
+        city: b.city,
+        province: b.province,
+        contactNumber: b.contactNumber ?? null,
+        email: b.email ?? null,
+        operatingHours: b.operatingHours ?? null,
+      }));
   },
 });
 
@@ -127,6 +218,10 @@ export const update = mutation({
     city: v.optional(v.string()),
     province: v.optional(v.string()),
     contactNumber: v.optional(v.string()),
+    email: v.optional(v.string()),
+    operatingHours: v.optional(v.string()),
+    receiptPrefix: v.optional(v.string()),
+    openingDate: v.optional(v.number()),
     managerId: v.optional(v.id("users")),
     isActive: v.optional(v.boolean()),
   },
@@ -158,7 +253,7 @@ export const update = mutation({
     if (Object.keys(clean).length === 0) return;
 
     const before = await ctx.db.get(branchId);
-    await ctx.db.patch(branchId, clean);
+    await ctx.db.patch(branchId, { ...clean, updatedAt: Date.now() });
 
     await ctx.db.insert("audit_log", {
       action: "update",
@@ -196,18 +291,18 @@ export const get = query({
 export const summary = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) throw new Error("Not authenticated");
-    const user = await ctx.db.get(userId);
-    if (!isAdminRole(user?.role ?? null)) {
-      throw new Error("Only the Super Admin or CEO can view branch performance.");
-    }
+    const viewer = await assertStaff(ctx);
 
-    const branches = await ctx.db.query("branches").collect();
-    const monthStart = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth(), 1
-    ).getTime();
+    // Head Office compares every branch side by side. Branch staff receive
+    // exactly one row — their own — so the same query powers the Branch
+    // Manager's "My Branch" panel without exposing another branch's figures.
+    let branches = await ctx.db.query("branches").collect();
+    if (!isAdminRole(viewer.role)) {
+      branches = branches.filter((b) => b._id === viewer.branchId);
+    }
+    // Manila month boundary — the server clock is UTC, which would otherwise
+    // push collections made before 8am on the 1st into the previous month.
+    const monthStart = manilaMonthStart();
 
     // Read the staff list once instead of once per branch.
     const allUsers = await ctx.db.query("users").collect();
@@ -259,6 +354,12 @@ export const summary = query({
           city: b.city,
           province: b.province,
           contactNumber: b.contactNumber,
+          email: b.email ?? null,
+          operatingHours: b.operatingHours ?? null,
+          receiptPrefix: b.receiptPrefix ?? null,
+          openingDate: b.openingDate ?? b.createdAt,
+          createdAt: b.createdAt,
+          updatedAt: b.updatedAt ?? b.createdAt,
           isActive: b.isActive,
           managerName: manager?.name || manager?.email || null,
           clientCount: clients.length,

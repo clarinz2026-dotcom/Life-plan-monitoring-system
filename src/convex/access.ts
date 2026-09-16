@@ -35,6 +35,12 @@ export async function getViewer(
 export const isAdminRole = (role: string | null) =>
   role === "super_admin" || role === "ceo";
 
+/** Head Office administrators (the "global access" level). */
+export const isHeadOfficeRole = isAdminRole;
+
+/** A branch manager — full control of exactly one branch. */
+export const isManagerRole = (role: string | null) => role === "manager";
+
 /** Roles that belong to office staff (i.e. may read business records). */
 export const STAFF_ROLES = [
   "super_admin",
@@ -65,25 +71,40 @@ export async function assertStaff(
 
 /**
  * Resolve the effective branch filter for a staff list query.
- * Branch staff are always forced to their own branch (server-side isolation);
- * admins may pass any branchId (undefined = all branches). Anonymous callers
- * get no filter (staff pages are authed anyway, and public queries such as the
- * client portal use their own endpoints).
+ *
+ * This is the single source of truth for data scoping:
+ * - Head Office (CEO / Super Admin): may pass any branchId, or none for the
+ *   company-wide view. The requested value is honoured, and the UI's branch
+ *   selector is only a convenience — passing another branchId is allowed here
+ *   *because* the caller is Head Office.
+ * - Branch staff (manager / cashier / finance_staff): the requested value is
+ *   IGNORED and their own branch is forced. This is what makes tampering with
+ *   `branchId` from the browser useless.
+ * - Anonymous callers and planholder accounts: rejected.
+ *
+ * A Convex query is callable by anyone holding the deployment URL, so the
+ * unauthenticated case must throw rather than fall through to an unfiltered
+ * read. Weakness fixed here: an anonymous caller previously received no filter
+ * and therefore every branch's clients, contracts, and payments.
  */
 export async function resolveBranchFilter(
   ctx: QueryCtx,
   requested?: Id<"branches">
 ): Promise<Id<"branches"> | undefined> {
   const viewer = await getViewer(ctx);
-  if (!viewer || isAdminRole(viewer.role)) return requested ?? undefined;
-  // A signed-in account that is not office staff (for example a planholder
-  // account created from the public sign-up form) must never be able to read
-  // client, contract, or payment data. Previously such accounts received *no*
-  // filter, which returned every branch's records.
+  if (!viewer) throw new Error("Not authenticated.");
+  if (isAdminRole(viewer.role)) return requested ?? undefined;
   if (!isStaffRole(viewer.role)) {
     throw new Error("Staff access required.");
   }
-  return viewer.branchId ?? undefined;
+  // A branch account with no branch would otherwise fall through to an
+  // unfiltered read of every branch. Force the caller to be scoped first.
+  if (!viewer.branchId) {
+    throw new Error(
+      "Your account is not assigned to a branch yet. Ask Head Office to assign you to one."
+    );
+  }
+  return viewer.branchId;
 }
 
 /**
@@ -141,4 +162,54 @@ export async function assertCanAccessRecord(
   throw new Error(
     "You can only manage records from your assigned branch. Unassigned records must be assigned to a branch by the CEO or Super Admin first."
   );
+}
+
+/**
+ * Guard for acting on a *branch itself* (settings, staff roster, statistics).
+ *
+ * Head Office may act on any branch. A manager may act on their own branch
+ * only, and a manager with no branch assigned may act on nothing.
+ */
+export async function assertCanManageBranch(
+  ctx: QueryCtx | MutationCtx,
+  branchId: Id<"branches">
+): Promise<Viewer> {
+  const viewer = await assertStaff(ctx);
+  if (isAdminRole(viewer.role)) return viewer;
+  if (isManagerRole(viewer.role) && viewer.branchId === branchId) return viewer;
+  throw new Error("This branch is outside your access.");
+}
+
+/**
+ * Guard for managing a staff account. `target` is the account being changed.
+ *
+ * - Head Office: any account except the protected admin roles (enforced by the
+ *   caller-specific rules in users.assignBranch).
+ * - Manager: only accounts already inside their own branch, and only for
+ *   non-admin targets — so a manager can hire/rotate their own team but can
+ *   never touch another branch or escalate themselves.
+ *
+ * `target.branchId` of null means the account has not been placed in a branch
+ * yet; a manager may claim such an account into their own branch.
+ */
+export function assertCanManageStaffAccount(
+  viewer: Viewer,
+  target: { role?: string | null; position?: string | null; branchId?: Id<"branches"> | null }
+): void {
+  if (isAdminRole(viewer.role)) return;
+
+  if (!isManagerRole(viewer.role)) {
+    throw new Error("Only a Branch Manager or Head Office can manage staff accounts.");
+  }
+  if (!viewer.branchId) {
+    throw new Error("You are not assigned to a branch, so you cannot manage staff.");
+  }
+  // Never let a manager touch an admin account, or an account in another branch.
+  const targetRole = target.role ?? null;
+  if (targetRole === "super_admin" || targetRole === "ceo") {
+    throw new Error("Only the Super Admin can manage a CEO or Super Admin account.");
+  }
+  if (target.branchId && target.branchId !== viewer.branchId) {
+    throw new Error("That staff member belongs to another branch.");
+  }
 }

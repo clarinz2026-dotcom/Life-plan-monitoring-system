@@ -32,9 +32,14 @@ import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useBranch } from "@/hooks/use-branch";
+import { BranchScopeSelector } from "@/components/BranchScopeSelector";
 
 const NAV_ITEMS = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
+  // Every staff account gets its own branch workspace. A Branch Manager uses it
+  // to run their branch (roster, settings); Head Office uses it to drill into
+  // whichever branch the scope selector points at.
+  { to: "/my-branch", icon: Building2, label: "My Branch", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
   { to: "/clients", icon: Users, label: "Clients", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
   { to: "/contracts", icon: FileText, label: "Contracts", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
   { to: "/payments", icon: CreditCard, label: "Payments", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
@@ -68,7 +73,7 @@ const STAFF_ROLES = ["super_admin", "ceo", "manager", "finance_staff", "cashier"
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const superAdminData = useQuery(api.users.hasSuperAdmin);
-  const { branchId, isBranchStaff } = useBranch();
+  const { branchId, isBranchStaff, isCeoOrAdmin, isAllBranches } = useBranch();
 
   // The signed-in user document, not `hasRole`, is the authority for the role.
   // `hasRole` can still serve the signed-out shape (role: null) for a beat after
@@ -81,6 +86,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     api.branches.get,
     isBranchStaff && branchId ? { branchId } : "skip"
   );
+
+  // Name of the branch Head Office has selected (skipped entirely for branch
+  // staff, who only ever see their own branch).
+  const scopeBranch = useQuery(
+    api.branches.get,
+    isCeoOrAdmin && branchId ? { branchId } : "skip"
+  );
+
+  // What the header says the app is currently showing. Head Office either sees
+  // the company-wide roll-up or the one branch it selected; branch staff always
+  // see their own branch, because that is all the server will return them.
+  const scopeLabel = isCeoOrAdmin
+    ? branchId
+      ? scopeBranch?.name ?? "Loading…"
+      : "All Branches"
+    : userBranch?.name ?? "Your branch";
   const navigate = useNavigate();
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
@@ -281,12 +302,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <BrandLogo className="h-8 w-8 rounded-[9px] ring-1 ring-white/15" />
           <div>
             <span className="text-[13px] font-bold uppercase tracking-[0.12em] text-white">Evangelist</span>
-            {isBranchStaff && userBranch && (
-              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/70 ring-1 ring-white/10">
-                <Building2 className="h-2.5 w-2.5" />
-                {userBranch.name}
+            <span className="ml-2 inline-flex max-w-[150px] items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/70 ring-1 ring-white/10">
+              <Building2 className="h-2.5 w-2.5 shrink-0" />
+              <span className="truncate">
+                {isCeoOrAdmin ? scopeLabel : userBranch?.name ?? "Your branch"}
               </span>
-            )}
+            </span>
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -334,6 +355,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     {user?.name || user?.email || "User"}
                   </p>
                   <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gold-soft">{roleLabel}</p>
+                  <p className="mt-1 text-[11.5px] text-white/60">
+                    {isCeoOrAdmin ? "Scope: " : "Branch: "}
+                    <span className="text-white/85">{scopeLabel}</span>
+                  </p>
+                  {isCeoOrAdmin && (
+                    <div className="mt-2.5">
+                      <BranchScopeSelector tone="chrome" className="w-full justify-between" />
+                    </div>
+                  )}
                 </div>
                 <button
                   onClick={() => setDarkMode(!darkMode)}
@@ -358,6 +388,43 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
         <div className="md:hidden h-[60px]" />
+
+        {/*
+         * Scope bar. States plainly which branch the pages below are showing —
+         * "All Branches" with the selector for Head Office, or the branch a
+         * staff account is locked to. Branch staff get no selector because
+         * their scope is fixed by their account, not by a choice.
+         */}
+        {canRenderPage && (
+          <header className="sticky top-0 z-40 hidden items-center justify-between gap-4 border-b border-line bg-paper/95 px-5 py-3 backdrop-blur md:flex lg:px-8">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <div
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                  isCeoOrAdmin && !branchId
+                    ? "bg-evergreen/10 text-evergreen"
+                    : "bg-gold/15 text-gold"
+                }`}
+              >
+                <Building2 className="h-4 w-4" />
+              </div>
+              <div className="flex min-w-0 flex-col leading-tight">
+                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone">
+                  {isCeoOrAdmin ? "Viewing" : "Your branch"}
+                </span>
+                <span className="truncate text-[14px] font-semibold text-evergreen">
+                  {scopeLabel}
+                </span>
+              </div>
+              {!isCeoOrAdmin && (
+                <span className="ml-1 hidden shrink-0 rounded-full bg-evergreen/8 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-evergreen ring-1 ring-evergreen/15 lg:inline">
+                  Locked scope
+                </span>
+              )}
+            </div>
+            <BranchScopeSelector />
+          </header>
+        )}
+
         <main className="mx-auto w-full max-w-[1500px] flex-1 pb-20 md:pb-0">
           {canRenderPage ? children : null}
         </main>

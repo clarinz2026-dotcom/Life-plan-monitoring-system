@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { useState } from "react";
+import { useBranch } from "@/hooks/use-branch";
 
 const ACTION_COLORS: Record<string, string> = {
   create: "terminal-status-current",
@@ -37,8 +38,14 @@ const ENTITY_ICONS: Record<string, typeof Users> = {
 
 export default function AuditLog() {
   const [limit, setLimit] = useState(50);
-  
-  const logs = useQuery(api.audit.list, { limit });
+  // Head Office's branch scope narrows the trail; branch staff are always
+  // narrowed to their own branch by the server.
+  const { queryBranchId, isCeoOrAdmin } = useBranch();
+
+  const logs = useQuery(api.audit.list, {
+    limit,
+    branchId: queryBranchId,
+  });
 
   if (!logs) {
     return (
@@ -55,7 +62,10 @@ export default function AuditLog() {
         <div>
           <h1 className="text-3xl font-bold">Audit Log</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {logs.length} entries
+            {logs.length} entries ·{" "}
+            {isCeoOrAdmin && !queryBranchId
+              ? "all branches"
+              : "this branch"}
           </p>
         </div>
         <Button

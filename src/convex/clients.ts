@@ -8,6 +8,7 @@ import {
   assertStaff,
   getViewer,
   isAdminRole,
+  isManagerRole,
   resolveBranchFilter,
 } from "./access";
 import { effectiveRole } from "./roles";
@@ -51,10 +52,13 @@ export const list = query({
   args: {
     search: v.optional(v.string()),
     branchId: v.optional(v.id("branches")),
+    /** Include archived (soft-deleted) planholders. Off by default. */
+    includeArchived: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const search = args.search?.toLowerCase().trim();
     const branchId = await resolveBranchFilter(ctx, args.branchId);
+    const includeArchived = args.includeArchived ?? false;
 
     let clients;
     if (branchId) {
@@ -92,7 +96,9 @@ export const list = query({
       );
     }
 
-    return clients;
+    // Archived planholders keep every contract, payment and receipt — they are
+    // hidden from the working lists, not deleted.
+    return includeArchived ? clients : clients.filter((c) => !c.archivedAt);
   },
 });
 
@@ -207,11 +213,16 @@ export const update = mutation({
 });
 
 /**
- * Permanently delete multiple clients and everything attached to them:
- * contracts, payments, receipts, payment schedules, death claims, and
- * notifications. Audit logs are kept for history.
+ * Permanently delete planholders that have NO financial history.
  *
- * Restricted to Super Admin, CEO, and Manager.
+ * This is the escape hatch for genuinely mistaken records (a duplicate typed
+ * into the wrong branch). Once a planholder has taken a payment, deletion is
+ * refused and the caller must archive instead: payments, receipts and SOAs are
+ * the company's financial record and the branch's collection history, and
+ * permanently removing them would silently rewrite past reports and the
+ * cashier's reconciliations.
+ *
+ * Head Office only — a Branch Manager can archive, but never erase.
  */
 export const bulkDelete = mutation({
   args: {
@@ -223,12 +234,10 @@ export const bulkDelete = mutation({
 
     const user = await ctx.db.get(userId);
     const viewerRole = effectiveRole(user);
-    if (
-      viewerRole !== "super_admin" &&
-      viewerRole !== "ceo" &&
-      viewerRole !== "manager"
-    ) {
-      throw new Error("Only the Super Admin, CEO, or Manager can delete clients.");
+    if (viewerRole !== "super_admin" && viewerRole !== "ceo") {
+      throw new Error(
+        "Only the Super Admin or CEO can permanently delete a planholder. Use Archive to remove a record from the working lists."
+      );
     }
 
     if (args.clientIds.length === 0) return { deleted: 0, names: [] as string[] };
@@ -242,6 +251,34 @@ export const bulkDelete = mutation({
       if (!client) continue;
       // Branch staff may only delete clients from their own branch.
       await assertCanAccessRecord(ctx, client.branchId);
+
+      // Refuse to erase financial history.
+      const contractsForGuard = await ctx.db
+        .query("contracts")
+        .withIndex("by_client", (q) => q.eq("clientId", clientId))
+        .collect();
+      let paymentCount = 0;
+      for (const c of contractsForGuard) {
+        paymentCount += (
+          await ctx.db
+            .query("payments")
+            .withIndex("by_contract", (q) => q.eq("contractId", c._id))
+            .collect()
+        ).length;
+      }
+      const receiptCount = (
+        await ctx.db
+          .query("receipts")
+          .withIndex("by_client", (q) => q.eq("clientId", clientId))
+          .collect()
+      ).length;
+
+      if (paymentCount > 0 || receiptCount > 0) {
+        throw new Error(
+          `${client.lastName}, ${client.firstName} has ${paymentCount} recorded payment(s) and ${receiptCount} receipt(s). Financial history is never deleted — archive this planholder instead.`
+        );
+      }
+
       deletedNames.push(`${client.lastName}, ${client.firstName}`);
 
       // All contracts for this client → their payments and schedules
@@ -312,15 +349,129 @@ export const bulkDelete = mutation({
 });
 
 /**
+ * Archive planholders (soft delete).
+ *
+ * Nothing is removed: the record, its contracts, payments, receipts and audit
+ * trail all stay exactly as they are, and the planholder simply drops out of
+ * the working lists. Head Office or a Branch Manager can archive; a branch can
+ * only archive its own planholders.
+ */
+export const archive = mutation({
+  args: {
+    clientIds: v.array(v.id("clients")),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await assertStaff(ctx);
+    if (!isAdminRole(viewer.role) && !isManagerRole(viewer.role)) {
+      throw new Error(
+        "Only a Branch Manager or Head Office can archive a planholder."
+      );
+    }
+    if (args.clientIds.length === 0) return { archived: 0, names: [] as string[] };
+
+    const actor = await ctx.db.get(viewer.userId);
+    const names: string[] = [];
+    let touchedBranch: Id<"branches"> | undefined;
+
+    for (const clientId of args.clientIds) {
+      const client = await ctx.db.get(clientId);
+      if (!client) continue;
+      // Branch isolation applies to archiving too.
+      await assertCanAccessRecord(ctx, client.branchId);
+      if (client.archivedAt) continue;
+
+      await ctx.db.patch(clientId, {
+        archivedAt: Date.now(),
+        archivedBy: viewer.userId,
+        archiveReason: args.reason,
+      });
+      names.push(`${client.lastName}, ${client.firstName}`);
+      touchedBranch = touchedBranch ?? client.branchId ?? undefined;
+    }
+
+    if (names.length > 0) {
+      await ctx.db.insert("audit_log", {
+        action: "delete", // "removed from the working lists"
+        entityType: "client",
+        entityId: args.clientIds.map(String).join(","),
+        userId: viewer.userId,
+        userName: actor?.name ?? actor?.email ?? "Unknown",
+        description: `Archived ${names.length} planholder(s): ${names.join(", ")}${args.reason ? ` — ${args.reason}` : ""}`,
+        newValues: { archived: names, reason: args.reason ?? null },
+        branchId: touchedBranch,
+        timestamp: Date.now(),
+      });
+    }
+
+    return { archived: names.length, names };
+  },
+});
+
+/**
+ * Restore archived planholders. The inverse of `archive`, with the same scope
+ * rules, so an archived record is never stranded.
+ */
+export const restore = mutation({
+  args: { clientIds: v.array(v.id("clients")) },
+  handler: async (ctx, args) => {
+    const viewer = await assertStaff(ctx);
+    if (!isAdminRole(viewer.role) && !isManagerRole(viewer.role)) {
+      throw new Error(
+        "Only a Branch Manager or Head Office can restore a planholder."
+      );
+    }
+    if (args.clientIds.length === 0) return { restored: 0, names: [] as string[] };
+
+    const actor = await ctx.db.get(viewer.userId);
+    const names: string[] = [];
+    let touchedBranch: Id<"branches"> | undefined;
+
+    for (const clientId of args.clientIds) {
+      const client = await ctx.db.get(clientId);
+      if (!client) continue;
+      await assertCanAccessRecord(ctx, client.branchId);
+      if (!client.archivedAt) continue;
+
+      await ctx.db.patch(clientId, {
+        archivedAt: undefined,
+        archivedBy: undefined,
+        archiveReason: undefined,
+      });
+      names.push(`${client.lastName}, ${client.firstName}`);
+      touchedBranch = touchedBranch ?? client.branchId ?? undefined;
+    }
+
+    if (names.length > 0) {
+      await ctx.db.insert("audit_log", {
+        action: "status_change",
+        entityType: "client",
+        entityId: args.clientIds.map(String).join(","),
+        userId: viewer.userId,
+        userName: actor?.name ?? actor?.email ?? "Unknown",
+        description: `Restored ${names.length} archived planholder(s): ${names.join(", ")}`,
+        newValues: { restored: names },
+        branchId: touchedBranch,
+        timestamp: Date.now(),
+      });
+    }
+
+    return { restored: names.length, names };
+  },
+});
+
+/**
  * List clients with computed delinquency status based on actual payment dates.
  * Returns each client with their active contract and computed status.
  */
 export const listWithStatus = query({
   args: {
     branchId: v.optional(v.id("branches")),
+    includeArchived: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const branchId = await resolveBranchFilter(ctx, args.branchId);
+    const includeArchived = args.includeArchived ?? false;
     let clients;
     if (branchId) {
       clients = await ctx.db
@@ -335,6 +486,8 @@ export const listWithStatus = query({
         .order("desc")
         .collect();
     }
+
+    if (!includeArchived) clients = clients.filter((c) => !c.archivedAt);
 
     const now = Date.now();
     const results = [];

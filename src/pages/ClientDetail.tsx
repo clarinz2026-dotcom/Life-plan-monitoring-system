@@ -14,6 +14,9 @@ import {
   Pencil,
   Save,
   Loader2,
+  ArrowRightLeft,
+  Building2,
+  Archive,
 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
@@ -27,6 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useBranch } from "@/hooks/use-branch";
 
 const STATUS_COLORS: Record<string, string> = {
   current: "terminal-status-current",
@@ -84,6 +88,21 @@ export default function ClientDetail() {
     client?.branchId ? { branchId: client.branchId } : "skip"
   );
   const settings = useQuery(api.settings.get);
+
+  // Branch transfer (Head Office only). The branch list is staff-only, so it is
+  // skipped for accounts that cannot transfer.
+  const { isCeoOrAdmin } = useBranch();
+  const allBranches = useQuery(api.branches.list, isCeoOrAdmin ? {} : "skip");
+  const transferHistory = useQuery(api.branches.transferHistory, {
+    clientId: clientId as any,
+  });
+  const transferClient = useMutation(api.branches.transferClient);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferring, setTransferring] = useState(false);
+  const [transferForm, setTransferForm] = useState({
+    toBranchId: "",
+    reason: "",
+  });
 
   const updateClient = useMutation(api.clients.update);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -352,10 +371,24 @@ export default function ClientDetail() {
         </Button>
         <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight">{fullName}</h1>
-          <p className="text-xs text-muted-foreground">
-            {[client.contactNumber, [client.city, client.province].filter(Boolean).join(", ")]
-              .filter(Boolean)
-              .join(" · ") || "—"}
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+            <span>
+              {[client.contactNumber, [client.city, client.province].filter(Boolean).join(", ")]
+                .filter(Boolean)
+                .join(" · ") || "—"}
+            </span>
+            {/* Which branch owns this planholder is the first thing to know
+                when a record looks missing from a filtered list. */}
+            <span className="inline-flex items-center gap-1 rounded-full bg-evergreen/8 px-2 py-0.5 text-[11px] font-medium text-evergreen ring-1 ring-evergreen/15">
+              <Building2 className="h-3 w-3" />
+              {branch ? `${branch.name} (${branch.code})` : "No branch assigned"}
+            </span>
+            {client.archivedAt && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-terminal-amber/12 px-2 py-0.5 text-[11px] font-medium text-terminal-amber ring-1 ring-terminal-amber/25">
+                <Archive className="h-3 w-3" />
+                Archived
+              </span>
+            )}
           </p>
           {client.notes && (
             <p className="text-[10px] text-muted-foreground/80 break-words">
@@ -364,6 +397,21 @@ export default function ClientDetail() {
           )}
         </div>
         <div className="flex items-center gap-2">
+          {isCeoOrAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => {
+                setTransferForm({ toBranchId: "", reason: "" });
+                setTransferOpen(true);
+              }}
+              title="Move this planholder to another branch"
+            >
+              <ArrowRightLeft className="h-4 w-4" />
+              Transfer
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -832,6 +880,148 @@ export default function ClientDetail() {
             </table>
           </CardContent>
         </Card>
+      )}
+
+      {/*
+       * Branch transfer trail. Each move is recorded permanently; a planholder
+       * who relocates keeps a readable history and their old payments stay with
+       * the branch that actually collected them.
+       */}
+      {transferHistory && transferHistory.length > 0 && (
+        <Card className="border-border/60 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2.5">
+              <ArrowRightLeft className="h-5 w-5 text-muted-foreground" />
+              Branch transfer history
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {transferHistory.map((t) => (
+              <div
+                key={t._id}
+                className="rounded-xl border border-line bg-paper px-4 py-3"
+              >
+                <div className="flex flex-wrap items-center gap-2 text-[13.5px]">
+                  <span className="font-medium text-ink">
+                    {t.fromBranchName || "Unassigned"}
+                  </span>
+                  <ArrowRightLeft className="h-3.5 w-3.5 text-stone" />
+                  <span className="font-medium text-evergreen">
+                    {t.toBranchName}
+                  </span>
+                  <span className="ml-auto text-[12px] text-stone">
+                    {new Date(t.createdAt).toLocaleDateString("en-PH", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                </div>
+                {t.reason && (
+                  <p className="mt-1 text-[12.5px] text-stone">{t.reason}</p>
+                )}
+                <p className="mt-1 text-[12px] text-stone">
+                  {t.movedContracts} contract(s) moved · {t.retainedPayments}{" "}
+                  payment(s) kept with the recording branch
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Transfer dialog — Head Office only */}
+      {isCeoOrAdmin && (
+        <Dialog open={transferOpen} onOpenChange={setTransferOpen}>
+          <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto mx-2 sm:mx-0">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold">
+                Transfer {fullName} to another branch
+              </DialogTitle>
+            </DialogHeader>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!transferForm.toBranchId) return;
+                setTransferring(true);
+                try {
+                  const result = await transferClient({
+                    clientId: client._id,
+                    toBranchId: transferForm.toBranchId as any,
+                    reason: transferForm.reason.trim() || undefined,
+                  });
+                  toast.success(
+                    "Transferred. " +
+                      result.movedContracts +
+                      " contract(s) moved; " +
+                      result.retainedPayments +
+                      " payment(s) kept with the branch that recorded them."
+                  );
+                  setTransferOpen(false);
+                  setTransferForm({ toBranchId: "", reason: "" });
+                } catch (err: any) {
+                  toast.error(
+                    err?.message || "Could not transfer this planholder."
+                  );
+                } finally {
+                  setTransferring(false);
+                }
+              }}
+              className="space-y-4 mt-3"
+            >
+              <p className="rounded-xl border border-line bg-cream/60 px-3.5 py-3 text-[12.5px] leading-relaxed text-stone">
+                The planholder and their live contracts move to the receiving
+                branch. Payments and receipts stay under the branch that
+                recorded them, so neither branch&apos;s historical collections,
+                reports, or reconciliations change.
+              </p>
+              <div>
+                <Label className="text-[14px]">Receiving branch *</Label>
+                <select
+                  value={transferForm.toBranchId}
+                  onChange={(e) =>
+                    setTransferForm({
+                      ...transferForm,
+                      toBranchId: e.target.value,
+                    })
+                  }
+                  className="h-11 w-full rounded-md border border-border bg-background px-3 text-base"
+                  required
+                >
+                  <option value="">Select branch…</option>
+                  {allBranches
+                    ?.filter((b) => b.isActive && b._id !== client.branchId)
+                    .map((b) => (
+                      <option key={b._id} value={b._id}>
+                        {b.name} ({b.code})
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <Label className="text-[14px]">Reason (optional)</Label>
+                <Input
+                  value={transferForm.reason}
+                  onChange={(e) =>
+                    setTransferForm({
+                      ...transferForm,
+                      reason: e.target.value,
+                    })
+                  }
+                  placeholder="e.g. planholder relocated"
+                  className="h-11 text-base"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={transferring}
+                className="w-full h-12 text-[15px] font-semibold"
+              >
+                {transferring ? "Transferring…" : "Transfer planholder"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

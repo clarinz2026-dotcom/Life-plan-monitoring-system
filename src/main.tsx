@@ -2,6 +2,7 @@ import "@vly-ai/integrations";
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
 import AppLayout from "@/components/AppLayout";
+import { BranchScopeProvider } from "@/hooks/use-branch";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
@@ -78,6 +79,7 @@ function lazyRoute<T extends React.ComponentType<any>>(
 
 const AuthPage = lazyRoute("Auth", () => import("./pages/Auth.tsx"));
 const Dashboard = lazyRoute("Dashboard", () => import("./pages/Dashboard.tsx"));
+const MyBranch = lazyRoute("MyBranch", () => import("./pages/MyBranch.tsx"));
 const Clients = lazyRoute("Clients", () => import("./pages/Clients.tsx"));
 const ClientDetail = lazyRoute("ClientDetail", () => import("./pages/ClientDetail.tsx"));
 const Contracts = lazyRoute("Contracts", () => import("./pages/Contracts.tsx"));
@@ -222,11 +224,19 @@ function RouteSyncer() {
   return null;
 }
 
-/** Wrapper that adds AppLayout around protected page content */
+/**
+ * Wrapper that adds AppLayout around protected page content.
+ *
+ * `BranchScopeProvider` sits outside AppLayout so the shell itself (the
+ * header's `[ ALL BRANCHES ▼ ]` control) and every page inside it read the same
+ * Head Office branch scope.
+ */
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return (
     <RequireAuth>
-      <AppLayout>{children}</AppLayout>
+      <BranchScopeProvider>
+        <AppLayout>{children}</AppLayout>
+      </BranchScopeProvider>
     </RequireAuth>
   );
 }
@@ -251,6 +261,14 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <ProtectedRoute>
                     <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/my-branch"
+                element={
+                  <ProtectedRoute>
+                    <MyBranch />
                   </ProtectedRoute>
                 }
               />

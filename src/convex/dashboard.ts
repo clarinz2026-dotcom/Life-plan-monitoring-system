@@ -1,6 +1,13 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { resolveBranchFilter } from "./access";
+import {
+  MS_PER_DAY,
+  lastManilaDays,
+  manilaDayStart,
+  manilaMonthStart,
+  manilaWeekdayLabel,
+} from "./datetime";
 
 /**
  * Dashboard summary stats — optionally filtered by branchId.
@@ -25,11 +32,9 @@ export const summary = query({
     }
     const totalClients = clients.length;
 
-    const monthStart = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth(),
-      1
-    ).getTime();
+    // Manila boundaries, not the server's (UTC) clock. "This month" and
+    // "today" must match the days the branches actually operate on.
+    const monthStart = manilaMonthStart();
     const newClientsThisMonth = clients.filter(
       (c) => c.createdAt >= monthStart
     ).length;
@@ -75,16 +80,21 @@ export const summary = query({
     const totalPayments = payments.length;
     const totalPaymentAmount = payments.reduce((sum, p) => sum + p.amount, 0);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStart = today.getTime();
-    const todayPayments = payments.filter((p) => p.paymentDate >= todayStart);
+    // Manila day boundary — previously this was the server's local midnight,
+    // which is 08:00 in the Philippines, so early-morning collections were
+    // attributed to the previous day and disagreed with the cashier's
+    // reconciliation sheet.
+    const todayStart = manilaDayStart();
+    const tomorrowStart = todayStart + MS_PER_DAY;
+    const todayPayments = payments.filter(
+      (p) => p.paymentDate >= todayStart && p.paymentDate < tomorrowStart
+    );
     const todayAmount = todayPayments.reduce((sum, p) => sum + p.amount, 0);
 
     const monthPayments = payments.filter((p) => p.paymentDate >= monthStart);
     const monthAmount = monthPayments.reduce((sum, p) => sum + p.amount, 0);
 
-    const yesterdayStart = todayStart - 24 * 60 * 60 * 1000;
+    const yesterdayStart = todayStart - MS_PER_DAY;
     const yesterdayAmount = payments
       .filter((p) => p.paymentDate >= yesterdayStart && p.paymentDate < todayStart)
       .reduce((sum, p) => sum + p.amount, 0);
@@ -128,44 +138,29 @@ export const weeklyTrend = query({
   handler: async (ctx, args) => {
     const branchId = await resolveBranchFilter(ctx, args.branchId);
 
-    // Only the last 7 days matter — read that slice through the date index
-    // instead of scanning every payment ever recorded.
-    const now = new Date();
-    const windowStart = new Date(now);
-    windowStart.setDate(now.getDate() - 6);
-    windowStart.setHours(0, 0, 0, 0);
+    // Only the last 7 Manila days matter — read that slice through the date
+    // index instead of scanning every payment ever recorded.
+    const dayStarts = lastManilaDays(7);
 
     let payments = await ctx.db
       .query("payments")
-      .withIndex("by_paymentDate", (q) =>
-        q.gte("paymentDate", windowStart.getTime())
-      )
+      .withIndex("by_paymentDate", (q) => q.gte("paymentDate", dayStarts[0]))
       .collect();
     if (branchId) {
       payments = payments.filter((p) => p.branchId === branchId);
     }
 
-    const days: Array<{ label: string; amount: number; count: number }> = [];
-
-    for (let i = 6; i >= 0; i--) {
-      const dayStart = new Date(now);
-      dayStart.setDate(now.getDate() - i);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(dayStart);
-      dayEnd.setDate(dayStart.getDate() + 1);
-
+    return dayStarts.map((dayStart) => {
+      const dayEnd = dayStart + MS_PER_DAY;
       const dayPayments = payments.filter(
-        (p) => p.paymentDate >= dayStart.getTime() && p.paymentDate < dayEnd.getTime()
+        (p) => p.paymentDate >= dayStart && p.paymentDate < dayEnd
       );
-
-      days.push({
-        label: dayStart.toLocaleDateString("en-US", { weekday: "short" }),
+      return {
+        label: manilaWeekdayLabel(dayStart),
         amount: dayPayments.reduce((sum, p) => sum + p.amount, 0),
         count: dayPayments.length,
-      });
-    }
-
-    return days;
+      };
+    });
   },
 });
 

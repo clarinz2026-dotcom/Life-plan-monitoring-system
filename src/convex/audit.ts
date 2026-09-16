@@ -1,7 +1,26 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { assertStaff } from "./access";
+import { assertStaff, isAdminRole, resolveBranchFilter } from "./access";
+import type { Id } from "./_generated/dataModel";
+
+/**
+ * Audit trail scoping.
+ *
+ * The trail is evidence, so it is append-only for everyone and readable only
+ * by office staff. Branch staff see entries for their own branch (plus rows
+ * written before branching existed, which carry no branch — those must remain
+ * visible or a branch would lose its own history). Head Office sees every
+ * branch, optionally narrowed to one.
+ */
+function scopeLogs<T extends { branchId?: Id<"branches"> }>(
+  logs: T[],
+  viewerBranchId: Id<"branches"> | null | undefined,
+  isAdmin: boolean
+): T[] {
+  if (isAdmin) return logs;
+  return logs.filter((l) => !l.branchId || l.branchId === viewerBranchId);
+}
 
 /**
  * Log an audit event.
@@ -24,6 +43,9 @@ export const log = mutation({
     description: v.string(),
     oldValues: v.optional(v.any()),
     newValues: v.optional(v.any()),
+    /** Branch the action belongs to. Ignored for branch staff, who are always
+     *  stamped with their own branch. */
+    branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -31,10 +53,15 @@ export const log = mutation({
 
     // Audit entries are evidence — only staff may append to the trail, so a
     // planholder account cannot forge entries attributed to other users.
-    await assertStaff(ctx);
+    const viewer = await assertStaff(ctx);
 
     const user = await ctx.db.get(userId);
     const userName = user?.name || user?.email || "Unknown";
+
+    // The authenticated account decides the branch, never the submitted value.
+    const branchId = isAdminRole(viewer.role)
+      ? args.branchId ?? viewer.branchId ?? undefined
+      : viewer.branchId ?? undefined;
 
     return await ctx.db.insert("audit_log", {
       action: args.action,
@@ -45,6 +72,7 @@ export const log = mutation({
       description: args.description,
       oldValues: args.oldValues,
       newValues: args.newValues,
+      branchId,
       timestamp: Date.now(),
     });
   },
@@ -59,9 +87,23 @@ export const list = query({
     entityId: v.optional(v.string()),
     action: v.optional(v.string()),
     limit: v.optional(v.number()),
+    /** Head Office branch filter. Branch staff are forced to their own. */
+    branchId: v.optional(v.id("branches")),
   },
   handler: async (ctx, args) => {
-    await assertStaff(ctx);
+    const viewer = await assertStaff(ctx);
+    const isAdmin = isAdminRole(viewer.role);
+    // Head Office may narrow the trail to one branch; branch staff are always
+    // narrowed to their own.
+    const branchId = isAdmin
+      ? await resolveBranchFilter(ctx, args.branchId)
+      : viewer.branchId ?? undefined;
+
+    const limit = args.limit || 50;
+    // Branch filtering happens after the indexed read, so read a wider slice
+    // first — otherwise a busy company-wide trail could filter down to fewer
+    // than `limit` rows for a branch that is quiet.
+    const readCount = isAdmin && !branchId ? limit : limit * 3;
 
     let logs;
 
@@ -72,22 +114,26 @@ export const list = query({
           q.eq("entityType", args.entityType as any).eq("entityId", args.entityId!)
         )
         .order("desc")
-        .take(args.limit || 50);
+        .take(readCount);
     } else if (args.action) {
       logs = await ctx.db
         .query("audit_log")
         .withIndex("by_action", (q) => q.eq("action", args.action as any))
         .order("desc")
-        .take(args.limit || 50);
+        .take(readCount);
     } else {
       logs = await ctx.db
         .query("audit_log")
         .withIndex("by_timestamp")
         .order("desc")
-        .take(args.limit || 50);
+        .take(readCount);
     }
 
-    return logs;
+    if (isAdmin && branchId) {
+      logs = logs.filter((l) => l.branchId === branchId);
+    }
+
+    return scopeLogs(logs, viewer.branchId, isAdmin).slice(0, limit);
   },
 });
 
@@ -100,14 +146,16 @@ export const getEntityTrail = query({
     entityId: v.string(),
   },
   handler: async (ctx, args) => {
-    await assertStaff(ctx);
+    const viewer = await assertStaff(ctx);
 
-    return await ctx.db
+    const logs = await ctx.db
       .query("audit_log")
       .withIndex("by_entity", (q) =>
         q.eq("entityType", args.entityType as any).eq("entityId", args.entityId)
       )
       .order("desc")
       .collect();
+
+    return scopeLogs(logs, viewer.branchId, isAdminRole(viewer.role));
   },
 });

@@ -1,6 +1,16 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { resolveBranchFilter } from "./access";
+import {
+  MS_PER_DAY,
+  manilaDayOfMonth,
+  manilaDayStart,
+  manilaDaysInMonth,
+  manilaMonthLabel,
+  manilaMonthStart,
+  manilaMonthStartOffset,
+  manilaYearStart,
+} from "./datetime";
 
 /**
  * Collection summary by date range, optionally filtered by branch.
@@ -11,12 +21,13 @@ export const collectionSummary = query({
   },
   handler: async (ctx, args) => {
     const branchId = await resolveBranchFilter(ctx, args.branchId);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const weekAgo = today - 7 * 24 * 60 * 60 * 1000;
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
-    const yearStart = new Date(now.getFullYear(), 0, 1).getTime();
+    // All windows are Manila windows — the deployment's clock is UTC, so a
+    // report read at 7am Manila would otherwise still be showing yesterday.
+    const today = manilaDayStart();
+    const weekAgo = today - 7 * MS_PER_DAY;
+    const monthStart = manilaMonthStart();
+    const lastMonthStart = manilaMonthStartOffset(-1);
+    const yearStart = manilaYearStart();
 
     // Everything this query reports lives at or after the earliest window
     // (this year, or last month when we are in January), so read only that
@@ -30,8 +41,12 @@ export const collectionSummary = query({
       payments = payments.filter((p) => p.branchId === branchId);
     }
 
-    // Today
-    const todayPayments = payments.filter((p) => p.paymentDate >= today);
+    // Today (Manila), with an exclusive upper bound so tomorrow's date-stamped
+    // rows can never be pulled into today's total.
+    const todayEnd = today + MS_PER_DAY;
+    const todayPayments = payments.filter(
+      (p) => p.paymentDate >= today && p.paymentDate < todayEnd
+    );
     const todayAmount = todayPayments.reduce((sum, p) => sum + p.amount, 0);
 
     // This week
@@ -43,11 +58,7 @@ export const collectionSummary = query({
     const monthAmount = monthPayments.reduce((sum, p) => sum + p.amount, 0);
 
     // Last month (exclusive upper bound so the final day is fully counted)
-    const lastMonthEndExclusive = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      1
-    ).getTime();
+    const lastMonthEndExclusive = monthStart;
     const lastMonthPayments = payments.filter(
       (p) =>
         p.paymentDate >= lastMonthStart && p.paymentDate < lastMonthEndExclusive
@@ -77,8 +88,7 @@ export const byChannel = query({
   },
   handler: async (ctx, args) => {
     const branchId = await resolveBranchFilter(ctx, args.branchId);
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const monthStart = manilaMonthStart();
 
     // Read only this month's payments through the date index instead of
     // scanning the whole payments table on every report load.
@@ -156,11 +166,8 @@ export const dailyCollections = query({
   },
   handler: async (ctx, args) => {
     const branchId = await resolveBranchFilter(ctx, args.branchId);
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = now.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const monthStart = new Date(year, month, 1).getTime();
+    const monthStart = manilaMonthStart();
+    const daysInMonth = manilaDaysInMonth();
 
     // Read only this month's payments through the date index instead of
     // scanning the whole payments table on every report load.
@@ -176,8 +183,10 @@ export const dailyCollections = query({
     const daily: Array<{ day: number; amount: number; count: number }> = [];
 
     for (let d = 1; d <= daysInMonth; d++) {
-      const dayStart = new Date(year, month, d).getTime();
-      const dayEnd = new Date(year, month, d + 1).getTime();
+      // Manila day buckets, so a payment taken at 7am lands on the day the
+      // collector actually received it.
+      const dayStart = manilaDayOfMonth(d);
+      const dayEnd = manilaDayOfMonth(d + 1);
       const dayPayments = monthPayments.filter(
         (p) => p.paymentDate >= dayStart && p.paymentDate < dayEnd
       );
@@ -260,15 +269,12 @@ export const monthlyTrend = query({
   },
   handler: async (ctx, args) => {
     const branchId = await resolveBranchFilter(ctx, args.branchId);
-    const now = new Date();
     const months: Array<{ month: string; amount: number; count: number }> = [];
 
-    // Only the last 12 months are needed (index range), not the whole table.
-    const trendStart = new Date(
-      now.getFullYear(),
-      now.getMonth() - 11,
-      1
-    ).getTime();
+    // Only the last 12 Manila months are needed (index range), not the whole
+    // table. Month boundaries are Manila midnights so a year-to-date figure
+    // never disagrees with the branch dashboard.
+    const trendStart = manilaMonthStartOffset(-11);
     let allPayments = await ctx.db
       .query("payments")
       .withIndex("by_paymentDate", (q) => q.gte("paymentDate", trendStart))
@@ -278,18 +284,17 @@ export const monthlyTrend = query({
     }
 
     for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const monthStart = d.getTime();
+      const monthStart = manilaMonthStartOffset(-i);
       // Exclusive upper bound — the old value stopped at 00:00 of the last day,
       // silently dropping that day's later payments.
-      const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1).getTime();
+      const monthEnd = manilaMonthStartOffset(-i + 1);
 
       const monthPayments = allPayments.filter(
         (p) => p.paymentDate >= monthStart && p.paymentDate < monthEnd
       );
 
       months.push({
-        month: d.toLocaleDateString("en-PH", { year: "numeric", month: "short" }),
+        month: manilaMonthLabel(monthStart),
         amount: monthPayments.reduce((sum, p) => sum + p.amount, 0),
         count: monthPayments.length,
       });

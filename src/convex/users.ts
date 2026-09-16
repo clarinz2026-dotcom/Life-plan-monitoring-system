@@ -2,7 +2,13 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { roleValidator } from "./schema";
 import { effectiveRole, roleFromPosition } from "./roles";
-import { isAdminRole } from "./access";
+import {
+  assertCanManageStaffAccount,
+  assertStaff,
+  getViewer,
+  isAdminRole,
+  isManagerRole,
+} from "./access";
 import { mutation, query, QueryCtx } from "./_generated/server";
 
 /**
@@ -306,7 +312,15 @@ export const getCurrentUser = async (ctx: QueryCtx) => {
 };
 
 /**
- * Assign a user to a branch with a position (CEO/Super Admin only).
+ * Assign a user to a branch with a position.
+ *
+ * Head Office may place anyone in any branch. A Branch Manager may staff their
+ * OWN branch only — they can bring in an unassigned account or rotate a
+ * position inside their team, and can never move anybody into or out of another
+ * branch, touch a CEO/Super Admin, or change their own branch assignment.
+ *
+ * The branch is always re-derived from the authenticated account on the server;
+ * a branchId submitted by the browser is validated, never trusted.
  */
 export const assignBranch = mutation({
   args: {
@@ -319,16 +333,46 @@ export const assignBranch = mutation({
     )),
   },
   handler: async (ctx, args) => {
-    const currentUserId = await getAuthUserId(ctx);
-    if (!currentUserId) throw new Error("Not authenticated");
+    const viewer = await getViewer(ctx);
+    if (!viewer) throw new Error("Not authenticated");
+    const currentUserId = viewer.userId;
     const currentUserDoc = await ctx.db.get(currentUserId);
-    const viewerRole = currentUserDoc?.role;
-    if (viewerRole !== "super_admin" && viewerRole !== "ceo") {
-      throw new Error("Only the Super Admin or CEO can assign branches.");
+    const viewerRole = viewer.role;
+    const viewerIsAdmin = isAdminRole(viewerRole);
+
+    if (!viewerIsAdmin && !isManagerRole(viewerRole)) {
+      throw new Error(
+        "Only the Super Admin, CEO, or a Branch Manager can assign branches."
+      );
     }
 
     const targetUser = await ctx.db.get(args.userId);
     if (!targetUser) throw new Error("User not found.");
+
+    if (!viewerIsAdmin) {
+      // Manager path — scope enforced here and re-checked below.
+      assertCanManageStaffAccount(viewer, targetUser);
+      if (args.userId === currentUserId) {
+        throw new Error("You cannot change your own branch assignment.");
+      }
+      if (!viewer.branchId) {
+        throw new Error("You are not assigned to a branch yet.");
+      }
+      if (args.branchId !== viewer.branchId) {
+        throw new Error(
+          "You can only add staff to your own branch."
+        );
+      }
+    }
+
+    // A branch assignment must point at a real, active branch.
+    if (args.branchId !== undefined) {
+      const branch = await ctx.db.get(args.branchId);
+      if (!branch) throw new Error("Branch not found.");
+      if (!branch.isActive) {
+        throw new Error(`"${branch.name}" is inactive, so staff cannot be assigned to it.`);
+      }
+    }
 
     const oldBranchId = targetUser.branchId;
     const oldPosition = targetUser.position;
@@ -363,10 +407,95 @@ export const assignBranch = mutation({
       description: `Branch & position assigned for ${targetUser.name ?? targetUser.email}: ${args.branchId ?? "no branch"} / ${positionLabel} (by ${viewerRole})`,
       oldValues: { branchId: oldBranchId ?? null, position: oldPosition ?? null },
       newValues: { branchId: args.branchId ?? null, position: args.position ?? null },
+      // A staff change belongs to the branch it affects, so the trail shows up
+      // in that branch's history (Head Office sees every branch's).
+      branchId: args.branchId ?? oldBranchId ?? undefined,
       timestamp: Date.now(),
     });
 
     return { success: true };
+  },
+});
+
+/**
+ * The staff roster of one branch.
+ *
+ * Head Office may pass any branch; branch staff always get their own (the
+ * requested value is ignored). This is what the Branch Manager's "My Branch"
+ * page lists, and it deliberately exposes no other branch's people.
+ */
+export const branchTeam = query({
+  args: {
+    branchId: v.optional(v.id("branches")),
+  },
+  handler: async (ctx, args) => {
+    const viewer = await assertStaff(ctx);
+
+    const branchId = isAdminRole(viewer.role)
+      ? args.branchId ?? viewer.branchId ?? null
+      : viewer.branchId ?? null;
+
+    if (!branchId) {
+      if (isAdminRole(viewer.role)) {
+        // Head Office with no branch chosen: show nothing rather than everyone.
+        return [];
+      }
+      throw new Error("You are not assigned to a branch yet.");
+    }
+
+    const users = await ctx.db
+      .query("users")
+      .withIndex("by_branch", (q) => q.eq("branchId", branchId))
+      .collect();
+
+    const positionLabel = (p?: string | null) =>
+      p === "branch_manager"
+        ? "Branch Manager"
+        : p === "collector"
+          ? "Collector"
+          : p === "cashier"
+            ? "Cashier"
+            : null;
+
+    return users
+      .map((u) => ({
+        _id: u._id,
+        name: u.name ?? null,
+        email: u.email ?? null,
+        image: u.image ?? null,
+        role: effectiveRole(u),
+        position: u.position ?? null,
+        positionLabel: positionLabel(u.position),
+        isAnonymous: u.isAnonymous ?? false,
+        joinedAt: u._creationTime,
+      }))
+      .sort((a, b) => a.joinedAt - b.joinedAt);
+  },
+});
+
+/**
+ * Accounts that are signed in but not yet placed in a branch.
+ *
+ * Head Office uses this to staff a new branch; a Branch Manager uses it to
+ * claim one of their own new hires. Only the branch's manager gets this list,
+ * and only for accounts that hold no branch, so it can never reveal another
+ * branch's staff.
+ */
+export const unassignedStaff = query({
+  args: {},
+  handler: async (ctx) => {
+    const viewer = await assertStaff(ctx);
+    if (!isAdminRole(viewer.role) && !isManagerRole(viewer.role)) return [];
+
+    const users = await ctx.db.query("users").collect();
+    return users
+      .filter((u) => !u.branchId && !(u.isAnonymous ?? false))
+      .map((u) => ({
+        _id: u._id,
+        name: u.name ?? null,
+        email: u.email ?? null,
+        role: effectiveRole(u),
+      }));
   },
 });
 

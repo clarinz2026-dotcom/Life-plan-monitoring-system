@@ -39,6 +39,7 @@ import {
 import { ScrollableTable } from "@/components/ScrollableTable";
 import { toast } from "sonner";
 import { useBranch } from "@/hooks/use-branch";
+import { Archive, ArchiveRestore } from "lucide-react";
 
 const STATUS_LABELS: Record<string, string> = {
   current: "Current",
@@ -100,8 +101,13 @@ function getPageItems(
 }
 
 export default function Clients() {
-  const { queryBranchId, isBranchStaff } = useBranch();
-  const clientsWithStatus = useQuery(api.clients.listWithStatus, { branchId: queryBranchId });
+  const { queryBranchId, isBranchStaff, isCeoOrAdmin, isManager } = useBranch();
+  // Archived planholders are hidden unless explicitly asked for.
+  const [showArchived, setShowArchived] = useState(false);
+  const clientsWithStatus = useQuery(api.clients.listWithStatus, {
+    branchId: queryBranchId,
+    includeArchived: showArchived,
+  });
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -110,14 +116,20 @@ export default function Clients() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [archiveReason, setArchiveReason] = useState("");
+  const [isArchiving, setIsArchiving] = useState(false);
 
   const [page, setPage] = useState(0);
 
   useEffect(() => {
     setPage(0);
-  }, [search, statusFilter]);
+  }, [search, statusFilter, showArchived]);
 
   const bulkDelete = useMutation(api.clients.bulkDelete);
+  const archiveClients = useMutation(api.clients.archive);
+  const restoreClients = useMutation(api.clients.restore);
+  const canArchive = isCeoOrAdmin || isManager;
 
   const [form, setForm] = useState({
     firstName: "",
@@ -164,6 +176,43 @@ export default function Clients() {
       toast.error(error?.message || "Could not delete the selected clients.");
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    setIsArchiving(true);
+    try {
+      const result = await archiveClients({
+        clientIds: [...selectedIds] as any,
+        reason: archiveReason.trim() || undefined,
+      });
+      toast.success(
+        `Archived ${result.archived} planholder${result.archived !== 1 ? "s" : ""}. All payment, receipt, and SOA history is intact.`
+      );
+      setSelectedIds(new Set());
+      setArchiveDialogOpen(false);
+      setArchiveReason("");
+    } catch (error: any) {
+      toast.error(error?.message || "Could not archive the selected planholders.");
+    } finally {
+      setIsArchiving(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    setIsArchiving(true);
+    try {
+      const result = await restoreClients({
+        clientIds: [...selectedIds] as any,
+      });
+      toast.success(
+        `Restored ${result.restored} planholder${result.restored !== 1 ? "s" : ""}.`
+      );
+      setSelectedIds(new Set());
+    } catch (error: any) {
+      toast.error(error?.message || "Could not restore the selected planholders.");
+    } finally {
+      setIsArchiving(false);
     }
   };
 
@@ -460,14 +509,28 @@ export default function Clients() {
 
       {/* Search + Status filters */}
       <div className="space-y-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input
-            placeholder="Search by name or contact..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 text-base h-11"
-          />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative max-w-md flex-1 min-w-[240px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input
+              placeholder="Search by name or contact..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10 text-base h-11"
+            />
+          </div>
+          <Button
+            variant={showArchived ? "default" : "outline"}
+            size="sm"
+            className="h-11 gap-2 px-4 text-[13.5px]"
+            onClick={() => {
+              setShowArchived((v) => !v);
+              setSelectedIds(new Set());
+            }}
+          >
+            <Archive className="h-4 w-4" />
+            {showArchived ? "Showing archived" : "Show archived"}
+          </Button>
         </div>
 
         <div className="flex flex-wrap gap-2">
@@ -499,12 +562,17 @@ export default function Clients() {
         </div>
       </div>
 
-      {/* Bulk selection bar */}
+      {/*
+       * Bulk selection bar. Archiving is the normal way to take a planholder
+       * out of the working lists and is available to Head Office and Branch
+       * Managers. Permanent deletion is Head Office only and is refused by the
+       * server once a planholder has any payment recorded.
+       */}
       {selectedIds.size > 0 && (
-        <div className="flex flex-wrap items-center gap-4 rounded-lg border border-destructive/30 bg-destructive/5 px-5 py-3">
-          <div className="flex items-center gap-2 text-[15px] font-medium text-destructive">
-            <AlertTriangle className="h-5 w-5" />
-            {selectedIds.size} client{selectedIds.size !== 1 ? "s" : ""} selected
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-cream/60 px-5 py-3">
+          <div className="flex items-center gap-2 text-[15px] font-medium text-ink">
+            <AlertTriangle className="h-5 w-5 text-gold" />
+            {selectedIds.size} planholder{selectedIds.size !== 1 ? "s" : ""} selected
           </div>
           <div className="flex-1" />
           <Button
@@ -515,15 +583,47 @@ export default function Clients() {
           >
             Clear
           </Button>
-          <Button
-            variant="destructive"
-            size="default"
-            className="h-10 gap-2 text-[14px]"
-            onClick={() => setDeleteDialogOpen(true)}
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete ({selectedIds.size})
-          </Button>
+
+          {showArchived ? (
+            <Button
+              variant="default"
+              size="default"
+              className="h-10 gap-2 text-[14px]"
+              onClick={handleRestore}
+              disabled={isArchiving || !canArchive}
+            >
+              <ArchiveRestore className="h-4 w-4" />
+              Restore ({selectedIds.size})
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="default"
+              className="h-10 gap-2 text-[14px]"
+              onClick={() => setArchiveDialogOpen(true)}
+              disabled={!canArchive}
+              title={
+                canArchive
+                  ? "Remove from the working lists without deleting history"
+                  : "Only a Branch Manager or Head Office can archive"
+              }
+            >
+              <Archive className="h-4 w-4" />
+              Archive ({selectedIds.size})
+            </Button>
+          )}
+
+          {isCeoOrAdmin && !showArchived && (
+            <Button
+              variant="destructive"
+              size="default"
+              className="h-10 gap-2 text-[14px]"
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete ({selectedIds.size})
+            </Button>
+          )}
         </div>
       )}
 
@@ -600,8 +700,17 @@ export default function Clients() {
                         />
                       </TableCell>
                       <TableCell>
-                        <p className="font-medium text-[15px]">
+                        <p className="flex flex-wrap items-center gap-2 font-medium text-[15px]">
                           {client.lastName}, {client.firstName}
+                          {client.archivedAt ? (
+                            <Badge
+                              variant="secondary"
+                              className="gap-1 text-[11px]"
+                            >
+                              <Archive className="h-3 w-3" />
+                              Archived
+                            </Badge>
+                          ) : null}
                         </p>
                         {client.middleName && (
                           <p className="text-[13px] text-muted-foreground">
@@ -715,16 +824,18 @@ export default function Clients() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold">
-              Delete {selectedIds.size} Client{selectedIds.size !== 1 ? "s" : ""}?
+              Permanently delete {selectedIds.size} planholder
+              {selectedIds.size !== 1 ? "s" : ""}?
             </DialogTitle>
             <DialogDescription className="space-y-3">
               <p className="text-[15px]">
-                This permanently deletes the selected client records and their
-                attached data:
+                This permanently deletes the selected records and their
+                attached contracts, payments, receipts, and payment schedules.
               </p>
-              <p className="text-[13px]">
-                contracts · payments · receipts · payment schedules ·
-                death claims
+              <p className="rounded-lg border border-terminal-amber/30 bg-terminal-amber/10 px-3 py-2 text-[13px] text-ink">
+                Deletion is refused for any planholder with recorded payments or
+                receipts — a branch&apos;s collections and its historical
+                reports must never be rewritten. Archive those instead.
               </p>
               {selectedNames.length > 0 && (
                 <div className="pt-1">
@@ -769,6 +880,62 @@ export default function Clients() {
                 <Trash2 className="h-4 w-4" />
               )}
               Delete {selectedIds.size} Client{selectedIds.size !== 1 ? "s" : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Archive (soft delete) confirmation */}
+      <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">
+              Archive {selectedIds.size} planholder
+              {selectedIds.size !== 1 ? "s" : ""}?
+            </DialogTitle>
+            <DialogDescription className="space-y-3">
+              <p className="text-[15px]">
+                Archived planholders disappear from the working lists, search,
+                reports, and aging views. Nothing is deleted:
+              </p>
+              <p className="text-[13px]">
+                contracts · payments · receipts · audit trail
+              </p>
+              <p className="text-[13px] text-stone">
+                They can be restored at any time from the archived view, and
+                their historical totals stay exactly as recorded.
+              </p>
+              <div className="pt-1">
+                <Label className="text-[13px]">Reason (optional)</Label>
+                <Input
+                  value={archiveReason}
+                  onChange={(e) => setArchiveReason(e.target.value)}
+                  placeholder="e.g. duplicated record"
+                  className="h-10 text-[14px]"
+                />
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setArchiveDialogOpen(false)}
+              disabled={isArchiving}
+              className="h-11 text-[14px]"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleArchive}
+              disabled={isArchiving}
+              className="gap-2 h-11 text-[14px]"
+            >
+              {isArchiving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Archive className="h-4 w-4" />
+              )}
+              Archive
             </Button>
           </DialogFooter>
         </DialogContent>

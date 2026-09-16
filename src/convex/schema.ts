@@ -124,13 +124,22 @@ const schema = defineSchema(
       ),
       notes: v.optional(v.string()),
       branchId: v.optional(v.id("branches")),
+      // Soft delete. Business and financial history is never hard-deleted: a
+      // removed planholder is archived, hidden from the working lists, and can
+      // be restored (see clients.archive).
+      archivedAt: v.optional(v.number()),
+      archivedBy: v.optional(v.id("users")),
+      archiveReason: v.optional(v.string()),
       createdAt: v.number(),
       createdBy: v.id("users"),
     })
       .index("by_lastName", ["lastName"])
       .index("by_createdAt", ["createdAt"])
       .index("by_email", ["email"])
-      .index("by_branch", ["branchId"]),
+      .index("by_branch", ["branchId"])
+      // Branch-scoped working list (excludes archived rows in the query).
+      .index("by_branch_archivedAt", ["branchId", "archivedAt"])
+      .index("by_archivedAt", ["archivedAt"]),
 
     // Contracts / plans
     contracts: defineTable({
@@ -339,6 +348,11 @@ const schema = defineSchema(
     }).index("by_key", ["key"]),
 
     // ─── NEW: Branches ───────────────────────────────────────────────────
+    // One row per operating branch. This is the ONLY place a branch is defined:
+    // creating a branch inserts a document, it never clones the application.
+    // Global settings (company name, logo, plan catalog, security) live in
+    // system_settings; branch settings (address, contact, hours, receipt
+    // prefix, manager) live here.
     branches: defineTable({
       name: v.string(),
       code: v.string(),
@@ -346,11 +360,18 @@ const schema = defineSchema(
       city: v.string(),
       province: v.string(),
       contactNumber: v.optional(v.string()),
+      email: v.optional(v.string()),
+      // Branch-level settings.
+      operatingHours: v.optional(v.string()),
+      receiptPrefix: v.optional(v.string()),
+      openingDate: v.optional(v.number()),
       managerId: v.optional(v.id("users")),
       isActive: v.boolean(),
       createdAt: v.number(),
+      updatedAt: v.optional(v.number()),
     })
-      .index("by_code", ["code"]),
+      .index("by_code", ["code"])
+      .index("by_isActive", ["isActive"]),
 
     // ─── NEW: Branch transfer history ────────────────────────────────────
     // One row per client moved between branches. Payments are never rewritten

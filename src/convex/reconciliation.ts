@@ -2,6 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { assertCanAccessRecord, resolveBranchFilter } from "./access";
+import { MS_PER_DAY, manilaDayStart } from "./datetime";
 
 /**
  * Start/end-of-day reconciliation.
@@ -22,10 +23,10 @@ export const create = mutation({
     if (!userId) throw new Error("Not authenticated");
     const user = await ctx.db.get(userId);
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStart = today.getTime();
-    const todayEnd = todayStart + 86400000;
+    // The cashier counts the drawer at close of business in Manila, so "today"
+    // must be the Manila calendar day — the server clock is UTC.
+    const todayStart = manilaDayStart();
+    const todayEnd = todayStart + MS_PER_DAY;
 
     // Get all payments recorded today (scoped to the cashier's branch)
     const todayPayments = (await ctx.db
@@ -60,6 +61,9 @@ export const create = mutation({
     const reconciliationId = await ctx.db.insert("daily_reconciliation", {
       cashierId: userId,
       reconciliationDate: todayStart,
+      // Stamp the branch whose collections were counted, so Head Office can
+      // filter reconciliations per branch and the branch keeps its own sheet.
+      branchId: user?.branchId ?? undefined,
       totalCash: args.totalCash,
       totalGCash: args.totalGCash,
       totalMaya: args.totalMaya,
@@ -162,10 +166,9 @@ export const todaySummary = query({
   },
   handler: async (ctx, args) => {
     const branchId = await resolveBranchFilter(ctx, args.branchId);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStart = today.getTime();
-    const todayEnd = todayStart + 86400000;
+    // Manila day window — matches what the branch actually collected today.
+    const todayStart = manilaDayStart();
+    const todayEnd = todayStart + MS_PER_DAY;
 
     let payments = await ctx.db
       .query("payments")

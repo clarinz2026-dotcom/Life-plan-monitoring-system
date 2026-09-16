@@ -26,6 +26,9 @@ import {
   Target,
   BarChart3,
   Database,
+  Mail,
+  Clock,
+  Receipt,
 } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollableTable } from "@/components/ScrollableTable";
@@ -62,6 +65,8 @@ export default function Branches() {
   const [selectedBranch, setSelectedBranch] = useState<any>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Branch settings live on the branch record. Company-wide settings (company
+  // name, logo, plan catalog, security) are managed centrally instead.
   const [form, setForm] = useState({
     name: "",
     code: "",
@@ -69,6 +74,9 @@ export default function Branches() {
     city: "",
     province: "",
     contactNumber: "",
+    email: "",
+    operatingHours: "",
+    receiptPrefix: "",
   });
 
   const [editForm, setEditForm] = useState({
@@ -78,6 +86,9 @@ export default function Branches() {
     city: "",
     province: "",
     contactNumber: "",
+    email: "",
+    operatingHours: "",
+    receiptPrefix: "",
   });
 
   const [assignForm, setAssignForm] = useState({
@@ -103,6 +114,9 @@ export default function Branches() {
         city: form.city,
         province: form.province,
         contactNumber: form.contactNumber || undefined,
+        email: form.email || undefined,
+        operatingHours: form.operatingHours || undefined,
+        receiptPrefix: form.receiptPrefix || undefined,
       });
       toast.success("Branch created successfully!");
       setCreateOpen(false);
@@ -113,6 +127,9 @@ export default function Branches() {
         city: "",
         province: "",
         contactNumber: "",
+        email: "",
+        operatingHours: "",
+        receiptPrefix: "",
       });
     } catch (err: any) {
       toast.error(err?.message || "Failed to create branch");
@@ -131,6 +148,9 @@ export default function Branches() {
         city: editForm.city,
         province: editForm.province,
         contactNumber: editForm.contactNumber || undefined,
+        email: editForm.email || undefined,
+        operatingHours: editForm.operatingHours || undefined,
+        receiptPrefix: editForm.receiptPrefix || undefined,
       });
       toast.success("Branch updated!");
       setEditOpen(false);
@@ -179,6 +199,9 @@ export default function Branches() {
       city: b.city,
       province: b.province,
       contactNumber: b.contactNumber || "",
+      email: b.email || "",
+      operatingHours: b.operatingHours || "",
+      receiptPrefix: b.receiptPrefix || "",
     });
     setEditOpen(true);
   };
@@ -313,6 +336,42 @@ export default function Branches() {
                       className={inputClass}
                     />
                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-[14px]">Branch Email</Label>
+                    <Input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) =>
+                        setForm({ ...form, email: e.target.value })
+                      }
+                      placeholder="branch@evangelistfuneral.com"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[14px]">Receipt Prefix</Label>
+                    <Input
+                      value={form.receiptPrefix}
+                      onChange={(e) =>
+                        setForm({ ...form, receiptPrefix: e.target.value })
+                      }
+                      placeholder="e.g. OPL"
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-[14px]">Operating Hours</Label>
+                  <Input
+                    value={form.operatingHours}
+                    onChange={(e) =>
+                      setForm({ ...form, operatingHours: e.target.value })
+                    }
+                    placeholder="Mon–Sat, 8:00 AM – 5:00 PM"
+                    className={inputClass}
+                  />
                 </div>
                 <div>
                   <Label className="text-[14px]">Address *</Label>
@@ -651,6 +710,24 @@ export default function Branches() {
                     {b.contactNumber}
                   </p>
                 )}
+                {b.email && (
+                  <p className="text-[12px] text-muted-foreground flex items-center gap-1">
+                    <Mail className="h-3 w-3" />
+                    {b.email}
+                  </p>
+                )}
+                {b.operatingHours && (
+                  <p className="text-[12px] text-muted-foreground flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {b.operatingHours}
+                  </p>
+                )}
+                {b.receiptPrefix && (
+                  <p className="text-[12px] text-muted-foreground flex items-center gap-1">
+                    <Receipt className="h-3 w-3" />
+                    Receipt prefix: {b.receiptPrefix}
+                  </p>
+                )}
 
                 <div className="grid grid-cols-3 gap-3 pt-3 border-t border-border/40">
                   <div className="text-center">
@@ -769,6 +846,39 @@ export default function Branches() {
                   className={inputClass}
                 />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-[14px]">Branch Email</Label>
+                <Input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, email: e.target.value })
+                  }
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <Label className="text-[14px]">Receipt Prefix</Label>
+                <Input
+                  value={editForm.receiptPrefix}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, receiptPrefix: e.target.value })
+                  }
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div>
+              <Label className="text-[14px]">Operating Hours</Label>
+              <Input
+                value={editForm.operatingHours}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, operatingHours: e.target.value })
+                }
+                className={inputClass}
+              />
             </div>
             <div>
               <Label className="text-[14px]">Address *</Label>

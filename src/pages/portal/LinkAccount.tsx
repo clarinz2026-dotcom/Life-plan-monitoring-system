@@ -22,7 +22,9 @@ import {
 export default function LinkAccount() {
   const overview = useQuery(api.portal.myOverview);
   const myRequests = useQuery(api.portal.myLinkRequests);
-  const branches = useQuery(api.branches.list);
+  // `branches.publicList` — the portal account is not staff, so the staff-only
+  // `branches.list` would reject this query and leave the picker empty.
+  const branches = useQuery(api.branches.publicList);
   const submit = useMutation(api.portal.requestAccountLink);
   const cancel = useMutation(api.portal.cancelMyLinkRequest);
 
@@ -49,7 +51,7 @@ export default function LinkAccount() {
     }
   }, [overview]);
 
-  const activeBranches = (branches ?? []).filter((b) => b.isActive !== false);
+  const activeBranches = branches ?? [];
   const hasRecords = (overview?.records?.length ?? 0) > 0;
   const requests = myRequests ?? [];
   const openRequest = requests.find(

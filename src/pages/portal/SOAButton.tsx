@@ -207,7 +207,9 @@ export function SOAButton({
   const [pdfError, setPdfError] = useState<string | null>(null);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
 
-  const branches = useQuery(api.branches.list);
+  // Public branch directory — this component runs for planholder accounts,
+  // which cannot call the staff-only `branches.list`.
+  const branches = useQuery(api.branches.publicList);
   const settings = useQuery(api.settings.get);
 
   const group = records[0];
