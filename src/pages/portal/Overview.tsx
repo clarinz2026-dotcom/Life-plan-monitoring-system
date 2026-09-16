@@ -29,6 +29,9 @@ import {
 } from "./shared";
 import { SOAButton } from "./SOAButton";
 
+/** Numerals on the portal render in Times New Roman. */
+const NUMERALS = { fontFamily: '"Times New Roman", Times, serif' } as const;
+
 export default function Overview() {
   const { user } = useAuth();
   const overview = useQuery(api.portal.myOverview);
@@ -162,7 +165,10 @@ export default function Overview() {
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.18em] text-stone">
                   {s.label}
                 </p>
-                <p className="mt-1.5 truncate font-display text-[22px] font-semibold text-evergreen lg:text-2xl">
+                <p
+                  className="mt-1.5 truncate text-[22px] font-semibold text-evergreen lg:text-2xl"
+                  style={NUMERALS}
+                >
                   {s.value}
                 </p>
                 <p className="mt-0.5 truncate text-[11.5px] text-stone">{s.note}</p>
@@ -177,7 +183,7 @@ export default function Overview() {
         <div className="rounded-2xl border border-amber-300 bg-amber-50 px-5 py-4">
           <p className="flex items-center gap-2 text-[13.5px] font-bold text-amber-900">
             <Clock className="h-4 w-4" />
-            {overdueList.length} past-due installment
+            <span style={NUMERALS}>{overdueList.length}</span> past-due installment
             {overdueList.length > 1 ? "s" : ""} need attention
           </p>
           <p className="mt-1 text-[12.5px] leading-relaxed text-amber-800">
@@ -277,7 +283,7 @@ export default function Overview() {
                               <p className="text-[15px] font-bold text-ink">
                                 {contract.planType || "Memorial Plan"}
                               </p>
-                              <p className="mt-0.5 font-mono text-[11.5px] text-stone">
+                              <p className="mt-0.5 text-[12px] text-stone" style={NUMERALS}>
                                 {contract.contractNumber}
                               </p>
                             </div>
@@ -294,7 +300,10 @@ export default function Overview() {
                                 <p className="text-[10px] font-bold uppercase tracking-wider text-stone">
                                   {s.l}
                                 </p>
-                                <p className="mt-0.5 text-[13px] font-bold text-evergreen">
+                                <p
+                                  className="mt-0.5 text-[14px] font-bold text-evergreen"
+                                  style={NUMERALS}
+                                >
                                   {s.v}
                                 </p>
                               </div>
@@ -304,7 +313,7 @@ export default function Overview() {
                           <div className="mt-4">
                             <div className="flex items-center justify-between text-[10.5px] font-semibold text-stone">
                               <span>Progress</span>
-                              <span>{Math.round(pct)}% paid</span>
+                              <span style={NUMERALS}>{Math.round(pct)}% paid</span>
                             </div>
                             <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-cream">
                               <div
@@ -322,7 +331,8 @@ export default function Overview() {
                             ) : dueSoon ? (
                               <span className="flex items-center gap-1.5 font-semibold text-stone">
                                 <CalendarDays className="h-3.5 w-3.5 text-gold" />
-                                Next: {fmtDay(dueSoon.dueDate)} · {fmtPeso(dueSoon.amount)}
+                                Next: {fmtDay(dueSoon.dueDate)} ·{" "}
+                <span style={NUMERALS}>{fmtPeso(dueSoon.amount)}</span>
                               </span>
                             ) : (
                               <span className="flex items-center gap-1.5 font-semibold text-emerald-700">
@@ -397,9 +407,11 @@ export default function Overview() {
                 </span>
                 <div className="min-w-0">
                   <p className="text-[13px] font-bold text-ink">Last payment</p>
-                  <p className="mt-0.5 text-[12px] text-stone">
-                    {fmtPeso(lastPayment.amount)} · {fmtDate(lastPayment.paymentDate)}{" "}
-                    ({lastPayment.clientName})
+                  <p className="mt-0.5 text-[12.5px] text-stone">
+                    <span className="font-bold text-ink" style={NUMERALS}>
+                      {fmtPeso(lastPayment.amount)}
+                    </span>{" "}
+                    · {fmtDate(lastPayment.paymentDate)} ({lastPayment.clientName})
                     {lastPayment.orNumber ? ` · O.R. ${lastPayment.orNumber}` : ""}
                   </p>
                 </div>
