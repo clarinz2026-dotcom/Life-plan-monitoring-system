@@ -1,6 +1,7 @@
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "convex/react";
+import type { ReactNode } from "react";
 import {
   ArrowRight,
   CalendarDays,
@@ -136,6 +137,9 @@ export default function Plans() {
                   (s) => s.status === "paid" || s.status === "waived"
                 );
                 const paidSum = cd.payments.reduce((s, p) => s + p.amount, 0);
+                const nextDueSchedule = upcoming
+                  .filter((s) => s.dueDate >= now)
+                  .sort((a, b) => a.dueDate - b.dueDate)[0];
 
                 return (
                   <Card key={contract._id} className="overflow-hidden">
@@ -160,29 +164,46 @@ export default function Plans() {
                       </div>
                     </div>
 
-                    {/* Money summary */}
-                    <div className="grid grid-cols-2 gap-px bg-line lg:grid-cols-4">
-                      {[
-                        { l: "Plan price", v: fmtPeso(plan) },
-                        { l: "Paid to date", v: fmtPeso(paid) },
-                        { l: "Outstanding", v: fmtPeso(balance) },
-                        { l: "Payments made", v: `${cd.payments.length} · ${fmtPeso(paidSum)}` },
-                      ].map((s) => (
-                        <div key={s.l} className="bg-white px-5 py-4 lg:px-7">
-                          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone">
-                            {s.l}
-                          </p>
-                          <p
-                            className={`mt-0.5 font-display text-[19px] font-semibold ${
-                              s.l === "Outstanding" && balance > 0
-                                ? "text-amber-700"
-                                : "text-evergreen"
-                            }`}
-                          >
-                            {s.v}
-                          </p>
-                        </div>
-                      ))}
+                    {/* Account summary — the same figures printed on the SOA */}
+                    <div className="border-t border-line px-5 py-5 lg:px-7">
+                      <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-evergreen">
+                        Account summary
+                      </p>
+                      <div className="mt-3 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+                        {(
+                          [
+                            { l: "Plan value", v: fmtPeso(plan) },
+                            { l: "Total paid", v: fmtPeso(paid) },
+                            {
+                              l: "Outstanding balance",
+                              v: fmtPeso(balance),
+                              cls: balance > 0 ? "text-amber-700" : "text-emerald-700",
+                            },
+                            { l: "Monthly installment", v: fmtPeso(contract.monthlyAmortization) },
+                            {
+                              l: "Next due date",
+                              v: nextDueSchedule ? fmtDate(nextDueSchedule.dueDate) : "—",
+                            },
+                            {
+                              l: "Payment status",
+                              v: <StatusPill map={CONTRACT_PILL} status={contract.contractStatus} />,
+                            },
+                          ] as { l: string; v: ReactNode; cls?: string }[]
+                        ).map((s) => (
+                          <div key={s.l}>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone">
+                              {s.l}
+                            </p>
+                            <p
+                              className={`mt-0.5 font-display text-[19px] font-semibold ${
+                                s.cls ?? "text-evergreen"
+                              }`}
+                            >
+                              {s.v}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Progress */}
@@ -330,7 +351,9 @@ export default function Plans() {
                                           {fmtPeso(runningBalance)}
                                         </td>
                                         <td className="py-2 text-stone">
-                                          {CHANNEL_LABEL[p.paymentChannel] ?? p.paymentChannel}
+                                          {p.remarks ||
+                                            CHANNEL_LABEL[p.paymentChannel] ||
+                                            p.paymentChannel}
                                         </td>
                                       </tr>
                                     );
@@ -338,11 +361,11 @@ export default function Plans() {
                                 })()}
                               </tbody>
                             </table>
-                            {cd.payments.length > 10 && (
-                              <p className="pt-2 text-[11.5px] text-stone">
-                                Showing all {cd.payments.length} payments
-                              </p>
-                            )}
+                            <p className="pt-2 text-[11.5px] text-stone">
+                              {cd.payments.length} payment
+                              {cd.payments.length > 1 ? "s" : ""} recorded ·{" "}
+                              {fmtPeso(paidSum)} total
+                            </p>
                           </div>
                         )}
                       </div>

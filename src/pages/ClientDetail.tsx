@@ -165,14 +165,34 @@ export default function ClientDetail() {
         remarks: p.remarks,
       }));
 
+      // Age shown on the printed form, derived from the birth date.
+      const birthDate = client.dateOfBirth ? new Date(client.dateOfBirth) : null;
+      let clientAge: number | undefined;
+      if (birthDate) {
+        const today = new Date();
+        clientAge = today.getFullYear() - birthDate.getFullYear();
+        const monthDelta = today.getMonth() - birthDate.getMonth();
+        if (monthDelta < 0 || (monthDelta === 0 && today.getDate() < birthDate.getDate())) {
+          clientAge--;
+        }
+      }
+
       await generateSOAPDF({
         clientName,
         clientAddress:
           [client.address, client.city, client.province].filter(Boolean).join(", ") || "—",
         clientContact: client.contactNumber || "—",
         clientEmail: client.email || undefined,
-        clientAge: undefined,
-        beneficiaries: [{ name: client.beneficiaryName || "—", relationship: client.beneficiaryRelationship || "—" }],
+        clientAge,
+        beneficiaries:
+          client.beneficiaries && client.beneficiaries.length > 0
+            ? client.beneficiaries
+            : [
+                {
+                  name: client.beneficiaryName || "—",
+                  relationship: client.beneficiaryRelationship || "—",
+                },
+              ],
         branchName: branch?.name,
         clientBirthDate: client.dateOfBirth
           ? new Date(client.dateOfBirth).toLocaleDateString("en-PH", {

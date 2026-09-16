@@ -50,6 +50,7 @@ export default function Overview() {
   const allDetails = records.flatMap((g) =>
     g.contracts.map((cd) => ({ ...cd, client: g.client }))
   );
+  const totalPlanValue = allDetails.reduce((s, d) => s + (d.contract.planAmount || 0), 0);
   const totalPaid = allDetails.reduce((s, d) => s + (d.contract.totalPaid || 0), 0);
   const totalOutstanding = allDetails.reduce(
     (s, d) => s + Math.max(0, (d.contract.planAmount || 0) - (d.contract.totalPaid || 0)),
@@ -124,7 +125,11 @@ export default function Overview() {
         <Card className="overflow-hidden border-0">
           <div className="grid grid-cols-2 gap-px bg-line lg:grid-cols-4">
             {[
-              { label: "Active plans", value: String(allDetails.length), note: `${records.length} planholder${records.length > 1 ? "s" : ""}` },
+              {
+                label: "Plan value",
+                value: fmtPeso(totalPlanValue),
+                note: `${allDetails.length} active plan${allDetails.length > 1 ? "s" : ""}`,
+              },
               { label: "Total paid", value: fmtPeso(totalPaid), note: "all recorded payments" },
               { label: "Outstanding balance", value: fmtPeso(totalOutstanding), note: "plan price less payments" },
               {
