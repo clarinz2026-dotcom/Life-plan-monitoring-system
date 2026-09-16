@@ -12,35 +12,95 @@ import "./index.css";
 
 import Landing from "./pages/Landing.tsx";
 
-// Lazy load the in-app routes for better code splitting. Landing is imported
-// eagerly: it is the entry point for almost every visitor, and lazy-loading it
-// meant the browser had to finish parsing the app bundle before it even
-// requested the hero markup and images (a full extra round trip before paint).
-const AuthPage = lazy(() => import("./pages/Auth.tsx"));
-const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
-const Clients = lazy(() => import("./pages/Clients.tsx"));
-const ClientDetail = lazy(() => import("./pages/ClientDetail.tsx"));
-const Contracts = lazy(() => import("./pages/Contracts.tsx"));
-const Payments = lazy(() => import("./pages/Payments.tsx"));
-const Receipts = lazy(() => import("./pages/Receipts.tsx"));
-const Reports = lazy(() => import("./pages/Reports.tsx"));
-const AuditLog = lazy(() => import("./pages/AuditLog.tsx"));
-const BulkUpload = lazy(() => import("./pages/BulkUpload.tsx"));
-const Plans = lazy(() => import("./pages/Plans.tsx"));
-const Reconciliation = lazy(() => import("./pages/Reconciliation.tsx"));
-const AgingReport = lazy(() => import("./pages/AgingReport.tsx"));
-const Notifications = lazy(() => import("./pages/Notifications.tsx"));
-const ExportData = lazy(() => import("./pages/ExportData.tsx"));
-const RoleManagement = lazy(() => import("./pages/RoleManagement.tsx"));
-const Branding = lazy(() => import("./pages/Branding.tsx"));
-const SuperAdminSetup = lazy(() => import("./pages/SuperAdminSetup.tsx"));
-const AccountLinks = lazy(() => import("./pages/AccountLinks.tsx"));
-const Branches = lazy(() => import("./pages/Branches.tsx"));
-const PortalLayout = lazy(() => import("./pages/portal/PortalLayout.tsx"));
-const PortalOverview = lazy(() => import("./pages/portal/Overview.tsx"));
-const PortalPlans = lazy(() => import("./pages/portal/Plans.tsx"));
-const PortalLinkAccount = lazy(() => import("./pages/portal/LinkAccount.tsx"));
-const NotFound = lazy(() => import("./pages/NotFound.tsx"));
+// Landing is imported eagerly: it is the entry point for almost every visitor,
+// and lazy-loading it meant the browser had to finish parsing the app bundle
+// before it even requested the hero markup and images (an extra round trip
+// before paint). Every other route is lazily code-split:
+/*
+ * Route modules are fetched by URL, and dev-server restarts or dependency
+ * re-optimizations invalidate those URLs. A request made against an old URL
+ * rejects with "Failed to fetch dynamically imported module" and, without a
+ * retry, left the preview stuck on the error panel until a manual refresh.
+ *
+ * Retry once (the server has usually finished re-optimizing by then) and, if it
+ * still fails, reload the page once so the router picks up fresh URLs. The
+ * reload is guarded per route and skipped entirely when storage is unavailable
+ * (framed contexts can block it), so it can never loop.
+ */
+const RELOAD_FLAG = "evangelist:route-reload";
+const routeStorage = (() => {
+  try {
+    const probe = "__storage_probe__";
+    window.sessionStorage.setItem(probe, "1");
+    window.sessionStorage.removeItem(probe);
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+})();
+
+function loadRoute<T>(name: string, load: () => Promise<T>): Promise<T> {
+  return load().then(
+    (mod) => {
+      routeStorage?.removeItem(RELOAD_FLAG);
+      return mod;
+    },
+    async (firstError: unknown) => {
+      // A short pause is enough for the dev server to finish re-optimizing deps.
+      await new Promise((resolve) => setTimeout(resolve, 350));
+      try {
+        const mod = await load();
+        routeStorage?.removeItem(RELOAD_FLAG);
+        return mod;
+      } catch (secondError) {
+        // Still failing: the import graph itself is stale. Without storage we
+        // cannot prove we have not already reloaded, so surface the error rather
+        // than risk a reload loop.
+        if (!routeStorage || routeStorage.getItem(RELOAD_FLAG) === name) {
+          throw secondError;
+        }
+        routeStorage.setItem(RELOAD_FLAG, name);
+        window.location.reload();
+        // The page is unloading; keep Suspense showing its fallback meanwhile.
+        return new Promise<never>(() => {});
+      }
+    }
+  );
+}
+
+/** `lazy()` wired to the resilient loader above. */
+function lazyRoute<T extends React.ComponentType<any>>(
+  name: string,
+  load: () => Promise<{ default: T }>
+) {
+  return lazy(() => loadRoute(name, load));
+}
+
+const AuthPage = lazyRoute("Auth", () => import("./pages/Auth.tsx"));
+const Dashboard = lazyRoute("Dashboard", () => import("./pages/Dashboard.tsx"));
+const Clients = lazyRoute("Clients", () => import("./pages/Clients.tsx"));
+const ClientDetail = lazyRoute("ClientDetail", () => import("./pages/ClientDetail.tsx"));
+const Contracts = lazyRoute("Contracts", () => import("./pages/Contracts.tsx"));
+const Payments = lazyRoute("Payments", () => import("./pages/Payments.tsx"));
+const Receipts = lazyRoute("Receipts", () => import("./pages/Receipts.tsx"));
+const Reports = lazyRoute("Reports", () => import("./pages/Reports.tsx"));
+const AuditLog = lazyRoute("AuditLog", () => import("./pages/AuditLog.tsx"));
+const BulkUpload = lazyRoute("BulkUpload", () => import("./pages/BulkUpload.tsx"));
+const Plans = lazyRoute("Plans", () => import("./pages/Plans.tsx"));
+const Reconciliation = lazyRoute("Reconciliation", () => import("./pages/Reconciliation.tsx"));
+const AgingReport = lazyRoute("AgingReport", () => import("./pages/AgingReport.tsx"));
+const Notifications = lazyRoute("Notifications", () => import("./pages/Notifications.tsx"));
+const ExportData = lazyRoute("ExportData", () => import("./pages/ExportData.tsx"));
+const RoleManagement = lazyRoute("RoleManagement", () => import("./pages/RoleManagement.tsx"));
+const Branding = lazyRoute("Branding", () => import("./pages/Branding.tsx"));
+const SuperAdminSetup = lazyRoute("SuperAdminSetup", () => import("./pages/SuperAdminSetup.tsx"));
+const AccountLinks = lazyRoute("AccountLinks", () => import("./pages/AccountLinks.tsx"));
+const Branches = lazyRoute("Branches", () => import("./pages/Branches.tsx"));
+const PortalLayout = lazyRoute("PortalLayout", () => import("./pages/portal/PortalLayout.tsx"));
+const PortalOverview = lazyRoute("PortalOverview", () => import("./pages/portal/Overview.tsx"));
+const PortalPlans = lazyRoute("PortalPlans", () => import("./pages/portal/Plans.tsx"));
+const PortalLinkAccount = lazyRoute("PortalLinkAccount", () => import("./pages/portal/LinkAccount.tsx"));
+const NotFound = lazyRoute("NotFound", () => import("./pages/NotFound.tsx"));
 
 // Lightweight, on-brand fallback for route transitions
 function RouteLoading() {
