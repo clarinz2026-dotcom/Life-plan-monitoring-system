@@ -4,7 +4,8 @@ import * as XLSX from "xlsx";
 /**
  * Shared parser for the bulk payment upload (CSV / XLSX).
  *
- * Two layouts are accepted, auto-detected per file:
+ * Two layouts are accepted; the statement layout is always attempted first
+ * (across every sheet and every row), and the flat ledger is the fallback:
  *
  * 1. Flat ledger — one header row, one payment per row:
  *      contractNumber, amount, channel, date, orNumber, remarks
@@ -13,7 +14,8 @@ import * as XLSX from "xlsx";
  *    `Label: value` lines identifies the plan (Contract No., Name, Branch,
  *    Plan Type, ...), followed by a payment grid:
  *      Pay Class | O.R. Date | O.R. No. | Amount | Installment No. | Balance | Remarks
- *    Files may repeat blocks for several contracts in one workbook.
+ *    Files may repeat blocks for several contracts, and the block may sit
+ *    any number of rows down or on any sheet of the workbook.
  */
 
 export interface ParsedPaymentRow {
@@ -33,6 +35,12 @@ export interface ParseResult {
   warnings: string[];
 }
 
+type Grid = unknown[][];
+interface SheetGrid {
+  name: string;
+  grid: Grid;
+}
+
 const VALID_CHANNELS = new Set(["cash", "gcash", "maya", "bank_transfer", "check"]);
 
 /** Normalize a spreadsheet cell to a trimmed string (numbers included). */
@@ -42,8 +50,8 @@ function cell(value: unknown): string {
 }
 
 /**
- * Parse a date cell into an ISO date string for `<input type="date">` display.
- * Accepts ISO, MM/DD/YYYY, DD-MM-YYYY, "17-Dec-2025", and XLSX serial numbers.
+ * Parse a date cell into an ISO date string (YYYY-MM-DD).
+ * Accepts ISO, MM/DD/YYYY, "17-Dec-2025", and XLSX serial numbers.
  */
 export function parseUploadDate(raw: string): string | null {
   const value = raw.trim();
@@ -101,58 +109,43 @@ export function parseMoney(raw: string): number {
   return parseFloat(value);
 }
 
-/** Find a header cell matching /contract/ in a grid row. */
-function contractColumnIndex(headers: string[]): number {
-  const idx = headers.findIndex((h) => h.toLowerCase().includes("contract"));
-  return idx;
+/** A plausible contract number: a short code without spaces. Rejects things like "O.R. Date". */
+function looksLikeContractNumber(value: string): boolean {
+  const v = value.trim();
+  return v.length > 0 && v.length <= 20 && !v.includes(" ") && /^[A-Za-z0-9][A-Za-z0-9\-\/\.\#]*$/.test(v);
 }
 
-/** Read the `Label: value` statement header block above the payment grid. */
-function extractStatementBlock(grid: unknown[][]): { contractNumber: string; name: string; headerRowIdx: number } {
-  let contractNumber = "";
-  let name = "";
-  let headerRowIdx = -1;
-
-  for (let r = 0; r < Math.min(grid.length, 40); r++) {
-    const row = grid[r] || [];
-    for (let c = 0; c < row.length; c++) {
-      const raw = cell(row[c]);
-      const label = raw.toLowerCase().replace(/[:\s]+$/, "");
-      if (!label) continue;
-
-      // Value either follows the colon inside this cell ("Contract No.: 014101")
-      // or sits in the adjacent cell ("Contract No.:" | "014101").
-      const valueOf = () => {
-        const colon = raw.indexOf(":");
-        if (colon >= 0) {
-          const inline = raw.slice(colon + 1).trim();
-          if (inline) return inline;
-        }
-        return cell(row[c + 1]);
-      };
-
-      // Contract identifier: "Contract No.: 014101"
-      if (!contractNumber && (label.includes("contract no") || label === "contract")) {
-        contractNumber = valueOf();
-      }
-      // Planholder: "Name: FE R. RANALAN"
-      if (!name && (label === "name" || label.startsWith("name:"))) {
-        name = valueOf();
-      }
+/** Read every non-empty sheet of an XLSX workbook (or the CSV text) as a grid. */
+async function readGrids(file: File): Promise<SheetGrid[]> {
+  if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array" });
+    const sheets: SheetGrid[] = [];
+    for (const name of workbook.SheetNames) {
+      const grid = XLSX.utils.sheet_to_json(workbook.Sheets[name], {
+        header: 1,
+        defval: "",
+      }) as unknown[][];
+      if (grid.length > 0) sheets.push({ name, grid });
     }
-
-    // Payment grid header row: contains both "O.R." (date column) and "Amount"
-    const joined = row.map((v) => cell(v).toLowerCase()).join("|");
-    if (headerRowIdx === -1 && joined.includes("o.r.") && joined.includes("amount")) {
-      headerRowIdx = r;
-      break; // Header found — the block above is complete.
-    }
+    return sheets;
   }
-
-  return { contractNumber, name, headerRowIdx };
+  const text = await file.text();
+  const result = Papa.parse<string[]>(text, { skipEmptyLines: false });
+  for (const err of result.errors) {
+    if (err.code !== "TooFewFields") throw new Error(`CSV parse error: ${err.message}`);
+  }
+  return [{ name: file.name, grid: result.data }];
 }
 
-/** Locate the O.R. Date / O.R. No. / Amount / Remarks column offsets in a grid header. */
+/** True when a row looks like the statement payment-grid header (O.R. + Amount). */
+function isPaymentGridHeader(row: unknown[]): boolean {
+  const joined = row.map((v) => cell(v).toLowerCase()).join("|");
+  const hasOr = joined.includes("o.r") || joined.includes("or date") || joined.includes("or no");
+  return hasOr && joined.includes("amount");
+}
+
+/** Locate the Date / O.R. No. / Amount / Installment / Remarks column offsets in a grid header. */
 function mapStatementColumns(headerRow: unknown[]): { date: number; or: number; amount: number; inst: number; remarks: number } | null {
   const lower = headerRow.map((v) => cell(v).toLowerCase());
   let date = -1, or = -1, amount = -1, inst = -1, remarks = -1;
@@ -172,153 +165,202 @@ function mapStatementColumns(headerRow: unknown[]): { date: number; or: number; 
 }
 
 /**
- * Parse an uploaded CSV / XLSX payment file.
- *
- * Auto-detects between the flat ledger format and the Sprinter-style statement
- * format; returns normalized rows ready for contract-number resolution.
+ * Starting at a row that mentions "contract", read the `Label: value` block
+ * above the payment grid and locate the grid header row.
  */
-export async function parsePaymentUpload(file: File): Promise<ParseResult> {
-  let grid: unknown[][] = [];
+function extractStatementBlock(grid: Grid, startRow: number): { contractNumber: string; headerRowIdx: number } {
+  let contractNumber = "";
+  let headerRowIdx = -1;
+  const end = Math.min(grid.length, startRow + 60);
 
-  if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
-    const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: "array" });
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    grid = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" }) as unknown[][];
-  } else {
-    const text = await file.text();
-    const result = Papa.parse<string[]>(text, { skipEmptyLines: false });
-    for (const err of result.errors) {
-      if (err.code !== "TooFewFields") throw new Error(`CSV parse error: ${err.message}`);
+  for (let r = startRow; r < end; r++) {
+    const row = grid[r] || [];
+
+    // Payment grid header row: contains both an O.R. column and Amount.
+    if (headerRowIdx === -1 && isPaymentGridHeader(row)) {
+      headerRowIdx = r;
+      break; // The block above is complete.
     }
-    grid = result.data;
+
+    for (let c = 0; c < row.length; c++) {
+      const raw = cell(row[c]);
+      const lower = raw.toLowerCase();
+      if (!lower) continue;
+
+      // Value either follows the colon inside this cell ("Contract No.: 014101")
+      // or sits in the adjacent cell ("Contract No.:" | "014101").
+      const valueOf = () => {
+        const colon = raw.indexOf(":");
+        if (colon >= 0) {
+          const inline = raw.slice(colon + 1).trim();
+          if (inline) return inline;
+        }
+        return cell(row[c + 1]);
+      };
+
+      // Contract identifier: "Contract No.: 014101" / "Contract Number"
+      if (!contractNumber && lower.startsWith("contract")) {
+        const value = valueOf();
+        if (looksLikeContractNumber(value)) contractNumber = value;
+      }
+    }
   }
 
-  if (grid.length === 0) return { rows: [], warnings: ["The file has no data rows."] };
+  return { contractNumber, headerRowIdx };
+}
 
-  // ── Detect layout ──────────────────────────────────────────────
-  // Scan the first 10 rows for a statement header block ("Contract No.:").
-  const head = grid.slice(0, 10).map((row) => (row || []).map(cell).join(" ").toLowerCase());
-  const isStatement = head.some((line) => line.includes("contract no") || line.includes("pay class"));
-
+/** Parse one sheet in the Sprinter statement layout. Empty result = not a statement sheet. */
+function parseStatementGrid(sheet: SheetGrid): ParseResult {
+  const { name, grid } = sheet;
   const rows: ParsedPaymentRow[] = [];
   const warnings: string[] = [];
 
-  if (isStatement) {
-    // ── Statement layout: repeat per contract block ─────────────
-    let currentContract = "";
-    let currentName = "";
-    let r = 0;
-
-    while (r < grid.length) {
-      const line = (grid[r] || []).map(cell).join(" ").toLowerCase();
-
-      // A new block starts at "Contract No.:"
-      if (line.includes("contract no")) {
-        const block = extractStatementBlock(grid.slice(r, r + 40));
-        if (!block.contractNumber) {
-          warnings.push(`Row ${r + 1}: a statement block is missing its contract number — skipped.`);
-          r += block.headerRowIdx >= 0 ? block.headerRowIdx + 1 : 1;
-          continue;
-        }
-        currentContract = block.contractNumber;
-        currentName = block.name;
-
-        if (block.headerRowIdx >= 0) {
-          const cols = mapStatementColumns(grid[r + block.headerRowIdx] || []);
-          if (!cols) {
-            warnings.push(`Row ${r + 1}: could not read the payment table header for contract ${currentContract} — block skipped.`);
-            r += block.headerRowIdx + 1;
-            continue;
-          }
-          // Consume grid rows until a blank separator / next block.
-          let pr = r + block.headerRowIdx + 1;
-          while (pr < grid.length) {
-            const prow = grid[pr] || [];
-            const pcell = (i: number) => cell(prow[i]);
-            const amount = parseMoney(pcell(cols.amount));
-            const dateCell = pcell(cols.date);
-
-            // Stop conditions: an entirely empty row, or the next block.
-            const rowJoined = prow.map(cell).join("").trim();
-            if (!rowJoined || rowJoined.toLowerCase().includes("contract no")) break;
-
-            const remarksFromPayClass = pcell(0) && !pcell(0).toLowerCase().includes("pay class") ? pcell(0) : "";
-            const remark = pcell(cols.remarks) || remarksFromPayClass;
-            const installment = cols.inst >= 0 ? pcell(cols.inst) : "";
-
-            if (!isNaN(amount) && amount > 0 && dateCell) {
-              rows.push({
-                contractNumber: currentContract,
-                amount,
-                channel: "cash",
-                date: dateCell,
-                orNumber: cols.or >= 0 ? pcell(cols.or) : "",
-                remarks: [remarksFromPayClass, installment ? `Installment ${installment}` : ""].filter(Boolean).join(" · ") || remark,
-                fromStatement: true,
-              });
-            } else if (rowJoined && !isNaN(amount) && amount <= 0) {
-              warnings.push(`Row ${pr + 1}: zero/negative amount in contract ${currentContract} — skipped.`);
-            }
-            pr++;
-          }
-          r = pr;
-          continue;
-        } else {
-          warnings.push(`Row ${r + 1}: no payment table header found for contract ${currentContract} — block skipped.`);
-          r += 1;
-          continue;
-        }
-      }
+  let r = 0;
+  while (r < grid.length) {
+    const row = grid[r] || [];
+    const contractCellIdx = row.findIndex((c) => cell(c).toLowerCase().startsWith("contract"));
+    if (contractCellIdx === -1) {
       r++;
+      continue;
     }
-    if (rows.length === 0) {
-      warnings.push("No payment rows could be read from the statement layout.");
+
+    const block = extractStatementBlock(grid, r);
+    if (!block.contractNumber) {
+      // Mentions "contract" but isn't a statement block (e.g. a flat-table
+      // header row) — skip silently so the flat fallback can take over.
+      r++;
+      continue;
     }
-    void currentName; // Available if the UI wants to show planholder names later.
-    return { rows, warnings };
+    if (block.headerRowIdx === -1) {
+      warnings.push(`${name}: found contract ${block.contractNumber} but no payment table below it — block skipped.`);
+      r++;
+      continue;
+    }
+
+    const cols = mapStatementColumns(grid[block.headerRowIdx] || []);
+    if (!cols) {
+      warnings.push(`${name}: could not read the payment table header for contract ${block.contractNumber} — block skipped.`);
+      r += block.headerRowIdx - r + 1;
+      continue;
+    }
+
+    // Consume payment rows until a blank separator or the next contract block.
+    let pr = block.headerRowIdx + 1;
+    while (pr < grid.length) {
+      const prow = grid[pr] || [];
+      const pcell = (i: number) => cell(prow[i]);
+      const rowJoined = prow.map(cell).join("").trim();
+      if (!rowJoined || prow.some((c) => cell(c).toLowerCase().startsWith("contract"))) break;
+
+      const amount = parseMoney(pcell(cols.amount));
+      const dateCell = pcell(cols.date);
+      if (!isNaN(amount) && amount > 0 && dateCell) {
+        const payClass = pcell(0) && !pcell(0).toLowerCase().includes("pay class") ? pcell(0) : "";
+        const installment = cols.inst >= 0 ? pcell(cols.inst) : "";
+        const remark = pcell(cols.remarks);
+        rows.push({
+          contractNumber: block.contractNumber,
+          amount,
+          channel: "cash",
+          date: dateCell,
+          orNumber: cols.or >= 0 ? pcell(cols.or) : "",
+          remarks: [payClass, installment ? `Installment ${installment}` : "", remark].filter(Boolean).join(" · "),
+          fromStatement: true,
+        });
+      } else if (rowJoined && !isNaN(amount) && amount <= 0 && dateCell) {
+        warnings.push(`${name} row ${pr + 1}: zero/negative amount for contract ${block.contractNumber} — skipped.`);
+      }
+      pr++;
+    }
+    r = pr;
   }
 
-  // ── Flat layout: header row + one payment per row ──────────────
-  const headerRowIdx = grid.findIndex((row) => (row || []).some((v) => /contract/i.test(cell(v))));
+  return { rows, warnings };
+}
+
+/** Parse one sheet in the flat ledger layout (header row + one payment per row). */
+function parseFlatGrid(sheet: SheetGrid): ParseResult {
+  const { name, grid } = sheet;
+  const rows: ParsedPaymentRow[] = [];
+
+  // The header row must mention both contract and amount so a label row
+  // ("Contract No.: 014101 … Plan Value …") can't be mistaken for it.
+  const headerRowIdx = grid.findIndex(
+    (row) =>
+      (row || []).some((v) => /contract/i.test(cell(v))) &&
+      (row || []).some((v) => /amount|amt/i.test(cell(v))),
+  );
   if (headerRowIdx === -1) {
-    return { rows: [], warnings: ["Could not find a header row containing a contract column."] };
+    return { rows: [], warnings: [`${name}: no header row with Contract and Amount columns was found.`] };
   }
 
   const headers = (grid[headerRowIdx] || []).map((v) => cell(v));
   const col = (patterns: RegExp[]) => headers.findIndex((h) => patterns.some((p) => p.test(h.toLowerCase())));
 
   const idxContract = col([/contract/]);
-  const idxAmount = col([/^amount$/, /^amt$/]);
-  const idxChannel = col([/channel/, /^mode$/, /^payment.?mode$/]);
+  const idxAmount = col([/^amount$/, /^amt$/, /^amount/]);
+  const idxChannel = col([/channel/, /^mode$/, /payment.?mode/]);
   const idxDate = col([/date/]);
   const idxOr = col([/o\.?r\.?/, /^or$/, /receipt/]);
   const idxRemarks = col([/remarks?/, /notes?/]);
-  const idxName = col([/^name$/, /planholder/]);
 
   if (idxContract === -1 || idxAmount === -1) {
-    return { rows: [], warnings: ["The header row must contain at least a contract and an amount column."] };
+    return {
+      rows: [],
+      warnings: [
+        `${name}: the header row must contain at least a contract and an amount column. Found: ${headers.filter(Boolean).join(", ") || "(none)"}`,
+      ],
+    };
   }
 
   for (let r = headerRowIdx + 1; r < grid.length; r++) {
     const row = grid[r] || [];
     const get = (i: number) => (i >= 0 ? cell(row[i]) : "");
-    const contractNumber = get(idxContract) || get(idxName); // fall back to name if contract cell empty
+    const contractNumber = get(idxContract);
     const amount = parseMoney(get(idxAmount));
-    const date = get(idxDate);
     if (!contractNumber || isNaN(amount) || amount <= 0) continue;
 
     rows.push({
       contractNumber,
       amount,
       channel: normalizeChannel(get(idxChannel)),
-      date,
+      date: get(idxDate),
       orNumber: get(idxOr),
       remarks: get(idxRemarks),
       fromStatement: false,
     });
   }
 
-  if (rows.length === 0) warnings.push("No valid payment rows were found in the file.");
-  return { rows, warnings };
+  return { rows, warnings: [] };
+}
+
+/**
+ * Parse an uploaded CSV / XLSX payment file.
+ *
+ * Tries the Sprinter statement layout first (every sheet, every row); if that
+ * finds nothing, falls back to the flat ledger layout.
+ */
+export async function parsePaymentUpload(file: File): Promise<ParseResult> {
+  const sheets = await readGrids(file);
+  if (sheets.length === 0) return { rows: [], warnings: ["The file has no data rows."] };
+
+  const statementResults = sheets.map(parseStatementGrid);
+  const statementRows = statementResults.flatMap((r) => r.rows);
+  if (statementRows.length > 0) {
+    return { rows: statementRows, warnings: statementResults.flatMap((r) => r.warnings) };
+  }
+
+  const flatResults = sheets.map(parseFlatGrid);
+  const flatRows = flatResults.flatMap((r) => r.rows);
+  if (flatRows.length > 0) {
+    return { rows: flatRows, warnings: flatResults.flatMap((r) => r.warnings) };
+  }
+
+  const flatWarnings = flatResults.flatMap((r) => r.warnings);
+  return {
+    rows: [],
+    warnings: flatWarnings.length > 0
+      ? flatWarnings
+      : ["No payment rows could be read. Expected a statement export (Contract No. block + Pay Class / O.R. Date / O.R. No. / Amount table) or a flat table with Contract and Amount columns."],
+  };
 }
