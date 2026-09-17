@@ -141,11 +141,14 @@ async function waitForAssets(container: HTMLElement): Promise<void> {
     2500
   );
 
-  // 2. The letterhead face must be fetched before it can be painted.
+  // 2. The letterhead faces must be fetched before they can be painted — the
+  //    brand block and the tagline/sign-off use different cuts of the same face.
   const fonts = document.fonts;
   if (fonts) {
     try {
-      await withTimeout(fonts.load('700 30px "Playfair Display"'), 2500);
+      await withTimeout(fonts.load('700 29px "Playfair Display"'), 2500);
+      await withTimeout(fonts.load('italic 600 14px "Playfair Display"'), 2500);
+      await withTimeout(fonts.load('italic 600 12.5px "Playfair Display"'), 2500);
       await withTimeout(fonts.ready, 2500);
     } catch {
       // Fall through — Georgia is a perfectly good serif fallback.

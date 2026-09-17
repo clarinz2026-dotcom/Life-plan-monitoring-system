@@ -12,6 +12,28 @@ export function fmtPeso(n: number | undefined | null) {
   }).format(n);
 }
 
+/**
+ * `₱#,##0.00` — the money format printed on the statement of account. The
+ * statement screens use this so the figures on My Plans read exactly like the
+ * figures on the PDF.
+ */
+export function fmtPesoExact(n: number | undefined | null) {
+  if (n === null || n === undefined || Number.isNaN(n)) return "\u2014";
+  return `\u20B1${new Intl.NumberFormat("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n)}`;
+}
+
+/** `MM/DD/YYYY` — the date format printed on the statement of account. */
+export function fmtDateNumeric(ts: number | undefined | null) {
+  if (!ts) return "\u2014";
+  const d = new Date(ts);
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${mm}/${dd}/${d.getFullYear()}`;
+}
+
 export function fmtDate(ts: number | undefined | null) {
   if (!ts) return "—";
   return new Date(ts).toLocaleDateString("en-PH", {

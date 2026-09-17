@@ -45,10 +45,6 @@ export interface SOAData {
   accountNumber: string;
 }
 
-/** Main office as printed on the original statement template. */
-const OFFICE_ADDRESS =
-  "2nd Floor, Gabrinez Bldg., Fortich St., Malaybalay City, Bukidnon 8700";
-
 /**
  * The printed statement uses the same three payment statuses as the portal, so
  * a family reading the PDF sees the same wording as the screen.
@@ -63,6 +59,15 @@ const STATUS_LABELS: Record<string, string> = {
   lapsed: "Lapsed",
 };
 
+const CHANNEL_LABELS: Record<string, string> = {
+  cash: "Cash",
+  gcash: "GCash",
+  maya: "Maya",
+  bank_transfer: "Bank Transfer",
+  check: "Check",
+};
+
+/** `#,##0.00` — the money format on the statement. */
 function fmtMoney(amount: number) {
   return new Intl.NumberFormat("en-PH", {
     minimumFractionDigits: 2,
@@ -70,6 +75,12 @@ function fmtMoney(amount: number) {
   }).format(amount);
 }
 
+/** `₱ #,##0.00` */
+function peso(amount: number) {
+  return `\u20B1 ${fmtMoney(amount)}`;
+}
+
+/** `MM/DD/YYYY` — the date format on the statement. */
 function fmtDateShort(ts: number) {
   return format(new Date(ts), "MM/dd/yyyy");
 }
@@ -84,29 +95,223 @@ function esc(value: string | number | undefined | null) {
     .replace(/"/g, "&quot;");
 }
 
-export function generateSOAHTML(data: SOAData): string {
-  // ── Planholder fields ──────────────────────────────────────────────────
-  const field = (label: string, value: string) =>
-    `<td class="fl">${esc(label)}</td><td class="fv">${esc(value)}</td>`;
+/**
+ * One document stylesheet, shared by the PDF render and the on-screen preview
+ * (`SOAButton` renders the same HTML into an iframe), so what a family sees in
+ * the viewer is exactly what they download.
+ *
+ * The layout follows the printed statement template: circular seal + brand
+ * block on the left, "A Life of Dignity / A Legacy of Love" on the right, a
+ * centred serif title, then brand-green section bars over ruled fields and
+ * bordered tables, and the four-cell account summary strip at the foot.
+ */
+const SOA_STYLES = `
+  @page { size: A4; margin: 10mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-  // ── Beneficiaries (up to 4) ────────────────────────────────────────────
-  const beneficiaryRows = data.beneficiaries.slice(0, 4);
-  const beneficiaryHTML =
-    beneficiaryRows.length > 0
-      ? beneficiaryRows
-          .map(
-            (b, i) => `
+  body {
+    font-family: 'Times New Roman', Times, Georgia, serif;
+    color: #211f1a;
+    background: #ffffff;
+    font-size: 11.5px;
+    line-height: 1.4;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  #soa {
+    position: relative;
+    width: 100%;
+    max-width: 742px;
+    margin: 0 auto;
+    padding: 2px 0 6px;
+    overflow: hidden;
+  }
+
+  /* ── Letterhead ─────────────────────────────────────────────────────── */
+  .lh { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  .lh-left { display: flex; align-items: center; gap: 12px; }
+  .lh-logo { width: 64px; height: 64px; object-fit: contain; }
+  .lh-brand {
+    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    font-size: 29px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: 0.01em;
+    color: #1b4332;
+  }
+  .lh-sub {
+    margin-top: 4px;
+    font-size: 12px;
+    letter-spacing: 0.30em;
+    text-transform: uppercase;
+    color: #1b4332;
+  }
+  .lh-motto {
+    margin-top: 5px;
+    font-size: 8px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #5c6b60;
+  }
+  .lh-right { text-align: right; padding-top: 4px; }
+  .lh-tag {
+    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #1b4332;
+  }
+  .lh-tag-rule { margin: 7px 0 0 auto; width: 158px; height: 2px; background: #a9874f; }
+  .lh-issued {
+    margin-top: 7px;
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #5c6b60;
+  }
+
+  /* ── Title ──────────────────────────────────────────────────────────── */
+  .doc-title {
+    margin: 16px 0 14px;
+    text-align: center;
+    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    font-size: 26px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #1b4332;
+  }
+
+  /* ── Section bars ───────────────────────────────────────────────────── */
+  .sec-bar {
+    display: inline-block;
+    margin: 12px 0 8px;
+    padding: 4px 30px 4px 10px;
+    background: #1b4332;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    /* The template's bar tapers to a point on the right. Browsers that can't
+       clip degrade to a plain rectangle, which still reads correctly. */
+    clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  }
+
+  /* ── Ruled fields ───────────────────────────────────────────────────── */
+  table.fields { width: 100%; border-collapse: collapse; }
+  table.fields td { vertical-align: bottom; padding: 2px 0 5px; }
+  .fld-label {
+    width: 1%;
+    white-space: nowrap;
+    padding-right: 5px !important;
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #33413a;
+  }
+  .fld-value {
+    border-bottom: 1px solid #94a096;
+    padding: 0 16px 2px 3px !important;
+    font-size: 11.5px;
+  }
+  .fld-value.wide { padding-right: 26px !important; }
+  .fld-value.narrow { padding-right: 6px !important; }
+
+  /* ── Bordered tables (beneficiaries, payments) ──────────────────────── */
+  table.grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.grid th, table.grid td { border: 1px solid #a9b4ab; padding: 5px 7px; font-size: 10.5px; }
+  table.grid thead th {
+    background: #eef1ea;
+    color: #1b4332;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+  }
+  table.grid td.c { text-align: center; }
+  table.grid td.num { text-align: center; font-variant-numeric: tabular-nums; }
+  table.grid td.r { text-align: right; font-variant-numeric: tabular-nums; }
+  table.grid td.empty { text-align: center; font-style: italic; color: #6b7269; padding: 10px 7px; }
+  table.grid tr.alt td { background: #fafbf9; }
+
+  /* ── Account summary strip ──────────────────────────────────────────── */
+  .summary { display: flex; border: 1px solid #a9b4ab; background: #f1f4ef; }
+  .summary .cell { flex: 1 1 0; padding: 8px 10px; border-left: 1px solid #c6cfc6; }
+  .summary .cell:first-child { border-left: none; }
+  .summary .lbl {
+    text-align: center;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #33413a;
+  }
+  .summary .val {
+    margin-top: 5px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #1b4332;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* ── Multi-plan statements ──────────────────────────────────────────── */
+  .plan-block { page-break-inside: avoid; }
+  .plan-block + .plan-block { margin-top: 8px; padding-top: 4px; border-top: 1px solid #d5dcd6; }
+  .plan-heading {
+    margin-top: 12px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #1b4332;
+  }
+
+  /* ── Footer ─────────────────────────────────────────────────────────── */
+  .foot { margin-top: 18px; page-break-inside: avoid; }
+  .foot-row { display: flex; align-items: center; gap: 14px; }
+  .foot-rule { flex: 1 1 auto; height: 1px; background: #a9b4ab; }
+  .foot-sign {
+    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 12.5px;
+    color: #211f1a;
+    white-space: nowrap;
+  }
+  .foot-motto {
+    margin-top: 7px;
+    text-align: center;
+    font-size: 8.5px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #5c6b60;
+  }
+
+  /* ── Seal watermark ─────────────────────────────────────────────────── */
+  .mark { position: absolute; right: -14px; bottom: -16px; width: 130px; height: 130px; opacity: 0.06; }
+`;
+
+export function generateSOAHTML(data: SOAData): string {
+  /** A label sitting on the same ruled line as its value. */
+  const fld = (label: string, value: string, valueClass = "") =>
+    `<td class="fld-label">${esc(label)}</td><td class="fld-value ${valueClass}">${esc(value)}</td>`;
+
+  // ── Beneficiaries: the template always shows four numbered rows ────────
+  const beneficiaryRows = Array.from({ length: 4 }, (_, i) => {
+    const b = data.beneficiaries[i];
+    return `
       <tr>
-        <td class="bnum">${i + 1}.</td>
-        <td class="bname">${esc(b.name)}</td>
-        <td class="blabel">Age:</td>
-        <td class="bage">${b.age !== undefined ? esc(b.age) : "&nbsp;"}</td>
-        <td class="blabel">Relationship:</td>
-        <td class="brel">${esc(b.relationship)}</td>
-      </tr>`
-          )
-          .join("")
-      : `<tr><td colspan="6" class="empty">No beneficiaries recorded</td></tr>`;
+        <td class="c">${i + 1}</td>
+        <td>${b ? esc(b.name) : ""}</td>
+        <td class="c">${b?.age !== undefined ? esc(b.age) : ""}</td>
+        <td class="c">${b ? esc(b.relationship) : ""}</td>
+      </tr>`;
+  }).join("");
 
   // ── Plan blocks ────────────────────────────────────────────────────────
   const multiPlan = data.contracts.length > 1;
@@ -124,14 +329,16 @@ export function generateSOAHTML(data: SOAData): string {
         .map((p, i) => {
           runningBalance = Math.max(0, runningBalance - p.amount);
           installmentCounter += 1;
+          const remark =
+            p.remarks || CHANNEL_LABELS[p.paymentChannel] || p.paymentChannel;
           return `
         <tr class="${i % 2 === 1 ? "alt" : ""}">
           <td class="c">${fmtDateShort(p.paymentDate)}</td>
-          <td class="c">${p.orNumber ? esc(p.orNumber) : "&mdash;"}</td>
-          <td class="r">${fmtMoney(p.amount)}</td>
-          <td class="c">${installmentCounter}</td>
-          <td class="r">${fmtMoney(runningBalance)}</td>
-          <td>${esc(p.remarks ?? "Paid")}</td>
+          <td class="c">${p.orNumber ? esc(p.orNumber) : ""}</td>
+          <td class="r">${esc(peso(p.amount))}</td>
+          <td class="num">${installmentCounter}</td>
+          <td class="r">${esc(peso(runningBalance))}</td>
+          <td>${esc(remark)}</td>
         </tr>`;
         })
         .join("");
@@ -143,30 +350,39 @@ export function generateSOAHTML(data: SOAData): string {
       <div class="plan-block">
         ${
           multiPlan
-            ? `<p class="plan-heading">Plan ${index + 1} of ${data.contracts.length} &mdash; ${esc(c.planType)} <span class="plan-heading-sub">(Control No. ${esc(c.contractNumber)})</span></p>`
+            ? `<p class="plan-heading">Plan ${index + 1} of ${data.contracts.length}</p>`
             : ""
         }
 
-        <table class="fields field-grid">
+        <span class="sec-bar">Plan Information</span>
+        <table class="fields">
           <tr>
-            ${field("PLAN VALUE:", `\u20B1 ${fmtMoney(c.planAmount)}`)}
-            ${field("PLAN TYPE:", c.planType)}
+            ${fld("Plan Value:", peso(c.planAmount))}
+            ${fld("Sales Agent:", data.salesAgent || "\u2014")}
           </tr>
           <tr>
-            ${field("SALES AGENT:", data.salesAgent || "\u2014")}
-            ${field("CONTROL NO.:", c.contractNumber)}
+            ${fld("Plan Type:", c.planType)}
+            ${fld("EFS OPC Control No.:", c.contractNumber)}
           </tr>
         </table>
 
-        <p class="section">Payment History</p>
-        <table class="ledger">
+        <span class="sec-bar">Payment History</span>
+        <table class="grid">
+          <colgroup>
+            <col style="width:15%" />
+            <col style="width:15%" />
+            <col style="width:16%" />
+            <col style="width:15%" />
+            <col style="width:17%" />
+            <col style="width:22%" />
+          </colgroup>
           <thead>
             <tr>
-              <th class="c">Date</th>
-              <th class="c">O.R. No.</th>
-              <th class="r">Amount</th>
-              <th class="c">Inst.</th>
-              <th class="r">Balance</th>
+              <th>Date<br />(MM/DD/YYYY)</th>
+              <th>O.R. No.</th>
+              <th>Amount</th>
+              <th>Installment<br />Number</th>
+              <th>Balance</th>
               <th>Remarks</th>
             </tr>
           </thead>
@@ -178,23 +394,35 @@ export function generateSOAHTML(data: SOAData): string {
           </tbody>
         </table>
 
-        <table class="totals">
-          <tr>
-            <td class="tl">Plan Value:</td>
-            <td class="tv">&#8369; ${fmtMoney(c.planAmount)}</td>
-            <td class="tl">Total Paid:</td>
-            <td class="tv">&#8369; ${fmtMoney(c.totalPaid)}</td>
-          </tr>
-          <tr>
-            <td class="tl">Outstanding Balance:</td>
-            <td class="tv tv-strong${outstanding > 0 ? " tv-due" : " tv-paid"}">&#8369; ${fmtMoney(outstanding)}</td>
-            <td class="tl">Status:</td>
-            <td class="tv tv-strong">${esc(status)}</td>
-          </tr>
-        </table>
+        <span class="sec-bar">Account Summary</span>
+        <div class="summary">
+          <div class="cell">
+            <p class="lbl">Plan Value</p>
+            <p class="val">${esc(peso(c.planAmount))}</p>
+          </div>
+          <div class="cell">
+            <p class="lbl">Total Paid</p>
+            <p class="val">${esc(peso(c.totalPaid))}</p>
+          </div>
+          <div class="cell">
+            <p class="lbl">Outstanding Balance</p>
+            <p class="val">${esc(peso(outstanding))}</p>
+          </div>
+          <div class="cell">
+            <p class="lbl">Payment Status</p>
+            <p class="val">${esc(status)}</p>
+          </div>
+        </div>
       </div>`;
     })
     .join("");
+
+  const issuedLine = [
+    `Issued ${data.generatedDate}`,
+    data.branchName ? data.branchName : null,
+  ]
+    .filter(Boolean)
+    .join(" \u00b7 ");
 
   return `<!DOCTYPE html>
 <html>
@@ -205,222 +433,97 @@ export function generateSOAHTML(data: SOAData): string {
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap"
     rel="stylesheet"
   />
-  <style>
-    @page { size: A4; margin: 14mm; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    body {
-      font-family: 'Times New Roman', Times, Georgia, serif;
-      color: #14181f;
-      background: #ffffff;
-      font-size: 12px;
-      line-height: 1.5;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
-    }
-    #soa { max-width: 740px; margin: 0 auto; }
-
-    /* ── Letterhead ── */
-    .letterhead { display: flex; align-items: center; justify-content: center; gap: 16px; }
-    .brand-logo { width: 72px; height: 72px; border-radius: 50%; object-fit: contain; }
-    .brand-name {
-      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
-      font-size: 30px;
-      font-weight: 700;
-      letter-spacing: 0.01em;
-      color: #1f4d3a;
-      line-height: 1.15;
-    }
-    .brand-tagline {
-      font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
-      font-size: 12.5px;
-      font-style: italic;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      color: #6b7280;
-      margin-top: 4px;
-    }
-    .brand-address { text-align: center; font-size: 11.5px; color: #4b5563; margin-top: 8px; }
-    .rule { border-top: 2px solid #1f4d3a; margin: 12px 0 0; }
-
-    /* ── Title ── */
-    .doc-title {
-      text-align: center; font-size: 19px; font-weight: bold;
-      letter-spacing: 0.16em; text-transform: uppercase; color: #1f4d3a;
-      margin: 22px 0 4px;
-    }
-    .doc-meta {
-      display: flex; justify-content: center; gap: 28px;
-      font-size: 10.5px; color: #6b7280; letter-spacing: 0.04em;
-      padding-bottom: 14px; border-bottom: 1px solid #d8ddd8; margin-bottom: 4px;
-    }
-    .doc-meta strong { color: #14181f; font-weight: bold; }
-
-    /* ── Section labels ── */
-    .section {
-      font-size: 10.5px; font-weight: bold; text-transform: uppercase;
-      letter-spacing: 0.16em; color: #1f4d3a;
-      margin: 22px 0 10px; padding-bottom: 5px; border-bottom: 1px solid #d8ddd8;
-    }
-
-    /* ── Fill-in style fields ── */
-    table.fields { width: 100%; border-collapse: collapse; }
-    table.fields td { padding: 5px 0 3px; vertical-align: bottom; }
-    td.fl {
-      width: 1%; white-space: nowrap; padding-right: 6px;
-      font-size: 10.5px; font-weight: bold; letter-spacing: 0.06em; color: #4b5563;
-    }
-    td.fv {
-      border-bottom: 1px solid #b9c2bb; padding-left: 4px; padding-right: 24px;
-      font-size: 12.5px; color: #14181f; min-width: 120px;
-    }
-    .field-grid td.fv { padding-right: 16px; }
-    .field-grid td.fl { padding-top: 7px; }
-
-    /* ── Beneficiaries ── */
-    table.benef { width: 100%; border-collapse: collapse; }
-    table.benef td { padding: 6px 0 3px; vertical-align: bottom; }
-    td.bnum { width: 20px; font-weight: bold; color: #4b5563; font-size: 11px; }
-    td.bname { border-bottom: 1px solid #b9c2bb; padding-right: 18px; font-size: 12.5px; }
-    td.blabel { width: 1%; white-space: nowrap; padding: 6px 6px 3px 16px; font-size: 10.5px; font-weight: bold; letter-spacing: 0.06em; color: #4b5563; }
-    td.bage { width: 56px; border-bottom: 1px solid #b9c2bb; text-align: center; font-size: 12.5px; }
-    td.brel { width: 170px; border-bottom: 1px solid #b9c2bb; padding-left: 4px; font-size: 12.5px; }
-
-    /* ── Ledger ── */
-    table.ledger { width: 100%; border-collapse: collapse; margin-top: 2px; }
-    table.ledger th {
-      background: #f2f5f2; border-top: 1.5px solid #1f4d3a; border-bottom: 1.5px solid #1f4d3a;
-      padding: 8px 8px; font-size: 9.5px; font-weight: bold;
-      text-transform: uppercase; letter-spacing: 0.1em; color: #1f4d3a;
-    }
-    table.ledger td {
-      padding: 8px; font-size: 11.5px; border-bottom: 1px solid #e3e7e3;
-      font-variant-numeric: tabular-nums;
-    }
-    table.ledger tr.alt td { background: #fafbfa; }
-    .c { text-align: center; }
-    .r { text-align: right; }
-    .empty { text-align: center !important; font-style: italic; color: #6b7280; padding: 16px 8px !important; }
-
-    /* ── Totals ── */
-    table.totals {
-      width: 100%; border-collapse: collapse; margin-top: 16px;
-      background: #f7f9f7; border: 1px solid #d8ddd8;
-    }
-    table.totals td { padding: 10px 14px; font-size: 11.5px; font-variant-numeric: tabular-nums; }
-    td.tl {
-      width: 1%; white-space: nowrap; font-size: 10.5px; font-weight: bold;
-      text-transform: uppercase; letter-spacing: 0.08em; color: #4b5563;
-    }
-    td.tv { font-size: 13px; font-weight: bold; color: #14181f; padding-right: 34px; }
-    td.tv-strong { color: #1f4d3a; }
-    td.tv-due { color: #a34700; }
-    td.tv-paid { color: #14683c; }
-
-    /* ── Plan blocks ── */
-    .plan-block { page-break-inside: avoid; margin-bottom: 30px; }
-    .plan-block + .plan-block { margin-top: 34px; padding-top: 6px; border-top: 1px dashed #d8ddd8; }
-    .plan-heading {
-      font-size: 11px; font-weight: bold; color: #14181f;
-      letter-spacing: 0.04em; margin-bottom: 4px;
-    }
-    .plan-heading-sub { font-weight: normal; color: #6b7280; font-size: 10.5px; }
-
-    /* ── Footer / signature ── */
-    .signoff {
-      margin-top: 42px; padding-top: 16px; border-top: 1px solid #d8ddd8;
-      page-break-inside: avoid;
-    }
-    .signoff-grid { display: flex; justify-content: space-between; gap: 40px; margin-top: 26px; }
-    .sig-block { width: 46%; }
-    .sig-line { border-bottom: 1px solid #14181f; height: 26px; }
-    .sig-caption { margin-top: 6px; font-size: 10.5px; color: #4b5563; letter-spacing: 0.04em; }
-    .sig-caption strong { display: block; font-size: 11.5px; color: #14181f; }
-    .disclaimer {
-      margin-top: 24px; font-size: 9.5px; line-height: 1.6; color: #6b7280;
-      text-align: center; font-style: italic;
-    }
-  </style>
+  <style>${SOA_STYLES}</style>
 </head>
 <body>
   <div id="soa">
 
     <!-- ── Letterhead ── -->
-    <div class="letterhead">
-      ${data.logoUrl ? `<img class="brand-logo" src="${esc(data.logoUrl)}" alt="" />` : ""}
-      <div>
-        <p class="brand-name">Evangelist Funeral Services OPC</p>
-        <p class="brand-tagline">&ldquo;To Care and To Serve&rdquo;</p>
+    <div class="lh">
+      <div class="lh-left">
+        ${data.logoUrl ? `<img class="lh-logo" src="${esc(data.logoUrl)}" alt="" />` : ""}
+        <div>
+          <p class="lh-brand">Evangelist</p>
+          <p class="lh-sub">Funeral Services</p>
+          <p class="lh-motto">In life and beyond, we care.</p>
+        </div>
+      </div>
+      <div class="lh-right">
+        <p class="lh-tag">A Life of Dignity<br />A Legacy of Love</p>
+        <div class="lh-tag-rule"></div>
+        <p class="lh-issued">${esc(issuedLine)}</p>
       </div>
     </div>
-    <p class="brand-address">${OFFICE_ADDRESS}</p>
-    <div class="rule"></div>
 
     <h1 class="doc-title">Statement of Account</h1>
-    <div class="doc-meta">
-      <span>Account No.: <strong>${esc(data.accountNumber)}</strong></span>
-      <span>Date Issued: <strong>${esc(data.generatedDate)}</strong></span>
-      ${data.branchName ? `<span>Branch: <strong>${esc(data.branchName)}</strong></span>` : ""}
-    </div>
 
     <!-- ── Planholder information ── -->
-    <p class="section">Planholder Information</p>
+    <span class="sec-bar">Planholder Information</span>
     <table class="fields">
       <tr>
-        ${field("PLANHOLDER:", data.clientName)}
-        ${field("CP NO.:", data.clientContact)}
+        ${fld("Planholder's Name:", data.clientName, "wide")}
+        ${fld("CP No.:", data.clientContact, "narrow")}
       </tr>
       <tr>
-        ${field("ADDRESS:", data.clientAddress)}
-        ${field("AGE:", data.clientAge !== undefined ? String(data.clientAge) : "\u2014")}
+        ${fld("Address:", data.clientAddress, "wide")}
+        ${fld("Age:", data.clientAge !== undefined ? String(data.clientAge) : "\u2014", "narrow")}
       </tr>
       <tr>
-        <td class="fl"></td>
-        <td class="fv" style="border-bottom:none;"></td>
-        ${field("BIRTHDAY:", data.clientBirthDate || "\u2014")}
+        <td class="fld-label">&nbsp;</td>
+        <td class="fld-value wide">${esc(data.clientEmail || "")}</td>
+        ${fld("Birthday:", data.clientBirthDate || "\u2014", "narrow")}
       </tr>
     </table>
 
     <!-- ── Beneficiaries ── -->
-    <p class="section">Beneficiaries</p>
-    <table class="benef">
-      ${beneficiaryHTML}
+    <span class="sec-bar">Beneficiaries</span>
+    <table class="grid">
+      <colgroup>
+        <col style="width:6%" />
+        <col style="width:54%" />
+        <col style="width:15%" />
+        <col style="width:25%" />
+      </colgroup>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Name</th>
+          <th>Age</th>
+          <th>Relationship</th>
+        </tr>
+      </thead>
+      <tbody>${beneficiaryRows}</tbody>
     </table>
 
     <!-- ── Plans ── -->
     ${
       plansHTML ||
-      `<p class="section">Plan Information</p>
-       <p class="empty" style="text-align:left !important;padding-left:0 !important;">No plan records on file for this planholder.</p>`
+      `<span class="sec-bar">Plan Information</span>
+       <table class="grid">
+         <tbody>
+           <tr><td class="empty">No plan records on file for this planholder.</td></tr>
+         </tbody>
+       </table>`
     }
 
-    <!-- ── Sign-off ── -->
-    <div class="signoff">
-      <div class="signoff-grid">
-        <div class="sig-block">
-          <div class="sig-line"></div>
-          <p class="sig-caption">
-            <strong>Prepared by</strong>
-            Evangelist Funeral Services
-          </p>
-        </div>
-        <div class="sig-block">
-          <div class="sig-line"></div>
-          <p class="sig-caption">
-            <strong>Received by</strong>
-            Planholder / Authorized Representative
-          </p>
-        </div>
+    <!-- ── Footer ── -->
+    <div class="foot">
+      <div class="foot-row">
+        <div class="foot-rule"></div>
+        <p class="foot-sign">Prepared by: Evangelist Funeral Services</p>
+        <div class="foot-rule"></div>
       </div>
-      <p class="disclaimer">
-        This Statement of Account reflects all payments recorded in our system as of
-        the date issued above. Please report any discrepancy to your branch office.
-      </p>
+      <p class="foot-motto">Service Today. Peace Forever.</p>
     </div>
 
+    ${
+      data.logoUrl
+        ? `<img class="mark" src="${esc(data.logoUrl)}" alt="" />`
+        : ""
+    }
   </div>
 </body>
 </html>`;
