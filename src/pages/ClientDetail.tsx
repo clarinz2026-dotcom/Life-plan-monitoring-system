@@ -21,6 +21,7 @@ import {
   Upload,
 } from "lucide-react";
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useState, useCallback, useEffect } from "react";
@@ -225,17 +226,23 @@ export default function ClientDetail() {
     }
   };
 
-  const handleUploadFile = (file: File) => {
+  const handleUploadFile = async (file: File) => {
     setUploadFile(file);
     setUploadError(null);
     setUploadPreview([]);
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target?.result as string;
-      if (!text) { setUploadError("Could not read the file"); return; }
-      const result = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true, transformHeader: (h: string) => h.trim() });
-      if (result.errors.length > 0) { setUploadError(`CSV parse error: ${result.errors[0].message}`); return; }
-      const rows = result.data;
+    try {
+      let rows: Record<string, string>[] = [];
+      if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: "array" });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        rows = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, { defval: "" });
+      } else {
+        const text = await file.text();
+        const result = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true, transformHeader: (h: string) => h.trim() });
+        if (result.errors.length > 0) { setUploadError(`CSV parse error: ${result.errors[0].message}`); return; }
+        rows = result.data;
+      }
       if (rows.length === 0) { setUploadError("The file has no data rows"); return; }
       setUploadPreview(rows.map((row) => ({
         contractNumber: (row.contractNumber || row.contract || row.ContractNumber || row.Contract || "").trim(),
@@ -245,8 +252,9 @@ export default function ClientDetail() {
         orNumber: (row.orNumber || row.or || row.OR || row["OR #"] || "").trim(),
         remarks: (row.remarks || row.Remarks || "").trim(),
       })));
-    };
-    reader.readAsText(file);
+    } catch (err: any) {
+      setUploadError(`Failed to parse file: ${err?.message || "unknown error"}`);
+    }
   };
 
   const handleBulkUploadSubmit = async () => {
@@ -1057,13 +1065,13 @@ export default function ClientDetail() {
               <DialogHeader>
                 <DialogTitle className="text-xl font-bold">Bulk Upload Payments</DialogTitle>
                 <DialogDescription className="text-sm">
-                  Upload a CSV with columns: contractNumber, amount, channel, date, orNumber, remarks
+                  Upload a CSV or XLSX file with columns: contractNumber, amount, channel, date, orNumber, remarks
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 mt-3">
                 <div>
                   <Label className="text-[14px]">CSV File *</Label>
-                  <Input type="file" accept=".csv" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadFile(f); }} className="text-sm" />
+                  <Input type="file" accept=".csv,.xlsx,.xls" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadFile(f); }} className="text-sm" />
                 </div>
                 {uploadFile && <p className="text-xs text-muted-foreground">{uploadFile.name} ({uploadPreview.length} row{uploadPreview.length !== 1 ? "s" : ""} parsed)</p>}
                 {uploadError && <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3"><p className="text-sm text-destructive whitespace-pre-wrap">{uploadError}</p></div>}
