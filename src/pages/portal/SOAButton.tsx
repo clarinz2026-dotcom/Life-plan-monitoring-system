@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import {
   deliverPDF,
   generateSOAPDFBlob,
+  toDataURL,
   type PreparedSOAPDF,
 } from "@/lib/generateSOA";
 import { generateSOAHTML, type SOAData, type SOABeneficiary } from "@/components/SOADocument";
@@ -205,6 +206,7 @@ export function SOAButton({
   const [preparing, setPreparing] = useState(false);
   const [prepared, setPrepared] = useState<PreparedSOAPDF | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
+  const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
 
   // Public branch directory — this component runs for planholder accounts,
@@ -212,21 +214,53 @@ export function SOAButton({
   const branches = useQuery(api.branches.publicList);
   const settings = useQuery(api.settings.get);
 
+  /**
+   * Inline the seal before it reaches the preview.
+   *
+   * The iframe is rendered from `srcDoc`, which has an opaque origin — a remote
+   * logo URL is refused there and renders as a broken-image box, while the PDF
+   * (which embeds a data URL) comes out fine. Resolving it once here keeps the
+   * preview and the download identical.
+   */
+  const logoUrl = settings?.logoUrl;
+  useEffect(() => {
+    if (!logoUrl) return;
+    let cancelled = false;
+    toDataURL(logoUrl)
+      .then((dataUrl) => {
+        if (!cancelled && dataUrl) setLogoDataUrl(dataUrl);
+      })
+      .catch(() => {
+        /* keep the raw URL — the header simply drops the seal */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [logoUrl]);
+
   const group = records[0];
   const branchName =
     group?.client.branchId
       ? branches?.find((b) => b._id === group.client.branchId)?.name
       : undefined;
 
+  // Prefer the inlined seal; fall back to the stored URL while it resolves.
+  const resolvedLogoUrl = logoDataUrl ?? logoUrl;
+
   let data: SOAData | null = null;
   if (group) {
     if (contractId) {
       const cd = group.contracts.find((c) => c.contract._id === contractId);
       if (cd) {
-        data = buildSingleContractSOA(group, cd, branchName, settings?.logoUrl ?? undefined);
+        data = buildSingleContractSOA(
+          group,
+          cd,
+          branchName,
+          resolvedLogoUrl ?? undefined
+        );
       }
     } else {
-      data = buildSOAData(records, branchName, settings?.logoUrl ?? undefined);
+      data = buildSOAData(records, branchName, resolvedLogoUrl ?? undefined);
     }
   }
 

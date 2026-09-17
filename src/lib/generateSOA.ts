@@ -92,7 +92,7 @@ export function deliverPDF({ blob, filename }: PreparedSOAPDF): DeliveryMode {
  * in the PDF (cross-origin images can otherwise render blank). Returns the
  * original value for data: URLs, and null when the fetch fails.
  */
-async function toDataURL(url: string): Promise<string | null> {
+export async function toDataURL(url: string): Promise<string | null> {
   if (url.startsWith("data:")) return url;
   try {
     const res = await fetch(url, { mode: "cors" });

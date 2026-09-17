@@ -452,7 +452,7 @@ export function generateSOAHTML(data: SOAData): string {
         </div>
       </div>
       <div class="lh-right">
-        <p class="lh-tag">A Life of Dignity<br />A Legacy of Love</p>
+        <p class="lh-tag">To Care and To Serve</p>
         <div class="lh-tag-rule"></div>
         <p class="lh-issued">${esc(issuedLine)}</p>
       </div>
