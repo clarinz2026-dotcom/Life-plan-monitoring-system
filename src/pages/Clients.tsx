@@ -267,18 +267,30 @@ export default function Clients() {
   const pageClients = filteredClients?.slice(pageStart, pageStart + PAGE_SIZE);
   const pageItems = getPageItems(currentPage, totalPages);
 
-  const pageClientIds = (pageClients ?? []).map((item) => String(item.client._id));
-  const allVisibleSelected =
-    pageClientIds.length > 0 && pageClientIds.every((id) => selectedIds.has(id));
-  const someVisibleSelected = pageClientIds.some((id) => selectedIds.has(id));
+  /**
+   * Every planholder matching the current search and status filter — all
+   * pages, not just the fifteen rows rendered on screen. The header checkbox
+   * works on this set so "Archive"/"Delete" act on everything the user
+   * filtered down to, instead of silently skipping the other pages.
+   */
+  const allFilteredIds = (filteredClients ?? []).map((item) =>
+    String(item.client._id)
+  );
+  const selectedFilteredCount = allFilteredIds.filter((id) =>
+    selectedIds.has(id)
+  ).length;
+  const allFilteredSelected =
+    allFilteredIds.length > 0 && selectedFilteredCount === allFilteredIds.length;
+  const someFilteredSelected =
+    selectedFilteredCount > 0 && !allFilteredSelected;
 
-  const toggleSelectVisible = () => {
+  const toggleSelectAll = () => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (allVisibleSelected) {
-        pageClientIds.forEach((id) => next.delete(id));
+      if (allFilteredSelected) {
+        allFilteredIds.forEach((id) => next.delete(id));
       } else {
-        pageClientIds.forEach((id) => next.add(id));
+        allFilteredIds.forEach((id) => next.add(id));
       }
       return next;
     });
@@ -642,10 +654,19 @@ export default function Clients() {
                 <TableHead className="w-12">
                   <Checkbox
                     checked={
-                      allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false
+                      allFilteredSelected
+                        ? true
+                        : someFilteredSelected
+                          ? "indeterminate"
+                          : false
                     }
-                    onCheckedChange={toggleSelectVisible}
-                    aria-label="Select all visible clients"
+                    onCheckedChange={toggleSelectAll}
+                    aria-label={`Select all ${totalFiltered} clients matching the current filter`}
+                    title={
+                      allFilteredSelected
+                        ? `Deselect all ${totalFiltered} clients`
+                        : `Select all ${totalFiltered} clients (all pages)`
+                    }
                   />
                 </TableHead>
                 <TableHead className="text-[13px] uppercase tracking-wider font-medium">
