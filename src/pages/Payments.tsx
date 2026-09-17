@@ -46,6 +46,13 @@ function formatPHP(amount: number) {
   }).format(amount);
 }
 
+/**
+ * Mirrors the cap enforced by `payments.archive` / `restore` / `remove`. One
+ * call may touch this many payments, so an oversized selection is flagged here
+ * instead of failing server-side after the user has already committed to it.
+ */
+const MAX_BULK_PAYMENTS = 500;
+
 export default function Payments() {
   const { queryBranchId, isCeoOrAdmin, isManager } = useBranch();
   const [showArchived, setShowArchived] = useState(false);
@@ -79,6 +86,8 @@ export default function Payments() {
   const selectedAmount = rows
     .filter((p) => selectedIds.has(String(p._id)))
     .reduce((sum, p) => sum + p.amount, 0);
+  /** Too many rows for a single reverse/restore/delete call. */
+  const overBulkCap = selectedIds.size > MAX_BULK_PAYMENTS;
 
   /**
    * Select every payment in the list — not just the rows in view. The list is
@@ -403,6 +412,12 @@ export default function Payments() {
             {selectedIds.size} payment{selectedIds.size !== 1 ? "s" : ""} selected ·{" "}
             {formatPHP(selectedAmount)}
           </span>
+          {overBulkCap && (
+            <span className="w-full text-[13px] font-medium text-destructive">
+              Up to {MAX_BULK_PAYMENTS} payments can be processed at once. Narrow
+              the selection (or clear and pick a smaller range) and try again.
+            </span>
+          )}
           <div className="ml-auto flex flex-wrap gap-2">
             <Button
               variant="outline"
@@ -419,7 +434,7 @@ export default function Payments() {
                 size="default"
                 className="h-10 gap-2 text-[14px]"
                 onClick={handleRestore}
-                disabled={isWorking || !canReverse}
+                disabled={isWorking || !canReverse || overBulkCap}
                 title={
                   canReverse
                     ? "Put these payments back on their plans"
@@ -439,7 +454,7 @@ export default function Payments() {
                 size="default"
                 className="h-10 gap-2 text-[14px]"
                 onClick={() => setArchiveDialogOpen(true)}
-                disabled={!canReverse}
+                disabled={!canReverse || overBulkCap}
                 title={
                   canReverse
                     ? "Reverse from the ledger without erasing the record"
@@ -457,6 +472,7 @@ export default function Payments() {
                 size="default"
                 className="h-10 gap-2 text-[14px]"
                 onClick={() => setDeleteDialogOpen(true)}
+                disabled={overBulkCap}
               >
                 <Trash2 className="h-4 w-4" />
                 Delete ({selectedIds.size})

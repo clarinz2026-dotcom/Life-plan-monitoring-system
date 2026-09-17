@@ -9,8 +9,19 @@ import {
   resolveBranchFilter,
 } from "./access";
 import { computeDelinquencyStatus } from "./clients";
+import { lastLivePaymentDate } from "./paymentLedger";
 import { effectiveRole } from "./roles";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
+
+/**
+ * How many payments one bulk call may touch.
+ *
+ * Every payment in a batch costs a handful of reads (the row, the access
+ * check, its receipts), and Convex caps a single function at 32,000 documents.
+ * The cap keeps a select-all on a busy branch well inside that budget and turns
+ * an otherwise opaque server error into a message the user can act on.
+ */
+const MAX_BULK_PAYMENTS = 500;
 
 /**
  * Legacy rows that carry no branch yet count as belonging to the viewer's own
@@ -32,44 +43,48 @@ function formatPHP(amount: number) {
 }
 
 /**
- * Take a payment's amount back off its plan.
+ * Leave a plan where it really stands after money moved on or off its ledger.
  *
- * A reversal has to leave the contract where it really stands: the amount comes
- * off `totalPaid`, and a contract that had been marked fully paid drops back to
- * its true delinquency status, recomputed from the most recent *remaining*
- * payment (the one being reversed is excluded) using the same thresholds the
- * rest of the app uses.
+ * A reversal has to do more than subtract an amount: a plan that had been
+ * marked fully paid drops back to its true delinquency status, recomputed from
+ * the most recent *remaining* payment using the same thresholds the rest of the
+ * app uses.
+ *
+ * Call this once per plan, after the whole batch of payment rows has been
+ * written. `amountDelta` is the net change to what has been collected (negative
+ * when money leaves the ledger). Reading the plan's newest live payment is then
+ * a single indexed row, not a walk of its history — doing it per payment is
+ * what blew past Convex's read limit on a large selection.
  */
-async function reversePayment(
+async function recomputePlanLedger(
   ctx: MutationCtx,
-  contract: Doc<"contracts">,
-  amount: number,
-  excludePaymentId: Id<"payments">
+  contractId: Id<"contracts">,
+  amountDelta: number
 ) {
-  const newTotalPaid = Math.max(0, contract.totalPaid - amount);
+  const contract = await ctx.db.get(contractId);
+  if (!contract) return null;
 
-  const siblings = await ctx.db
-    .query("payments")
-    .withIndex("by_contract", (q) => q.eq("contractId", contract._id))
-    .collect();
-  const lastPaymentDate = siblings
-    .filter((p) => p._id !== excludePaymentId && !p.archivedAt)
-    .reduce<number | null>(
-      (latest, p) => (latest === null || p.paymentDate > latest ? p.paymentDate : latest),
-      null
+  const newTotalPaid = Math.max(0, contract.totalPaid + amountDelta);
+
+  let contractStatus: string;
+  if (amountDelta > 0 && newTotalPaid >= contract.planAmount) {
+    contractStatus = "fully_paid";
+  } else {
+    // Never feed "fully_paid" in: the helper treats it as a status to preserve,
+    // which is the opposite of what a reversal needs.
+    const lastPaymentDate = await lastLivePaymentDate(ctx, contractId);
+    contractStatus = computeDelinquencyStatus(
+      contract.contractStatus === "fully_paid"
+        ? "current"
+        : contract.contractStatus,
+      lastPaymentDate,
+      newTotalPaid,
+      contract.planAmount,
+      contract.startDate
     );
+  }
 
-  // Never feed "fully_paid" in: the helper treats it as a status to preserve,
-  // which is the opposite of what a reversal needs.
-  const contractStatus = computeDelinquencyStatus(
-    contract.contractStatus === "fully_paid" ? "current" : contract.contractStatus,
-    lastPaymentDate,
-    newTotalPaid,
-    contract.planAmount,
-    contract.startDate
-  );
-
-  await ctx.db.patch(contract._id, {
+  await ctx.db.patch(contractId, {
     totalPaid: newTotalPaid,
     contractStatus: contractStatus as any,
   });
@@ -77,17 +92,13 @@ async function reversePayment(
   return { newTotalPaid, contractStatus };
 }
 
-/** Put a previously reversed payment's amount back onto its plan. */
-async function applyPayment(ctx: MutationCtx, payment: Doc<"payments">) {
-  const contract = await ctx.db.get(payment.contractId);
-  if (!contract) return;
-  const newTotalPaid = contract.totalPaid + payment.amount;
-  await ctx.db.patch(contract._id, {
-    totalPaid: newTotalPaid,
-    contractStatus: (newTotalPaid >= contract.planAmount
-      ? "fully_paid"
-      : contract.contractStatus) as any,
-  });
+/** Validate a bulk selection before doing any work. */
+function assertBulkSize(action: string, count: number) {
+  if (count > MAX_BULK_PAYMENTS) {
+    throw new Error(
+      `You can ${action} up to ${MAX_BULK_PAYMENTS} payments at a time — ${count} were selected. Narrow the selection and try again.`
+    );
+  }
 }
 
 /** Void (archive) or re-issue the official receipt attached to a payment. */
@@ -351,11 +362,14 @@ export const archive = mutation({
     if (args.paymentIds.length === 0) {
       return { archived: 0, amount: 0, summaries: [] as string[] };
     }
+    assertBulkSize("reverse", args.paymentIds.length);
 
     const actor = await ctx.db.get(viewer.userId);
     const summaries: string[] = [];
     let reversedAmount = 0;
     let touchedBranch: Id<"branches"> | undefined;
+    /** Net amount each plan loses, applied in one pass at the end. */
+    const deltasByPlan = new Map<Id<"contracts">, number>();
 
     for (const paymentId of args.paymentIds) {
       const payment = await ctx.db.get(paymentId);
@@ -372,13 +386,21 @@ export const archive = mutation({
         archivedBy: viewer.userId,
         archiveReason: args.reason,
       });
-
-      await reversePayment(ctx, contract, payment.amount, paymentId);
       await setReceiptStatus(ctx, paymentId, "cancelled");
+
+      deltasByPlan.set(
+        payment.contractId,
+        (deltasByPlan.get(payment.contractId) ?? 0) - payment.amount
+      );
 
       summaries.push(`${formatPHP(payment.amount)} on ${contract.contractNumber}`);
       reversedAmount += payment.amount;
       touchedBranch = touchedBranch ?? payment.branchId ?? undefined;
+    }
+
+    // One recompute per plan, after every row in the batch has left the ledger.
+    for (const [contractId, delta] of deltasByPlan) {
+      await recomputePlanLedger(ctx, contractId, delta);
     }
 
     if (summaries.length > 0) {
@@ -417,10 +439,13 @@ export const restore = mutation({
       );
     }
     if (args.paymentIds.length === 0) return { restored: 0 };
+    assertBulkSize("restore", args.paymentIds.length);
 
     const actor = await ctx.db.get(viewer.userId);
     const summaries: string[] = [];
     let touchedBranch: Id<"branches"> | undefined;
+    /** Net amount each plan gains back, applied in one pass at the end. */
+    const deltasByPlan = new Map<Id<"contracts">, number>();
 
     for (const paymentId of args.paymentIds) {
       const payment = await ctx.db.get(paymentId);
@@ -433,11 +458,19 @@ export const restore = mutation({
         archivedBy: undefined,
         archiveReason: undefined,
       });
-      await applyPayment(ctx, payment);
       await setReceiptStatus(ctx, paymentId, "active");
+
+      deltasByPlan.set(
+        payment.contractId,
+        (deltasByPlan.get(payment.contractId) ?? 0) + payment.amount
+      );
 
       summaries.push(`${formatPHP(payment.amount)} restored`);
       touchedBranch = touchedBranch ?? payment.branchId ?? undefined;
+    }
+
+    for (const [contractId, delta] of deltasByPlan) {
+      await recomputePlanLedger(ctx, contractId, delta);
     }
 
     if (summaries.length > 0) {
@@ -479,9 +512,12 @@ export const remove = mutation({
       );
     }
     if (args.paymentIds.length === 0) return { deleted: 0 };
+    assertBulkSize("delete", args.paymentIds.length);
 
     const summaries: string[] = [];
     let touchedBranch: Id<"branches"> | undefined;
+    /** Net amount each plan loses because a not-yet-reversed row is erased. */
+    const deltasByPlan = new Map<Id<"contracts">, number>();
 
     for (const paymentId of args.paymentIds) {
       const payment = await ctx.db.get(paymentId);
@@ -490,8 +526,12 @@ export const remove = mutation({
 
       const contract = await ctx.db.get(payment.contractId);
       if (contract && !payment.archivedAt) {
-        // Not reversed yet — take the amount off the plan before erasing.
-        await reversePayment(ctx, contract, payment.amount, paymentId);
+        // Not reversed yet — the amount comes off the plan once the row is
+        // gone (applied in the per-plan pass below).
+        deltasByPlan.set(
+          payment.contractId,
+          (deltasByPlan.get(payment.contractId) ?? 0) - payment.amount
+        );
       }
 
       const receipts = await ctx.db
@@ -504,6 +544,10 @@ export const remove = mutation({
       touchedBranch = touchedBranch ?? payment.branchId ?? undefined;
 
       await ctx.db.delete(paymentId);
+    }
+
+    for (const [contractId, delta] of deltasByPlan) {
+      await recomputePlanLedger(ctx, contractId, delta);
     }
 
     if (summaries.length > 0) {
