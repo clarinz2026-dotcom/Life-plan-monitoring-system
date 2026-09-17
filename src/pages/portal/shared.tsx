@@ -51,21 +51,31 @@ export function initials(name?: string | null) {
 const PILL_BASE =
   "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide";
 
+/**
+ * Payment status pills.
+ *
+ * The office works with three payment statuses — Good Payer, Lapsed,
+ * Reinstated. The stored `contractStatus` still records *how far* behind a plan
+ * is (`delinquent_30/60/90`), which the aging report and the collection
+ * follow-ups read, but what planholders and staff see is the three-way wording.
+ * The colours keep escalating with the stored status, so a 90-day or lapsed
+ * account still reads red while a 30-day one reads amber.
+ */
 export const CONTRACT_PILL: Record<string, { label: string; cls: string }> = {
   current: {
-    label: "Current",
+    label: "Good Payer",
     cls: "border-emerald-300 bg-emerald-50 text-emerald-800",
   },
   delinquent_30: {
-    label: "30 Days Late",
+    label: "Lapsed",
     cls: "border-amber-300 bg-amber-50 text-amber-800",
   },
   delinquent_60: {
-    label: "60 Days Late",
+    label: "Lapsed",
     cls: "border-orange-300 bg-orange-50 text-orange-800",
   },
   delinquent_90: {
-    label: "90 Days Late",
+    label: "Lapsed",
     cls: "border-red-300 bg-red-50 text-red-700",
   },
   lapsed: {
@@ -73,8 +83,12 @@ export const CONTRACT_PILL: Record<string, { label: string; cls: string }> = {
     cls: "border-red-400 bg-red-100 text-red-800",
   },
   fully_paid: {
-    label: "Fully Paid",
+    label: "Good Payer",
     cls: "border-evergreen/40 bg-evergreen text-white",
+  },
+  reinstated: {
+    label: "Reinstated",
+    cls: "border-sky-300 bg-sky-50 text-sky-800",
   },
 };
 

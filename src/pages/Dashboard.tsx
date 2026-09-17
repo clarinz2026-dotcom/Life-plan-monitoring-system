@@ -25,14 +25,32 @@ import { format } from "date-fns";
 import { useState } from "react";
 import { useBranch } from "@/hooks/use-branch";
 
+/**
+ * The office works with three payment statuses — Good Payer, Lapsed,
+ * Reinstated. The stored status still records how far behind a plan is, which
+ * the aging report reads, but every label on this page uses the three-way
+ * wording.
+ */
 const STATUS_LABELS: Record<string, string> = {
-  current: "Current",
-  delinquent_30: "30 Days Late",
-  delinquent_60: "60 Days Late",
-  delinquent_90: "90 Days Late",
+  current: "Good Payer",
+  fully_paid: "Good Payer",
+  reinstated: "Reinstated",
+  delinquent_30: "Lapsed",
+  delinquent_60: "Lapsed",
+  delinquent_90: "Lapsed",
   lapsed: "Lapsed",
-  fully_paid: "Fully Paid",
 };
+
+/** Stored statuses that roll up into each of the three payment statuses. */
+const STATUS_GROUPS: { label: string; cls: string; statuses: string[] }[] = [
+  { label: "Good Payer", cls: "terminal-status-paid", statuses: ["current", "fully_paid"] },
+  {
+    label: "Lapsed",
+    cls: "terminal-status-claim",
+    statuses: ["delinquent_30", "delinquent_60", "delinquent_90", "lapsed"],
+  },
+  { label: "Reinstated", cls: "terminal-status-current", statuses: ["reinstated"] },
+];
 
 const STATUS_COLORS: Record<string, string> = {
   current: "terminal-status-current",
@@ -131,6 +149,17 @@ export default function Dashboard() {
     (summary.contractsByStatus.delinquent_60 || 0) +
     (summary.contractsByStatus.delinquent_90 || 0) +
     (summary.contractsByStatus.lapsed || 0);
+
+  // The three payment statuses, with the stored statuses rolled up. Collapsing
+  // them here (instead of listing every stored value) is what keeps the card
+  // from showing "Good Payer" twice once current and fully_paid are merged.
+  const statusRows = STATUS_GROUPS.map((group) => ({
+    ...group,
+    count: group.statuses.reduce(
+      (sum, status) => sum + (summary.contractsByStatus[status] || 0),
+      0
+    ),
+  })).filter((group) => group.count > 0);
 
   const trendData = weeklyTrend ?? [];
 
@@ -486,18 +515,15 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {Object.entries(summary.contractsByStatus).map(([status, count]) => (
-                  <div key={status} className="flex items-center justify-between">
-                    <Badge
-                      variant="outline"
-                      className={`text-[12px] ${STATUS_COLORS[status] || ""}`}
-                    >
-                      {STATUS_LABELS[status] || status}
+                {statusRows.map((group) => (
+                  <div key={group.label} className="flex items-center justify-between">
+                    <Badge variant="outline" className={`text-[12px] ${group.cls}`}>
+                      {group.label}
                     </Badge>
-                    <span className="font-figures text-base font-bold">{count}</span>
+                    <span className="font-figures text-base font-bold">{group.count}</span>
                   </div>
                 ))}
-                {Object.keys(summary.contractsByStatus).length === 0 && (
+                {statusRows.length === 0 && (
                   <p className="text-base text-muted-foreground text-center py-3">
                     No contracts yet
                   </p>

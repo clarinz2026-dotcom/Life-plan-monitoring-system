@@ -34,11 +34,26 @@ import { useBranch } from "@/hooks/use-branch";
 
 const STATUS_COLORS: Record<string, string> = {
   current: "terminal-status-current",
+  reinstated: "terminal-status-current",
   delinquent_30: "terminal-status-delinquent",
   delinquent_60: "terminal-status-delinquent",
   delinquent_90: "terminal-status-claim",
   lapsed: "terminal-status-claim",
   fully_paid: "terminal-status-paid",
+};
+
+/**
+ * The three payment statuses the office works with. The stored status still
+ * records how far behind a plan is, which the aging report reads.
+ */
+const STATUS_LABELS: Record<string, string> = {
+  current: "Good Payer",
+  fully_paid: "Good Payer",
+  reinstated: "Reinstated",
+  delinquent_30: "Lapsed",
+  delinquent_60: "Lapsed",
+  delinquent_90: "Lapsed",
+  lapsed: "Lapsed",
 };
 
 function formatPHP(amount: number) {
@@ -756,7 +771,8 @@ export default function ClientDetail() {
                         STATUS_COLORS[contract.contractStatus] || ""
                       }`}
                     >
-                      {contract.contractStatus.replace(/_/g, " ")}
+                      {STATUS_LABELS[contract.contractStatus] ||
+                        contract.contractStatus.replace(/_/g, " ")}
                     </Badge>
                   </div>
                 </CardHeader>

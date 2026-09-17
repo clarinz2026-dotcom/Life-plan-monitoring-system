@@ -49,13 +49,18 @@ export interface SOAData {
 const OFFICE_ADDRESS =
   "2nd Floor, Gabrinez Bldg., Fortich St., Malaybalay City, Bukidnon 8700";
 
+/**
+ * The printed statement uses the same three payment statuses as the portal, so
+ * a family reading the PDF sees the same wording as the screen.
+ */
 const STATUS_LABELS: Record<string, string> = {
-  current: "Current",
-  delinquent_30: "30 Days Late",
-  delinquent_60: "60 Days Late",
-  delinquent_90: "90 Days Late",
+  current: "Good Payer",
+  fully_paid: "Good Payer",
+  reinstated: "Reinstated",
+  delinquent_30: "Lapsed",
+  delinquent_60: "Lapsed",
+  delinquent_90: "Lapsed",
   lapsed: "Lapsed",
-  fully_paid: "Fully Paid",
 };
 
 function fmtMoney(amount: number) {
