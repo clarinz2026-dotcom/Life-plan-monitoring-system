@@ -116,16 +116,28 @@ function extractStatementBlock(grid: unknown[][]): { contractNumber: string; nam
   for (let r = 0; r < Math.min(grid.length, 40); r++) {
     const row = grid[r] || [];
     for (let c = 0; c < row.length; c++) {
-      const label = cell(row[c]).toLowerCase().replace(/[:\s]+$/, "");
+      const raw = cell(row[c]);
+      const label = raw.toLowerCase().replace(/[:\s]+$/, "");
       if (!label) continue;
+
+      // Value either follows the colon inside this cell ("Contract No.: 014101")
+      // or sits in the adjacent cell ("Contract No.:" | "014101").
+      const valueOf = () => {
+        const colon = raw.indexOf(":");
+        if (colon >= 0) {
+          const inline = raw.slice(colon + 1).trim();
+          if (inline) return inline;
+        }
+        return cell(row[c + 1]);
+      };
 
       // Contract identifier: "Contract No.: 014101"
       if (!contractNumber && (label.includes("contract no") || label === "contract")) {
-        contractNumber = cell(row[c + 1]);
+        contractNumber = valueOf();
       }
       // Planholder: "Name: FE R. RANALAN"
-      if (!name && label === "name") {
-        name = cell(row[c + 1]);
+      if (!name && (label === "name" || label.startsWith("name:"))) {
+        name = valueOf();
       }
     }
 
@@ -146,7 +158,11 @@ function mapStatementColumns(headerRow: unknown[]): { date: number; or: number; 
   let date = -1, or = -1, amount = -1, inst = -1, remarks = -1;
   lower.forEach((h, i) => {
     if (date === -1 && (h.includes("o.r. date") || h.includes("or date") || (h.includes("date") && !h.includes("birth")))) date = i;
-    if (or === -1 && (h.includes("o.r. no") || h.includes("or no") || h.includes("o.r."))) or = i;
+  });
+  // Second pass for the O.R. number so "O.R. Date" can't hijack it.
+  lower.forEach((h, i) => {
+    if (i === date) return;
+    if (or === -1 && (h.includes("o.r. no") || h.includes("or no") || h.includes("o.r.") || h === "or")) or = i;
     if (amount === -1 && h.includes("amount")) amount = i;
     if (inst === -1 && h.includes("installment") && h.includes("no")) inst = i;
     if (remarks === -1 && h.includes("remarks")) remarks = i;

@@ -20,8 +20,7 @@ import {
   Archive,
   Upload,
 } from "lucide-react";
-import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import { parsePaymentUpload, parseUploadDate } from "@/lib/parsePaymentUpload";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useState, useCallback, useEffect } from "react";
@@ -184,7 +183,7 @@ export default function ClientDetail() {
   const [uploadPaymentOpen, setUploadPaymentOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<
-    { contractNumber: string; amount: number; channel: string; date: string; orNumber: string; remarks: string }[]
+    { contractNumber: string; amount: number; channel: string; date: string; orNumber: string; remarks: string; fromStatement: boolean }[]
   >([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadWorking, setUploadWorking] = useState(false);
@@ -231,27 +230,21 @@ export default function ClientDetail() {
     setUploadError(null);
     setUploadPreview([]);
     try {
-      let rows: Record<string, string>[] = [];
-      if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
-        const buffer = await file.arrayBuffer();
-        const workbook = XLSX.read(buffer, { type: "array" });
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        rows = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, { defval: "" });
-      } else {
-        const text = await file.text();
-        const result = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true, transformHeader: (h: string) => h.trim() });
-        if (result.errors.length > 0) { setUploadError(`CSV parse error: ${result.errors[0].message}`); return; }
-        rows = result.data;
+      const { rows, warnings } = await parsePaymentUpload(file);
+      if (rows.length === 0) {
+        setUploadError(warnings.join("\n") || "No payment rows could be read from the file.");
+        return;
       }
-      if (rows.length === 0) { setUploadError("The file has no data rows"); return; }
       setUploadPreview(rows.map((row) => ({
-        contractNumber: (row.contractNumber || row.contract || row.ContractNumber || row.Contract || "").trim(),
-        amount: parseFloat(String(row.amount || row.Amount || "0").replace(/,/g, "")),
-        channel: (row.channel || row.Channel || row.paymentChannel || "cash").trim().toLowerCase().replace(/\s+/g, "_"),
-        date: (row.date || row.Date || row.paymentDate || "").trim(),
-        orNumber: (row.orNumber || row.or || row.OR || row["OR #"] || "").trim(),
-        remarks: (row.remarks || row.Remarks || "").trim(),
+        contractNumber: row.contractNumber,
+        amount: row.amount,
+        channel: row.channel,
+        date: parseUploadDate(row.date) || row.date,
+        orNumber: row.orNumber,
+        remarks: row.remarks,
+        fromStatement: row.fromStatement,
       })));
+      if (warnings.length > 0) setUploadError(warnings.join("\n"));
     } catch (err: any) {
       setUploadError(`Failed to parse file: ${err?.message || "unknown error"}`);
     }
@@ -1065,12 +1058,12 @@ export default function ClientDetail() {
               <DialogHeader>
                 <DialogTitle className="text-xl font-bold">Bulk Upload Payments</DialogTitle>
                 <DialogDescription className="text-sm">
-                  Upload a CSV or XLSX file with columns: contractNumber, amount, channel, date, orNumber, remarks
+                  Upload a CSV or XLSX file. Two formats are accepted: the simple ledger (contractNumber, amount, channel, date, orNumber, remarks) or a statement export (contract header block + Pay Class / O.R. Date / O.R. No. / Amount table).
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 mt-3">
                 <div>
-                  <Label className="text-[14px]">CSV File *</Label>
+                  <Label className="text-[14px]">Payment File (CSV or XLSX) *</Label>
                   <Input type="file" accept=".csv,.xlsx,.xls" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadFile(f); }} className="text-sm" />
                 </div>
                 {uploadFile && <p className="text-xs text-muted-foreground">{uploadFile.name} ({uploadPreview.length} row{uploadPreview.length !== 1 ? "s" : ""} parsed)</p>}

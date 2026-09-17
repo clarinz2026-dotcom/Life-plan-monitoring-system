@@ -300,7 +300,7 @@ export default function Payments() {
           errors.push(`Row ${i + 1}: invalid amount`);
           continue;
         }
-        paymentEntries.push({ ...row, contractId });
+        paymentEntries.push({ ...row });
       }
       if (errors.length > 0 && paymentEntries.length === 0) {
         setUploadError(errors.join("\n"));
@@ -309,7 +309,7 @@ export default function Payments() {
       }
       const result = await bulkRecordPayments({
         payments: paymentEntries.map((p) => ({
-          contractId: p.contractId as any,
+          contractId: contractMap.get(p.contractNumber.toLowerCase()) as any,
           amount: p.amount,
           paymentChannel: (p.channel as any) || "cash",
           paymentDate: p.date ? new Date(p.date).getTime() : Date.now(),
