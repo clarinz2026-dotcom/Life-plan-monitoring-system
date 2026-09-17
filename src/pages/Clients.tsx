@@ -174,7 +174,19 @@ export default function Clients() {
       const result = await bulkDelete({
         clientIds: [...selectedIds] as any,
       });
-      toast.success(`Deleted ${result.deleted} client${result.deleted !== 1 ? "s" : ""}.`);
+      if (result.deleted > 0) {
+        toast.success(`Deleted ${result.deleted} client${result.deleted !== 1 ? "s" : ""}.`);
+      }
+      if (result.skipped.length > 0) {
+        const preview = result.skipped
+          .slice(0, 3)
+          .map((s) => s.name)
+          .join(", ");
+        toast.warning(
+          `${result.skipped.length} client${result.skipped.length !== 1 ? "s" : ""} kept — they have payment/receipt history (archive instead): ${preview}${result.skipped.length > 3 ? ` and ${result.skipped.length - 3} more` : ""}`,
+          { duration: 8000 },
+        );
+      }
       setSelectedIds(new Set());
       setDeleteDialogOpen(false);
     } catch (error: any) {

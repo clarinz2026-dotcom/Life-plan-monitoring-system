@@ -225,6 +225,9 @@ export const update = mutation({
  *
  * Head Office only — a Branch Manager can archive, but never erase.
  */
+/** Selection cap for one permanent-delete run (each client costs ~4-8 reads). */
+const MAX_BULK_DELETE = 200;
+
 export const bulkDelete = mutation({
   args: {
     clientIds: v.array(v.id("clients")),
@@ -241,9 +244,16 @@ export const bulkDelete = mutation({
       );
     }
 
-    if (args.clientIds.length === 0) return { deleted: 0, names: [] as string[] };
+    if (args.clientIds.length === 0) return { deleted: 0, names: [] as string[], skipped: [] as Array<{ name: string; reason: string }> };
+
+    if (args.clientIds.length > MAX_BULK_DELETE) {
+      throw new Error(
+        `You can permanently delete up to ${MAX_BULK_DELETE} clients at a time — ${args.clientIds.length} were selected. Deselect some and try again.`
+      );
+    }
 
     const deletedNames: string[] = [];
+    const skipped: Array<{ name: string; reason: string }> = [];
     let totalContracts = 0;
     let totalPayments = 0;
 
@@ -253,19 +263,21 @@ export const bulkDelete = mutation({
       // Branch staff may only delete clients from their own branch.
       await assertCanAccessRecord(ctx, client.branchId);
 
-      // Refuse to erase financial history.
-      const contractsForGuard = await ctx.db
+      // One pass: collect the client's contracts and payments, then decide.
+      const contracts = await ctx.db
         .query("contracts")
         .withIndex("by_client", (q) => q.eq("clientId", clientId))
         .collect();
+
       let paymentCount = 0;
-      for (const c of contractsForGuard) {
-        paymentCount += (
-          await ctx.db
-            .query("payments")
-            .withIndex("by_contract", (q) => q.eq("contractId", c._id))
-            .collect()
-        ).length;
+      const paymentIds: Id<"payments">[] = [];
+      for (const contract of contracts) {
+        const payments = await ctx.db
+          .query("payments")
+          .withIndex("by_contract", (q) => q.eq("contractId", contract._id))
+          .collect();
+        paymentIds.push(...payments.map((p) => p._id));
+        paymentCount += payments.length;
       }
       const receiptCount = (
         await ctx.db
@@ -274,28 +286,21 @@ export const bulkDelete = mutation({
           .collect()
       ).length;
 
+      // Never erase financial history — but don't punish the whole batch.
+      // Skip this planholder and continue with the rest; the caller reports
+      // who was kept and why. (Bulk-imported clients always trip this: their
+      // backdated payments ARE financial history.)
       if (paymentCount > 0 || receiptCount > 0) {
-        throw new Error(
-          `${client.lastName}, ${client.firstName} has ${paymentCount} recorded payment(s) and ${receiptCount} receipt(s). Financial history is never deleted — archive this planholder instead.`
-        );
+        skipped.push({
+          name: `${client.lastName}, ${client.firstName}`,
+          reason: `${paymentCount} payment(s), ${receiptCount} receipt(s) — archive instead`,
+        });
+        continue;
       }
 
       deletedNames.push(`${client.lastName}, ${client.firstName}`);
 
-      // All contracts for this client → their payments and schedules
-      const contracts = await ctx.db
-        .query("contracts")
-        .withIndex("by_client", (q) => q.eq("clientId", clientId))
-        .collect();
-
-      const paymentIds: Id<"payments">[] = [];
       for (const contract of contracts) {
-        const payments = await ctx.db
-          .query("payments")
-          .withIndex("by_contract", (q) => q.eq("contractId", contract._id))
-          .collect();
-        paymentIds.push(...payments.map((p) => p._id));
-
         const schedules = await ctx.db
           .query("payment_schedules")
           .withIndex("by_contract", (q) => q.eq("contractId", contract._id))
@@ -336,16 +341,17 @@ export const bulkDelete = mutation({
       entityId: args.clientIds.map(String).join(","),
       userId,
       userName: user?.name ?? user?.email ?? "Unknown",
-      description: `Bulk deleted ${deletedNames.length} client(s) (${totalContracts} contracts, ${totalPayments} payments removed)`,
+      description: `Bulk deleted ${deletedNames.length} client(s) (${totalContracts} contracts, ${totalPayments} payments removed), ${skipped.length} kept for financial history`,
       newValues: {
         clients: deletedNames,
         contractsRemoved: totalContracts,
         paymentsRemoved: totalPayments,
+        skipped: skipped.map((s) => s.name),
       },
       timestamp: Date.now(),
     });
 
-    return { deleted: deletedNames.length, names: deletedNames };
+    return { deleted: deletedNames.length, names: deletedNames, skipped };
   },
 });
 
