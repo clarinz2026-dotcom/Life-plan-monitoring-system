@@ -186,7 +186,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Early return placed after every hook so the hook order stays stable across
   // renders (React throws when a conditional return changes it).
   if (mustGoToPortal) {
-    return <Navigate to="/portal" replace />;
+    return <Navigate to="/portal/plans" replace />;
   }
 
   return (

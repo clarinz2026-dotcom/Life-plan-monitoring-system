@@ -96,7 +96,7 @@ function Auth() {
     // Staff intent: stay on this page and explain, instead of bouncing a
     // non-staff account into the client portal.
     if (staffIntent) return;
-    navigate("/portal");
+    navigate("/portal/plans");
   }, [
     authLoading,
     isAuthenticated,
@@ -244,7 +244,7 @@ function Auth() {
                   type="button"
                   variant="outline"
                   className="w-full gap-2"
-                  onClick={() => navigate("/portal")}
+                  onClick={() => navigate("/portal/plans")}
                 >
                   Go to my client portal
                   <ArrowRight className="h-4 w-4" />
@@ -337,7 +337,7 @@ function Auth() {
                           <button
                             type="button"
                             className="underline transition-colors hover:text-foreground"
-                            onClick={() => navigate("/auth?returnTo=%2Fportal")}
+                            onClick={() => navigate("/auth?returnTo=%2Fportal%2Fplans")}
                           >
                             Open the client portal
                           </button>

@@ -8,7 +8,7 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
 import React, { StrictMode, useEffect, lazy, Suspense } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route, Routes, useLocation } from "react-router";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router";
 import "./index.css";
 
 import Landing from "./pages/Landing.tsx";
@@ -97,7 +97,6 @@ const SuperAdminSetup = lazyRoute("SuperAdminSetup", () => import("./pages/Super
 const AccountLinks = lazyRoute("AccountLinks", () => import("./pages/AccountLinks.tsx"));
 const Branches = lazyRoute("Branches", () => import("./pages/Branches.tsx"));
 const PortalLayout = lazyRoute("PortalLayout", () => import("./pages/portal/PortalLayout.tsx"));
-const PortalOverview = lazyRoute("PortalOverview", () => import("./pages/portal/Overview.tsx"));
 const PortalPlans = lazyRoute("PortalPlans", () => import("./pages/portal/Plans.tsx"));
 const PortalLinkAccount = lazyRoute("PortalLinkAccount", () => import("./pages/portal/LinkAccount.tsx"));
 const NotFound = lazyRoute("NotFound", () => import("./pages/NotFound.tsx"));
@@ -180,7 +179,7 @@ function prefetchPrimaryRoutes() {
   for (const load of [
     () => import("./pages/Auth.tsx"),
     () => import("./pages/Dashboard.tsx"),
-    () => import("./pages/portal/Overview.tsx"),
+    () => import("./pages/portal/Plans.tsx"),
   ]) {
     load().catch(() => {
       /* prefetch is best-effort — the route still loads on demand */
@@ -413,7 +412,10 @@ createRoot(document.getElementById("root")!).render(
                   </RequireAuth>
                 }
               >
-                <Route index element={<PortalOverview />} />
+                {/* The portal's landing page is the plans/payments statement,
+                    so the index redirects instead of rendering a separate
+                    overview screen. */}
+                <Route index element={<Navigate to="/portal/plans" replace />} />
                 <Route path="plans" element={<PortalPlans />} />
                 <Route path="link-account" element={<PortalLinkAccount />} />
               </Route>
