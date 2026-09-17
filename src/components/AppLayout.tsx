@@ -43,6 +43,7 @@ const NAV_ITEMS = [
   { to: "/payments", icon: CreditCard, label: "Payments", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
   { to: "/receipts", icon: Receipt, label: "Receipts", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
   { to: "/plans", icon: Package, label: "Plans", roles: ["super_admin", "ceo"] },
+  { to: "/bulk-upload", icon: Upload, label: "Bulk Upload", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
   { to: "/reports", icon: BarChart3, label: "Reports", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
 
   { to: "/audit", icon: History, label: "Audit Log", roles: ["super_admin", "ceo", "manager"] },

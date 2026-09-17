@@ -124,6 +124,12 @@
 /* ─── Corporate landing page tokens ──────────────────────────────────────── */
 @theme {
   --font-display: Georgia, "Times New Roman", ui-serif, serif;
+  /*
+   * Times New Roman, first choice — used for figures and ledger-style records
+   * (dashboard totals, payment logs, SOA) where the staff/portal voice is the
+   * same one the printed documents use.
+   */
+  --font-times: "Times New Roman", Times, ui-serif, serif;
   --color-evergreen: #1b4332;
   --color-pine: #10291d;
   --color-moss: #2d6a4f;
@@ -362,6 +368,16 @@
   .dark .staff-shell [data-slot="table-head"] {
     background: #221f19;
     color: #a49d8e;
+  }
+
+  /*
+   * Times New Roman for figures and record rows (dashboard totals, payment and
+   * SOA ledgers) — the same face the printed documents use. Declared as a real
+   * class, not only as the `--font-times` theme token, so it also wins over the
+   * serif `--font-display` rule above on the big bold numerals.
+   */
+  .font-times {
+    font-family: "Times New Roman", Times, ui-serif, serif;
   }
 
 /*

@@ -59,6 +59,13 @@ const CHANNEL_COLORS: Record<string, string> = {
   check: "#716c60",
 };
 
+/**
+ * Chart text (axis ticks, tooltips) is drawn by recharts into SVG/canvas rather
+ * than styled by a class, so the Times New Roman stack has to be passed as a
+ * font-family value. Keep it in step with `--font-times` in `index.css`.
+ */
+const TIMES_FONT = '"Times New Roman", Times, ui-serif, serif';
+
 function formatPHP(amount: number) {
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
@@ -175,12 +182,12 @@ export default function Dashboard() {
               </span>
             </div>
             <div className="flex flex-wrap items-end gap-4">
-              <p className="text-4xl md:text-5xl font-bold tracking-tight">
+              <p className="font-times text-4xl md:text-5xl font-bold tracking-tight">
                 {formatPHP(summary.todayAmount)}
               </p>
               {dayChangePct !== null && (
                 <span
-                  className={`flex items-center gap-1 text-[14px] font-semibold px-2.5 py-1 rounded-full ${
+                  className={`font-times flex items-center gap-1 text-[14px] font-semibold px-2.5 py-1 rounded-full ${
                     isUp ? "bg-white/15 text-green-100" : "bg-white/15 text-red-100"
                   }`}
                 >
@@ -198,11 +205,11 @@ export default function Dashboard() {
             <div className="grid grid-cols-2 gap-4 mt-6 pt-5 border-t border-white/15">
               <div>
                 <p className="text-[12px] uppercase tracking-wider text-white/60">This Month</p>
-                <p className="text-xl font-bold mt-0.5">{formatPHP(summary.monthAmount)}</p>
+                <p className="font-times text-xl font-bold mt-0.5">{formatPHP(summary.monthAmount)}</p>
               </div>
               <div>
                 <p className="text-[12px] uppercase tracking-wider text-white/60">Month Payments</p>
-                <p className="text-xl font-bold mt-0.5">{summary.monthPayments}</p>
+                <p className="font-times text-xl font-bold mt-0.5">{summary.monthPayments}</p>
               </div>
             </div>
           </CardContent>
@@ -217,7 +224,7 @@ export default function Dashboard() {
                 Collection Progress
               </span>
             </div>
-            <p className="text-4xl font-bold text-terminal-green">
+            <p className="font-times text-4xl font-bold text-terminal-green">
               {summary.collectionRate}%
             </p>
             <p className="text-[13px] text-muted-foreground mt-1">
@@ -227,15 +234,15 @@ export default function Dashboard() {
             <div className="mt-4 pt-4 border-t border-border space-y-2">
               <div className="flex justify-between text-[14px]">
                 <span className="text-muted-foreground">Collected</span>
-                <span className="font-semibold text-terminal-green">{formatPHP(summary.totalCollected)}</span>
+                <span className="font-times font-semibold text-terminal-green">{formatPHP(summary.totalCollected)}</span>
               </div>
               <div className="flex justify-between text-[14px]">
                 <span className="text-muted-foreground">Total Contract Value</span>
-                <span className="font-semibold">{formatPHP(summary.totalContractValue)}</span>
+                <span className="font-times font-semibold">{formatPHP(summary.totalContractValue)}</span>
               </div>
               <div className="flex justify-between text-[14px]">
                 <span className="text-muted-foreground">Remaining</span>
-                <span className="font-semibold text-terminal-amber">
+                <span className="font-times font-semibold text-terminal-amber">
                   {formatPHP(Math.max(summary.totalContractValue - summary.totalCollected, 0))}
                 </span>
               </div>
@@ -253,13 +260,13 @@ export default function Dashboard() {
                 <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
                   Total Clients
                 </p>
-                <p className="text-2xl font-bold mt-1">{summary.totalClients}</p>
+                <p className="font-times text-2xl font-bold mt-1">{summary.totalClients}</p>
               </div>
               <div className="h-11 w-11 rounded-lg bg-terminal-green/10 flex items-center justify-center">
                 <Users className="h-5 w-5 text-terminal-green" />
               </div>
             </div>
-            <p className="text-[12px] text-muted-foreground mt-2 flex items-center gap-1">
+            <p className="font-times text-[12px] text-muted-foreground mt-2 flex items-center gap-1">
               <UserPlus className="h-3.5 w-3.5" />
               +{summary.newClientsThisMonth} new this month
             </p>
@@ -273,13 +280,13 @@ export default function Dashboard() {
                 <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
                   Active Contracts
                 </p>
-                <p className="text-2xl font-bold mt-1">{summary.totalContracts}</p>
+                <p className="font-times text-2xl font-bold mt-1">{summary.totalContracts}</p>
               </div>
               <div className="h-11 w-11 rounded-lg bg-blue-50 flex items-center justify-center">
                 <FileText className="h-5 w-5 text-blue-600" />
               </div>
             </div>
-            <p className="text-[12px] text-muted-foreground mt-2 flex items-center gap-1">
+            <p className="font-times text-[12px] text-muted-foreground mt-2 flex items-center gap-1">
               <CheckCircle2 className="h-3.5 w-3.5 text-terminal-green" />
               {summary.fullyPaidCount} fully paid
             </p>
@@ -293,7 +300,7 @@ export default function Dashboard() {
                 <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
                   Late Accounts
                 </p>
-                <p className={`text-2xl font-bold mt-1 ${delinquentCount > 0 ? "text-terminal-amber" : ""}`}>
+                <p className={`font-times text-2xl font-bold mt-1 ${delinquentCount > 0 ? "text-terminal-amber" : ""}`}>
                   {delinquentCount}
                 </p>
               </div>
@@ -314,13 +321,13 @@ export default function Dashboard() {
                 <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
                   Lifetime Collections
                 </p>
-                <p className="text-2xl font-bold mt-1">{formatPHP(summary.totalCollected)}</p>
+                <p className="font-times text-2xl font-bold mt-1">{formatPHP(summary.totalCollected)}</p>
               </div>
               <div className="h-11 w-11 rounded-lg bg-terminal-green/10 flex items-center justify-center">
                 <Wallet className="h-5 w-5 text-terminal-green" />
               </div>
             </div>
-            <p className="text-[12px] text-muted-foreground mt-2">
+            <p className="font-times text-[12px] text-muted-foreground mt-2">
               {summary.totalPayments} total payments
             </p>
           </CardContent>
@@ -343,12 +350,12 @@ export default function Dashboard() {
                   <CartesianGrid strokeDasharray="3 3" stroke="#e6dfd1" vertical={false} />
                   <XAxis
                     dataKey="label"
-                    tick={{ fontSize: 13 }}
+                    tick={{ fontSize: 13, fontFamily: TIMES_FONT }}
                     stroke="#716c60"
                     tickLine={false}
                   />
                   <YAxis
-                    tick={{ fontSize: 12 }}
+                    tick={{ fontSize: 12, fontFamily: TIMES_FONT }}
                     stroke="#716c60"
                     tickLine={false}
                     tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`}
@@ -361,6 +368,7 @@ export default function Dashboard() {
                       border: "1px solid #d4d2cb",
                       borderRadius: "8px",
                       fontSize: "14px",
+                      fontFamily: TIMES_FONT,
                     }}
                   />
                   <Bar dataKey="amount" fill="#1b4332" radius={[6, 6, 0, 0]} maxBarSize={48} />
@@ -396,7 +404,7 @@ export default function Dashboard() {
                       <span className="text-[14px] font-medium">
                         {CHANNEL_LABELS[ch.name] || ch.name}
                       </span>
-                      <span className="text-[13px] text-muted-foreground">
+                      <span className="font-times text-[13px] text-muted-foreground">
                         {formatPHP(ch.amount)} · {ch.count}
                       </span>
                     </div>
@@ -428,13 +436,16 @@ export default function Dashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {/* `max-h-96` (24rem) is five rows of this list at its current
+                padding and type scale; the other fifteen of the twenty the
+                query returns scroll inside the card. */}
             {!recentPayments || recentPayments.length === 0 ? (
               <p className="text-base text-muted-foreground py-6 text-center">
                 No payments recorded yet
               </p>
             ) : (
-              <div className="space-y-3">
-                {recentPayments.slice(0, 8).map((p) => (
+              <div className="font-times space-y-3 max-h-96 overflow-y-auto pr-1">
+                {recentPayments.slice(0, 20).map((p) => (
                   <div
                     key={p._id}
                     className="flex items-center justify-between py-3 border-b border-border/40 last:border-0"
@@ -483,7 +494,7 @@ export default function Dashboard() {
                     >
                       {STATUS_LABELS[status] || status}
                     </Badge>
-                    <span className="text-base font-bold">{count}</span>
+                    <span className="font-times text-base font-bold">{count}</span>
                   </div>
                 ))}
                 {Object.keys(summary.contractsByStatus).length === 0 && (
@@ -521,7 +532,7 @@ export default function Dashboard() {
                             ? `${c.client.lastName}, ${c.client.firstName}`
                             : "Unknown"}
                         </p>
-                        <p className="text-[12px] text-muted-foreground">
+                        <p className="font-times text-[12px] text-muted-foreground">
                           {c.contractNumber}
                         </p>
                       </div>

@@ -92,9 +92,7 @@ const Plans = lazyRoute("Plans", () => import("./pages/Plans.tsx"));
 const Reconciliation = lazyRoute("Reconciliation", () => import("./pages/Reconciliation.tsx"));
 const AgingReport = lazyRoute("AgingReport", () => import("./pages/AgingReport.tsx"));
 const Notifications = lazyRoute("Notifications", () => import("./pages/Notifications.tsx"));
-const ExportData = lazyRoute("ExportData", () => import("./pages/ExportData.tsx"));
 const RoleManagement = lazyRoute("RoleManagement", () => import("./pages/RoleManagement.tsx"));
-const Branding = lazyRoute("Branding", () => import("./pages/Branding.tsx"));
 const SuperAdminSetup = lazyRoute("SuperAdminSetup", () => import("./pages/SuperAdminSetup.tsx"));
 const AccountLinks = lazyRoute("AccountLinks", () => import("./pages/AccountLinks.tsx"));
 const Branches = lazyRoute("Branches", () => import("./pages/Branches.tsx"));
@@ -400,14 +398,11 @@ createRoot(document.getElementById("root")!).render(
                   </ProtectedRoute>
                 }
               />
-              <Route
-                path="/branding"
-                element={<NotFound />}
-              />
-              <Route
-                path="/export"
-                element={<NotFound />}
-              />
+              {/* Removed from the product: branding editor and the generic
+                  export dump. The URLs still resolve to NotFound rather than a
+                  blank page, and the backend settings they used are untouched. */}
+              <Route path="/branding" element={<NotFound />} />
+              <Route path="/export" element={<NotFound />} />
 
               {/* Client portal (families & planholders) */}
               <Route
