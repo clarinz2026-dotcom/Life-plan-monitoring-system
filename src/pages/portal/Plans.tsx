@@ -217,7 +217,7 @@ export default function Plans() {
                       label="Planholder’s Name"
                       value={`${c.lastName}, ${c.firstName}${c.middleName ? ` ${c.middleName}` : ""}`}
                     />
-                    <Field label="CP No." value={c.contactNumber || "—"} />
+                    <Field label="Contact Number" value={c.contactNumber || "—"} />
                     <Field
                       label="Address"
                       value={

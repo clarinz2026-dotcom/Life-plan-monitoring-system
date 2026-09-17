@@ -465,7 +465,7 @@ export function generateSOAHTML(data: SOAData): string {
     <table class="fields">
       <tr>
         ${fld("Planholder's Name:", data.clientName, "wide")}
-        ${fld("CP No.:", data.clientContact, "narrow")}
+        ${fld("Contact Number:", data.clientContact, "narrow")}
       </tr>
       <tr>
         ${fld("Address:", data.clientAddress, "wide")}
