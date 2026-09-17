@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   FileText,
   CreditCard,
+  FileUp,
   Plus,
   Download,
   Pencil,
@@ -17,13 +18,17 @@ import {
   ArrowRightLeft,
   Building2,
   Archive,
+  Upload,
 } from "lucide-react";
+import Papa from "papaparse";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useState, useCallback, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -153,6 +158,135 @@ export default function ClientDetail() {
 
   const clientContracts = contracts || [];
   const clientPayments = payments || [];
+
+  // ── Add payment dialog ───────────────────────────────────────────────
+  const recordPayment = useMutation(api.payments.record);
+  const [addPaymentOpen, setAddPaymentOpen] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    contractId: "",
+    amount: "",
+    paymentChannel: "cash" as
+      | "cash"
+      | "gcash"
+      | "maya"
+      | "bank_transfer"
+      | "check",
+    paymentDate: new Date().toISOString().split("T")[0],
+    orNumber: "",
+    referenceNumber: "",
+    chequeNumber: "",
+    bankName: "",
+    remarks: "",
+  });
+
+  // ── Bulk upload payments ──────────────────────────────────────────────
+  const [uploadPaymentOpen, setUploadPaymentOpen] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<
+    { contractNumber: string; amount: number; channel: string; date: string; orNumber: string; remarks: string }[]
+  >([]);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadWorking, setUploadWorking] = useState(false);
+  const bulkRecordPayments = useMutation(api.payments.bulkRecord);
+
+  const activeContracts = clientContracts.filter((c) => c.contractStatus !== "fully_paid");
+
+  const handlePaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const result = await recordPayment({
+        contractId: paymentForm.contractId as any,
+        amount: Number(paymentForm.amount),
+        paymentChannel: paymentForm.paymentChannel,
+        paymentDate: paymentForm.paymentDate
+          ? new Date(paymentForm.paymentDate).getTime()
+          : Date.now(),
+        orNumber: paymentForm.orNumber || undefined,
+        referenceNumber: paymentForm.referenceNumber || undefined,
+        chequeNumber: paymentForm.chequeNumber || undefined,
+        bankName: paymentForm.bankName || undefined,
+        remarks: paymentForm.remarks || undefined,
+      });
+      toast.success(`Payment recorded! Receipt: ${result.receiptNumber}`);
+      setAddPaymentOpen(false);
+      setPaymentForm({
+        contractId: paymentForm.contractId,
+        amount: "",
+        paymentChannel: "cash",
+        paymentDate: new Date().toISOString().split("T")[0],
+        orNumber: "",
+        referenceNumber: "",
+        chequeNumber: "",
+        bankName: "",
+        remarks: "",
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to record payment");
+    }
+  };
+
+  const handleUploadFile = (file: File) => {
+    setUploadFile(file);
+    setUploadError(null);
+    setUploadPreview([]);
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      if (!text) { setUploadError("Could not read the file"); return; }
+      const result = Papa.parse<Record<string, string>>(text, { header: true, skipEmptyLines: true, transformHeader: (h: string) => h.trim() });
+      if (result.errors.length > 0) { setUploadError(`CSV parse error: ${result.errors[0].message}`); return; }
+      const rows = result.data;
+      if (rows.length === 0) { setUploadError("The file has no data rows"); return; }
+      setUploadPreview(rows.map((row) => ({
+        contractNumber: (row.contractNumber || row.contract || row.ContractNumber || row.Contract || "").trim(),
+        amount: parseFloat(String(row.amount || row.Amount || "0").replace(/,/g, "")),
+        channel: (row.channel || row.Channel || row.paymentChannel || "cash").trim().toLowerCase().replace(/\s+/g, "_"),
+        date: (row.date || row.Date || row.paymentDate || "").trim(),
+        orNumber: (row.orNumber || row.or || row.OR || row["OR #"] || "").trim(),
+        remarks: (row.remarks || row.Remarks || "").trim(),
+      })));
+    };
+    reader.readAsText(file);
+  };
+
+  const handleBulkUploadSubmit = async () => {
+    if (uploadPreview.length === 0 || !contracts) return;
+    setUploadWorking(true);
+    setUploadError(null);
+    try {
+      const contractMap = new Map<string, string>();
+      for (const c of contracts) contractMap.set(c.contractNumber.toLowerCase(), String(c._id));
+      const entries: { contractId: string; amount: number; channel: string; date: string; orNumber: string; remarks: string }[] = [];
+      const errors: string[] = [];
+      for (let i = 0; i < uploadPreview.length; i++) {
+        const row = uploadPreview[i];
+        const contractId = contractMap.get(row.contractNumber.toLowerCase());
+        if (!contractId) { errors.push(`Row ${i + 1}: contract "${row.contractNumber}" not found`); continue; }
+        if (!row.amount || row.amount <= 0) { errors.push(`Row ${i + 1}: invalid amount`); continue; }
+        entries.push({ ...row, contractId });
+      }
+      if (errors.length > 0 && entries.length === 0) { setUploadError(errors.join("\n")); setUploadWorking(false); return; }
+      const result = await bulkRecordPayments({
+        payments: entries.map((p) => ({
+          contractId: p.contractId as any,
+          amount: p.amount,
+          paymentChannel: (p.channel as any) || "cash",
+          paymentDate: p.date ? new Date(p.date).getTime() : Date.now(),
+          orNumber: p.orNumber || undefined,
+          remarks: p.remarks || undefined,
+        })),
+      });
+      if (result.recorded > 0) toast.success(`Recorded ${result.recorded} payment(s) with ${result.receipts} receipt(s)`);
+      if (result.errors.length > 0) setUploadError(result.errors.join("\n"));
+      if (result.recorded > 0) setUploadPaymentOpen(false);
+      setUploadFile(null);
+      setUploadPreview([]);
+    } catch (err: any) {
+      setUploadError(err?.message || "Upload failed");
+    } finally {
+      setUploadWorking(false);
+    }
+  };
 
   const handleContractSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -837,6 +971,131 @@ export default function ClientDetail() {
           <CreditCard className="h-5 w-5 text-muted-foreground" />
           Payment History ({clientPayments.length})
         </h2>
+        <div className="flex gap-2">
+          <Dialog open={addPaymentOpen} onOpenChange={setAddPaymentOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" className="gap-2">
+                <Plus className="h-4 w-4" />
+                Add Payment
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto mx-2 sm:mx-0">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold">Record Payment</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handlePaymentSubmit} className="space-y-4 mt-3">
+                <div>
+                  <Label className="text-[14px]">Contract *</Label>
+                  <select
+                    value={paymentForm.contractId}
+                    onChange={(e) => setPaymentForm({ ...paymentForm, contractId: e.target.value })}
+                    className="h-11 w-full rounded-md border border-border bg-background px-3 text-base"
+                    required
+                  >
+                    <option value="">Select contract…</option>
+                    {activeContracts.map((c) => (
+                      <option key={c._id} value={c._id}>
+                        {c.contractNumber} — {c.planType} ({formatPHP(c.planAmount)})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-[14px]">Amount (₱) *</Label>
+                    <Input type="number" value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} className="h-11 text-base" required />
+                  </div>
+                  <div>
+                    <Label className="text-[14px]">Channel *</Label>
+                    <select
+                      value={paymentForm.paymentChannel}
+                      onChange={(e) => setPaymentForm({ ...paymentForm, paymentChannel: e.target.value as typeof paymentForm.paymentChannel })}
+                      className="h-11 w-full rounded-md border border-border bg-background px-3 text-base"
+                    >
+                      <option value="cash">Cash</option>
+                      <option value="gcash">GCash</option>
+                      <option value="maya">Maya</option>
+                      <option value="bank_transfer">Bank Transfer</option>
+                      <option value="check">Check</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-[14px]">Payment Date *</Label>
+                  <Input type="date" value={paymentForm.paymentDate} onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })} className="h-11 text-base" required />
+                </div>
+                <div className="space-y-3">
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Reference Details</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {paymentForm.paymentChannel === "check" && (
+                      <>
+                        <div><Label className="text-[14px]">Cheque Number</Label><Input value={paymentForm.chequeNumber} onChange={(e) => setPaymentForm({ ...paymentForm, chequeNumber: e.target.value })} className="h-11 text-base" /></div>
+                        <div><Label className="text-[14px]">Bank Name</Label><Input value={paymentForm.bankName} onChange={(e) => setPaymentForm({ ...paymentForm, bankName: e.target.value })} className="h-11 text-base" /></div>
+                      </>
+                    )}
+                    {(paymentForm.paymentChannel === "gcash" || paymentForm.paymentChannel === "maya" || paymentForm.paymentChannel === "bank_transfer") && (
+                      <div className="col-span-2"><Label className="text-[14px]">Reference Number</Label><Input value={paymentForm.referenceNumber} onChange={(e) => setPaymentForm({ ...paymentForm, referenceNumber: e.target.value })} className="h-11 text-base" /></div>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-[14px]">Remarks</Label>
+                  <Input value={paymentForm.remarks} onChange={(e) => setPaymentForm({ ...paymentForm, remarks: e.target.value })} placeholder="Optional notes…" className="h-11 text-base" />
+                </div>
+                <Button type="submit" className="w-full h-12 text-[15px] font-semibold">Record Payment & Issue Receipt</Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+          <Dialog open={uploadPaymentOpen} onOpenChange={setUploadPaymentOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <FileUp className="h-4 w-4" />
+                Upload Payments
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto mx-2 sm:mx-0">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-bold">Bulk Upload Payments</DialogTitle>
+                <DialogDescription className="text-sm">
+                  Upload a CSV with columns: contractNumber, amount, channel, date, orNumber, remarks
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 mt-3">
+                <div>
+                  <Label className="text-[14px]">CSV File *</Label>
+                  <Input type="file" accept=".csv" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleUploadFile(f); }} className="text-sm" />
+                </div>
+                {uploadFile && <p className="text-xs text-muted-foreground">{uploadFile.name} ({uploadPreview.length} row{uploadPreview.length !== 1 ? "s" : ""} parsed)</p>}
+                {uploadError && <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3"><p className="text-sm text-destructive whitespace-pre-wrap">{uploadError}</p></div>}
+                {uploadPreview.length > 0 && (
+                  <div className="max-h-60 overflow-auto rounded-lg border border-border">
+                    <table className="w-full text-xs">
+                      <thead className="bg-muted sticky top-0"><tr><th className="px-3 py-2 text-left">Contract</th><th className="px-3 py-2 text-right">Amount</th><th className="px-3 py-2 text-left">Channel</th><th className="px-3 py-2 text-left">Date</th></tr></thead>
+                      <tbody>
+                        {uploadPreview.slice(0, 20).map((row, i) => (
+                          <tr key={i} className="border-t border-border/50">
+                            <td className="px-3 py-1.5">{row.contractNumber}</td>
+                            <td className="px-3 py-1.5 text-right font-medium">{formatPHP(row.amount)}</td>
+                            <td className="px-3 py-1.5">{row.channel}</td>
+                            <td className="px-3 py-1.5">{row.date}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {uploadPreview.length > 20 && <p className="px-3 py-2 text-xs text-muted-foreground">…and {uploadPreview.length - 20} more rows</p>}
+                  </div>
+                )}
+              </div>
+              <DialogFooter className="mt-4">
+                <Button variant="outline" onClick={() => { setUploadPaymentOpen(false); setUploadFile(null); setUploadPreview([]); setUploadError(null); }}>Cancel</Button>
+                <Button onClick={handleBulkUploadSubmit} disabled={uploadWorking || uploadPreview.length === 0} className="gap-2">
+                  {uploadWorking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {uploadWorking ? "Uploading…" : `Record ${uploadPreview.length} Payment(s)`}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       {clientPayments.length === 0 ? (

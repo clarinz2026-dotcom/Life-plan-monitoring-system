@@ -567,3 +567,155 @@ export const remove = mutation({
     return { deleted: summaries.length };
   },
 });
+
+/**\ * Bulk-record multiple payments in one call.\ *\ * The frontend parses the CSV/Excel file and sends the validated rows as
+ * an array. Each row is processed the same way as a single `record` call:
+ * the contract's totalPaid is bumped, a receipt is generated, and an audit
+ * entry is written.\ *\ * The caller must be authenticated staff.\ */
+const bulkPaymentItem = v.object({
+  contractId: v.id("contracts"),
+  amount: v.number(),
+  paymentChannel: paymentChannelValidator,
+  paymentDate: v.number(),
+  orNumber: v.optional(v.string()),
+  referenceNumber: v.optional(v.string()),
+  chequeNumber: v.optional(v.string()),
+  bankName: v.optional(v.string()),
+  remarks: v.optional(v.string()),
+});
+
+export const bulkRecord = mutation({
+  args: {
+    payments: v.array(bulkPaymentItem),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) throw new Error("Not authenticated");
+    if (args.payments.length === 0)
+      return { recorded: 0, receipts: 0, errors: [] as string[] };
+    if (args.payments.length > MAX_BULK_PAYMENTS) {
+      throw new Error(
+        `You can record up to ${MAX_BULK_PAYMENTS} payments at a time — ${args.payments.length} were provided. Split the file and try again.`
+      );
+    }
+
+    const actor = await ctx.db.get(userId);
+    const errors: string[] = [];
+    let recorded = 0;
+    let receiptCount = 0;
+    /** Net amount each plan gains, applied in one pass at the end. */
+    const deltasByPlan = new Map<Id<"contracts">, number>();
+    const touchedBranch = new Set<Id<"branches">>();
+
+    for (let i = 0; i < args.payments.length; i++) {
+      const item = args.payments[i];
+      try {
+        const contract = await ctx.db.get(item.contractId);
+        if (!contract) {
+          errors.push(`Row ${i + 1}: contract not found`);
+          continue;
+        }
+        await assertCanAccessRecord(ctx, contract.branchId);
+
+        const client = await ctx.db.get(contract.clientId);
+        if (!client) {
+          errors.push(`Row ${i + 1}: client not found for contract ${contract.contractNumber}`);
+          continue;
+        }
+
+        const branchId = contract.branchId ?? actor?.branchId;
+        if (branchId) touchedBranch.add(branchId);
+
+        // Insert payment
+        const paymentId = await ctx.db.insert("payments", {
+          contractId: item.contractId,
+          clientId: contract.clientId,
+          amount: item.amount,
+          paymentChannel: item.paymentChannel,
+          paymentDate: item.paymentDate,
+          orNumber: item.orNumber,
+          referenceNumber: item.referenceNumber,
+          chequeNumber: item.chequeNumber,
+          bankName: item.bankName,
+          remarks: item.remarks,
+          branchId,
+          recordedBy: userId,
+          createdAt: Date.now(),
+        });
+
+        deltasByPlan.set(
+          item.contractId,
+          (deltasByPlan.get(item.contractId) ?? 0) + item.amount
+        );
+
+        // Generate receipt
+        const now = new Date(item.paymentDate);
+        const dateStr =
+          now.getFullYear().toString() +
+          (now.getMonth() + 1).toString().padStart(2, "0") +
+          now.getDate().toString().padStart(2, "0");
+        const prefix = `RCP-${dateStr}-`;
+        const sameDayReceipts = await ctx.db
+          .query("receipts")
+          .withIndex("by_receiptNumber", (q) =>
+            q.gte("receiptNumber", prefix).lt("receiptNumber", `${prefix}\uffff`)
+          )
+          .collect();
+        let maxSeq = 0;
+        for (const r of sameDayReceipts) {
+          const seq = parseInt(r.receiptNumber.slice(prefix.length), 10);
+          if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+        }
+        const receiptNumber = `${prefix}${(maxSeq + 1).toString().padStart(4, "0")}`;
+
+        const fullName = client.middleName
+          ? `${client.lastName}, ${client.firstName} ${client.middleName}`
+          : `${client.lastName}, ${client.firstName}`;
+
+        await ctx.db.insert("receipts", {
+          paymentId,
+          contractId: item.contractId,
+          clientId: contract.clientId,
+          receiptNumber,
+          amount: item.amount,
+          paymentChannel: item.paymentChannel,
+          paymentDate: item.paymentDate,
+          issuedTo: fullName,
+          planType: contract.planType,
+          contractNumber: contract.contractNumber,
+          status: "active",
+          issuedBy: userId,
+          branchId,
+          createdAt: Date.now(),
+        });
+
+        receiptCount++;
+        recorded++;
+      } catch (err: any) {
+        errors.push(`Row ${i + 1}: ${err?.message || "unknown error"}`);
+      }
+    }
+
+    // Recompute each affected plan once
+    for (const [contractId, delta] of deltasByPlan) {
+      await recomputePlanLedger(ctx, contractId, delta);
+    }
+
+    if (recorded > 0) {
+      await ctx.db.insert("audit_log", {
+        action: "create",
+        entityType: "payment",
+        entityId: "bulk-import",
+        userId,
+        userName: actor?.name ?? actor?.email ?? "Unknown",
+        description: `Bulk-recorded ${recorded} payment(s) totalling ${formatPHP(
+          [...deltasByPlan.values()].reduce((s, v) => s + v, 0)
+        )}${errors.length > 0 ? ` (${errors.length} row(s) skipped)` : ""}`,
+        newValues: { bulkCount: recorded, errorCount: errors.length },
+        timestamp: Date.now(),
+      });
+    }
+
+    return { recorded, receipts: receiptCount, errors };
+  },
+});
