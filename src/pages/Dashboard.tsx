@@ -32,25 +32,16 @@ import { useBranch } from "@/hooks/use-branch";
  * wording.
  */
 const STATUS_LABELS: Record<string, string> = {
-  current: "Good Payer",
-  fully_paid: "Good Payer",
-  reinstated: "Reinstated",
-  delinquent_30: "Lapsed",
-  delinquent_60: "Lapsed",
-  delinquent_90: "Lapsed",
+  current: "Current",
+  delinquent_30: "30 Days Late",
+  delinquent_60: "60 Days Late",
+  delinquent_90: "90 Days Late",
   lapsed: "Lapsed",
+  fully_paid: "Fully Paid",
 };
 
 /** Stored statuses that roll up into each of the three payment statuses. */
-const STATUS_GROUPS: { label: string; cls: string; statuses: string[] }[] = [
-  { label: "Good Payer", cls: "terminal-status-paid", statuses: ["current", "fully_paid"] },
-  {
-    label: "Lapsed",
-    cls: "terminal-status-claim",
-    statuses: ["delinquent_30", "delinquent_60", "delinquent_90", "lapsed"],
-  },
-  { label: "Reinstated", cls: "terminal-status-current", statuses: ["reinstated"] },
-];
+
 
 const STATUS_COLORS: Record<string, string> = {
   current: "terminal-status-current",
@@ -153,13 +144,13 @@ export default function Dashboard() {
   // The three payment statuses, with the stored statuses rolled up. Collapsing
   // them here (instead of listing every stored value) is what keeps the card
   // from showing "Good Payer" twice once current and fully_paid are merged.
-  const statusRows = STATUS_GROUPS.map((group) => ({
-    ...group,
-    count: group.statuses.reduce(
-      (sum, status) => sum + (summary.contractsByStatus[status] || 0),
-      0
-    ),
-  })).filter((group) => group.count > 0);
+  const statusRows = Object.entries(summary.contractsByStatus)
+    .map(([status, count]) => ({
+      label: STATUS_LABELS[status] || status,
+      cls: STATUS_COLORS[status] || "",
+      count,
+    }))
+    .filter((row) => row.count > 0);
 
   const trendData = weeklyTrend ?? [];
 

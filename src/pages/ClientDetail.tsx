@@ -47,13 +47,12 @@ const STATUS_COLORS: Record<string, string> = {
  * records how far behind a plan is, which the aging report reads.
  */
 const STATUS_LABELS: Record<string, string> = {
-  current: "Good Payer",
-  fully_paid: "Good Payer",
-  reinstated: "Reinstated",
-  delinquent_30: "Lapsed",
-  delinquent_60: "Lapsed",
-  delinquent_90: "Lapsed",
+  current: "Current",
+  delinquent_30: "30 Days Late",
+  delinquent_60: "60 Days Late",
+  delinquent_90: "90 Days Late",
   lapsed: "Lapsed",
+  fully_paid: "Fully Paid",
 };
 
 function formatPHP(amount: number) {

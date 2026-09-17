@@ -47,27 +47,14 @@ import { Archive, ArchiveRestore } from "lucide-react";
  * the aging report reads, but every label here uses the three-way wording.
  */
 const STATUS_LABELS: Record<string, string> = {
-  current: "Good Payer",
-  fully_paid: "Good Payer",
-  reinstated: "Reinstated",
-  delinquent_30: "Lapsed",
-  delinquent_60: "Lapsed",
-  delinquent_90: "Lapsed",
+  current: "Current",
+  delinquent_30: "30 Days Late",
+  delinquent_60: "60 Days Late",
+  delinquent_90: "90 Days Late",
   lapsed: "Lapsed",
+  fully_paid: "Fully Paid",
   no_contract: "No Contract",
 };
-
-/**
- * Roll a stored contract status up into one of the three payment statuses.
- * A planholder with no contract keeps its own bucket — that is a data state,
- * not a payment status.
- */
-function statusGroup(status: string): string {
-  if (status === "no_contract") return "no_contract";
-  if (status === "reinstated") return "reinstated";
-  if (status === "current" || status === "fully_paid") return "good_payer";
-  return "lapsed";
-}
 
 const STATUS_COLORS: Record<string, string> = {
   current: "terminal-status-current",
@@ -81,10 +68,12 @@ const STATUS_COLORS: Record<string, string> = {
 
 const FILTER_TABS = [
   { key: "all", label: "All" },
-  { key: "good_payer", label: "Good Payer" },
+  { key: "current", label: "Current" },
+  { key: "delinquent_30", label: "30 Days Late" },
+  { key: "delinquent_60", label: "60 Days Late" },
+  { key: "delinquent_90", label: "90 Days Late" },
   { key: "lapsed", label: "Lapsed" },
-  { key: "reinstated", label: "Reinstated" },
-  { key: "no_contract", label: "No Contract" },
+  { key: "fully_paid", label: "Fully Paid" },
 ];
 
 function formatPHP(amount: number) {
@@ -246,10 +235,7 @@ export default function Clients() {
           item.client.contactNumber.includes(q);
         if (!matchesSearch) return false;
       }
-      if (
-        statusFilter !== "all" &&
-        statusGroup(item.computedStatus) !== statusFilter
-      ) {
+      if (statusFilter !== "all" && item.computedStatus !== statusFilter) {
         return false;
       }
       return true;
@@ -259,8 +245,7 @@ export default function Clients() {
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const item of clientsWithStatus ?? []) {
-      const key = statusGroup(item.computedStatus);
-      counts[key] = (counts[key] || 0) + 1;
+      counts[item.computedStatus] = (counts[item.computedStatus] || 0) + 1;
     }
     return counts;
   }, [clientsWithStatus]);

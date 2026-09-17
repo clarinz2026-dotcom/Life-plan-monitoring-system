@@ -15,21 +15,13 @@ import { format } from "date-fns";
  * the aging report reads, but every label here uses the three-way wording.
  */
 const STATUS_LABELS: Record<string, string> = {
-  current: "Good Payer",
-  fully_paid: "Good Payer",
-  reinstated: "Reinstated",
-  delinquent_30: "Lapsed",
-  delinquent_60: "Lapsed",
-  delinquent_90: "Lapsed",
+  current: "Current",
+  delinquent_30: "30 Days Late",
+  delinquent_60: "60 Days Late",
+  delinquent_90: "90 Days Late",
   lapsed: "Lapsed",
+  fully_paid: "Fully Paid",
 };
-
-/** Roll a stored contract status up into one of the three payment statuses. */
-function statusGroup(status: string): string {
-  if (status === "reinstated") return "reinstated";
-  if (status === "current" || status === "fully_paid") return "good_payer";
-  return "lapsed";
-}
 
 const STATUS_COLORS: Record<string, string> = {
   current: "terminal-status-current",
@@ -50,9 +42,10 @@ function formatPHP(amount: number) {
 
 const TABS = [
   { key: "all", label: "All" },
-  { key: "good_payer", label: "Good Payer" },
+  { key: "current", label: "Current" },
+  { key: "delinquent", label: "Delinquent" },
   { key: "lapsed", label: "Lapsed" },
-  { key: "reinstated", label: "Reinstated" },
+  { key: "fully_paid", label: "Fully Paid" },
 ];
 
 export default function Contracts() {
@@ -63,7 +56,9 @@ export default function Contracts() {
 
   const filtered = contracts?.filter((c) => {
     if (filter === "all") return true;
-    return statusGroup(c.contractStatus) === filter;
+    if (filter === "delinquent")
+      return c.contractStatus.startsWith("delinquent");
+    return c.contractStatus === filter;
   });
 
   return (
