@@ -1,4 +1,4 @@
-# Evangelist Funeral Services
+# Life Plan Monitoring System
 
 **Pre-Need Deathcare Plan Management & Financial Collection Platform**
 
