@@ -305,7 +305,7 @@ export default function Plans() {
                           {contract.planType || "Memorial Plan"}
                         </p>
                         <p
-                          className="mt-0.5 text-[12px] text-stone"
+                          className="mt-0.5 text-[14px] text-ink/70"
                           style={STATEMENT_FONT}
                         >
                           Plan No. {contract.contractNumber} · Effectivity Date: {fmtDate(contract.startDate)}
