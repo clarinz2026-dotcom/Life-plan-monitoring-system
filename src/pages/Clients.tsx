@@ -39,7 +39,8 @@ import {
 import { ScrollableTable } from "@/components/ScrollableTable";
 import { toast } from "sonner";
 import { useBranch } from "@/hooks/use-branch";
-import { Archive, ArchiveRestore } from "lucide-react";
+import { Archive, ArchiveRestore, MessageSquare } from "lucide-react";
+import { SMSDialog, type SmsRecipient } from "@/components/SMSDialog";
 
 /**
  * The office works with three payment statuses — Good Payer, Lapsed,
@@ -124,6 +125,7 @@ export default function Clients() {
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [archiveReason, setArchiveReason] = useState("");
   const [isArchiving, setIsArchiving] = useState(false);
+  const [smsOpen, setSmsOpen] = useState(false);
 
   const [page, setPage] = useState(0);
 
@@ -236,6 +238,19 @@ export default function Clients() {
   // Derived from the query result — memoized so typing in the search box or
   // toggling a checkbox only recomputes what actually changed instead of
   // re-filtering the full list on every render.
+  /** SMS recipients built from the current selection (skips missing numbers). */
+  const smsRecipients: SmsRecipient[] = useMemo(() => {
+    return [...selectedIds]
+      .map((id) => clientsWithStatus?.find((c) => c.client._id === id))
+      .filter((c): c is NonNullable<typeof c> => !!c)
+      .map((c) => ({
+        phone: c.client.contactNumber || "",
+        name: `${c.client.lastName}, ${c.client.firstName}`,
+        recipientType: "client" as const,
+        clientId: c.client._id,
+      }));
+  }, [selectedIds, clientsWithStatus]);
+
   const filteredClients = useMemo(() => {
     if (!clientsWithStatus) return undefined;
     const q = search.trim().toLowerCase();
@@ -613,6 +628,19 @@ export default function Clients() {
             Clear
           </Button>
 
+          {!showArchived && (
+            <Button
+              variant="outline"
+              size="default"
+              className="h-10 gap-2 text-[14px]"
+              onClick={() => setSmsOpen(true)}
+              title="Text the selected planholders"
+            >
+              <MessageSquare className="h-4 w-4" />
+              Send SMS ({selectedIds.size})
+            </Button>
+          )}
+
           {showArchived ? (
             <Button
               variant="default"
@@ -978,6 +1006,14 @@ export default function Clients() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Send SMS to the selected planholders */}
+      <SMSDialog
+        open={smsOpen}
+        onOpenChange={setSmsOpen}
+        recipients={smsRecipients}
+        title={`Send SMS to ${selectedIds.size} planholder${selectedIds.size !== 1 ? "s" : ""}`}
+      />
     </div>
   );
 }

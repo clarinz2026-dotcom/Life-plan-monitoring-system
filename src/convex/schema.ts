@@ -89,6 +89,9 @@ const schema = defineSchema(
       role: v.optional(roleValidator),
       branchId: v.optional(v.id("branches")),
       position: v.optional(positionValidator),
+      // Mobile number for staff SMS blasts (reminders, schedule changes).
+      // Optional and never used for auth — email remains the login identity.
+      phoneNumber: v.optional(v.string()),
     })
       .index("email", ["email"])
       .index("by_role", ["role"])
@@ -422,6 +425,32 @@ const schema = defineSchema(
       .index("by_user", ["userId"])
       .index("by_status", ["status"])
       .index("by_createdAt", ["createdAt"])
+      .index("by_branch", ["branchId"]),
+
+    // Outbound SMS log. One row per recipient per send — a bulk send to a
+    // selection creates one row each, so failures are attributable and the
+    // history answers "did they get the reminder?" without leaving the app.
+    sms_messages: defineTable({
+      to: v.string(), // E.164 (+639…)
+      recipientName: v.optional(v.string()),
+      // "client" or "staff" — keeps the client/staff histories separable.
+      recipientType: v.union(v.literal("client"), v.literal("staff")),
+      clientId: v.optional(v.id("clients")),
+      staffUserId: v.optional(v.id("users")),
+      body: v.string(),
+      status: v.union(
+        v.literal("queued"),
+        v.literal("sent"),
+        v.literal("failed"),
+      ),
+      providerSid: v.optional(v.string()), // Twilio message SID when sent
+      errorMessage: v.optional(v.string()),
+      branchId: v.optional(v.id("branches")),
+      sentBy: v.id("users"),
+      createdAt: v.number(),
+    })
+      .index("by_createdAt", ["createdAt"])
+      .index("by_sentBy", ["sentBy"])
       .index("by_branch", ["branchId"]),
   },
   {

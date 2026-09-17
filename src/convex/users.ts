@@ -69,6 +69,7 @@ export const list = query({
       role: effectiveRole(u),
       branchId: u.branchId ?? null,
       position: u.position ?? null,
+      phoneNumber: u.phoneNumber ?? null,
       createdAt: u._creationTime,
     }));
   },
@@ -167,6 +168,44 @@ export const claimSuperAdmin = mutation({
  *   hold those roles. Cannot change their own role.
  * - Everyone else: denied.
  */
+/**
+ * Set a staff member's mobile number (used for SMS blasts).
+ * Head Office only, same trust level as assigning roles.
+ */
+export const setPhoneNumber = mutation({
+  args: {
+    userId: v.id("users"),
+    phoneNumber: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const currentUserId = await getAuthUserId(ctx);
+    if (!currentUserId) throw new Error("Not authenticated");
+
+    const currentUserDoc = await ctx.db.get(currentUserId);
+    const viewerRole = currentUserDoc?.role;
+    if (viewerRole !== "super_admin" && viewerRole !== "ceo") {
+      throw new Error("Only the Super Admin or CEO can edit staff contact details.");
+    }
+
+    const targetUser = await ctx.db.get(args.userId);
+    if (!targetUser) throw new Error("User not found.");
+
+    const phone = args.phoneNumber?.trim() || undefined;
+    await ctx.db.patch(args.userId, { phoneNumber: phone });
+
+    const actor = await ctx.db.get(currentUserId);
+    await ctx.db.insert("audit_log", {
+      action: "update",
+      entityType: "client", // reuse as system event (matches role-change audits)
+      entityId: args.userId,
+      userId: currentUserId,
+      userName: actor?.name || actor?.email || "Unknown",
+      description: `Mobile number ${phone ? `set to ${phone}` : "removed"} for ${targetUser.name || targetUser.email || "user"}`,
+      timestamp: Date.now(),
+    });
+  },
+});
+
 export const setRole = mutation({
   args: {
     userId: v.id("users"),
@@ -527,6 +566,7 @@ export const listWithBranches = query({
       branchId: u.branchId ?? null,
       branchName: (u.branchId && branchNameById.get(u.branchId)) || null,
       position: u.position ?? null,
+      phoneNumber: u.phoneNumber ?? null,
       createdAt: u._creationTime,
     }));
   },

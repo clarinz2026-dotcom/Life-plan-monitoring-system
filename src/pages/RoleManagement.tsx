@@ -1,16 +1,20 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
   Shield,
   ShieldCheck,
   UserCog,
   Crown,
   ChevronDown,
+  MessageSquare,
+  Phone,
 } from "lucide-react";
 import { toast } from "sonner";
+import { SMSDialog, type SmsRecipient } from "@/components/SMSDialog";
 
 const ALL_ROLES = [
   { value: "super_admin", label: "Super Admin", color: "bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800" },
@@ -32,8 +36,12 @@ export default function RoleManagement() {
   const roleData = useQuery(api.users.hasRole);
   const users = useQuery(api.users.list);
   const setRole = useMutation(api.users.setRole);
+  const setPhoneNumber = useMutation(api.users.setPhoneNumber);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [confirmRole, setConfirmRole] = useState<{ userId: string; name: string; role: string } | null>(null);
+  const [selectedStaffIds, setSelectedStaffIds] = useState<Set<string>>(new Set());
+  const [smsOpen, setSmsOpen] = useState(false);
+  const [phoneDraft, setPhoneDraft] = useState<{ userId: string; value: string } | null>(null);
 
   const viewerRole = roleData?.role;
   const canManage = viewerRole === "super_admin" || viewerRole === "ceo";
@@ -48,6 +56,38 @@ export default function RoleManagement() {
   // Roles the current viewer is not allowed to touch.
   const isProtectedRole = (role: string | null | undefined) =>
     role === "super_admin" || (!isViewerSuperAdmin && role === "ceo");
+
+  /** SMS recipients from the ticked staff cards. */
+  const smsRecipients: SmsRecipient[] = useMemo(() => {
+    return (users ?? [])
+      .filter((u) => selectedStaffIds.has(u._id))
+      .map((u) => ({
+        phone: u.phoneNumber || "",
+        name: u.name || u.email || "Staff",
+        recipientType: "staff" as const,
+        staffUserId: u._id,
+      }));
+  }, [users, selectedStaffIds]);
+
+  const toggleStaff = (id: string) => {
+    setSelectedStaffIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleSavePhone = async () => {
+    if (!phoneDraft) return;
+    try {
+      await setPhoneNumber({ userId: phoneDraft.userId as never, phoneNumber: phoneDraft.value || undefined });
+      toast.success("Mobile number saved");
+      setPhoneDraft(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save number");
+    }
+  };
 
   if (!roleData || !canManage) {
     return (
@@ -109,6 +149,24 @@ export default function RoleManagement() {
         )}
       </div>
 
+      {/* Staff SMS bar */}
+      {selectedStaffIds.size > 0 && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-line bg-cream/60 px-5 py-3">
+          <div className="flex items-center gap-2 text-[15px] font-medium text-ink">
+            <MessageSquare className="h-5 w-5 text-evergreen" />
+            {selectedStaffIds.size} staff{selectedStaffIds.size !== 1 ? "" : ""} selected
+          </div>
+          <div className="flex-1" />
+          <Button variant="outline" size="default" className="h-10 text-[14px]" onClick={() => setSelectedStaffIds(new Set())}>
+            Clear
+          </Button>
+          <Button variant="default" size="default" className="h-10 gap-2 text-[14px]" onClick={() => setSmsOpen(true)}>
+            <MessageSquare className="h-4 w-4" />
+            Send SMS ({selectedStaffIds.size})
+          </Button>
+        </div>
+      )}
+
       {/* Role Legend */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
         {ALL_ROLES.map((r) => (
@@ -156,6 +214,15 @@ export default function RoleManagement() {
               key={u._id}
               className="flex flex-col md:flex-row md:items-center gap-3 rounded-lg border border-border bg-card p-4"
             >
+              {/* Selection for SMS */}
+              <input
+                type="checkbox"
+                checked={selectedStaffIds.has(u._id)}
+                onChange={() => toggleStaff(u._id)}
+                className="h-4 w-4 shrink-0 accent-[#1b4332]"
+                aria-label={`Select ${u.name || u.email} for SMS`}
+              />
+
               {/* User Info */}
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 {u.image ? (
@@ -178,6 +245,33 @@ export default function RoleManagement() {
                   <p className="text-xs text-muted-foreground truncate">
                     {u.email || "No email"}
                   </p>
+                  {/* Mobile number (for SMS) — inline edit */}
+                  {phoneDraft?.userId === u._id ? (
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <Input
+                        autoFocus
+                        value={phoneDraft.value}
+                        onChange={(e) => setPhoneDraft({ userId: u._id, value: e.target.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleSavePhone();
+                          if (e.key === "Escape") setPhoneDraft(null);
+                        }}
+                        placeholder="09XXXXXXXXX"
+                        className="h-7 w-44 text-xs"
+                      />
+                      <Button size="sm" className="h-7 px-2 text-xs" onClick={handleSavePhone}>Save</Button>
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" onClick={() => setPhoneDraft(null)}>Cancel</Button>
+                    </div>
+                  ) : (
+                    <button
+                      className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => setPhoneDraft({ userId: u._id, value: u.phoneNumber || "" })}
+                      title="Edit mobile number (used for SMS)"
+                    >
+                      <Phone className="h-3 w-3" />
+                      {u.phoneNumber || "Add mobile number"}
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -311,6 +405,14 @@ export default function RoleManagement() {
           </div>
         </div>
       )}
+
+      {/* Send SMS to the selected staff */}
+      <SMSDialog
+        open={smsOpen}
+        onOpenChange={setSmsOpen}
+        recipients={smsRecipients}
+        title={`Send SMS to ${selectedStaffIds.size} staff member${selectedStaffIds.size !== 1 ? "s" : ""}`}
+      />
     </div>
   );
 }
