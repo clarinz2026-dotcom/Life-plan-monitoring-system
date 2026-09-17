@@ -122,11 +122,26 @@ const SOA_STYLES = `
   #soa {
     position: relative;
     width: 100%;
-    max-width: 742px;
+    max-width: 774px;
     margin: 0 auto;
     padding: 2px 0 6px;
     overflow: hidden;
   }
+
+  /* html2canvas ignores <colgroup> entirely, so column widths are declared
+     directly on the header cells. Every bordered table then spans the full
+     content width in both the on-screen preview and the PDF. */
+  table.grid { width: 100% !important; table-layout: fixed; }
+  table.grid th.wc1 { width: 13%; }
+  table.grid th.wc2 { width: 15%; }
+  table.grid th.wc3 { width: 16%; }
+  table.grid th.wc4 { width: 16%; }
+  table.grid th.wc5 { width: 16%; }
+  table.grid th.wc6 { width: 24%; }
+  table.grid th.wb1 { width: 6%; }
+  table.grid th.wb2 { width: 54%; }
+  table.grid th.wb3 { width: 15%; }
+  table.grid th.wb4 { width: 25%; }
 
   /* ── Letterhead ─────────────────────────────────────────────────────── */
   .lh { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
@@ -368,22 +383,14 @@ export function generateSOAHTML(data: SOAData): string {
 
         <span class="sec-bar">Payment History</span>
         <table class="grid">
-          <colgroup>
-            <col style="width:15%" />
-            <col style="width:15%" />
-            <col style="width:16%" />
-            <col style="width:15%" />
-            <col style="width:17%" />
-            <col style="width:22%" />
-          </colgroup>
           <thead>
             <tr>
-              <th>Date<br />(MM/DD/YYYY)</th>
-              <th>O.R. No.</th>
-              <th>Amount</th>
-              <th>Installment<br />Number</th>
-              <th>Balance</th>
-              <th>Remarks</th>
+              <th class="wc1">Date<br />(MM/DD/YYYY)</th>
+              <th class="wc2">O.R. No.</th>
+              <th class="wc3">Amount</th>
+              <th class="wc4">Installment<br />Number</th>
+              <th class="wc5">Balance</th>
+              <th class="wc6">Remarks</th>
             </tr>
           </thead>
           <tbody>
@@ -481,18 +488,12 @@ export function generateSOAHTML(data: SOAData): string {
     <!-- ── Beneficiaries ── -->
     <span class="sec-bar">Beneficiaries</span>
     <table class="grid">
-      <colgroup>
-        <col style="width:6%" />
-        <col style="width:54%" />
-        <col style="width:15%" />
-        <col style="width:25%" />
-      </colgroup>
       <thead>
         <tr>
-          <th>#</th>
-          <th>Name</th>
-          <th>Age</th>
-          <th>Relationship</th>
+          <th class="wb1">#</th>
+          <th class="wb2">Name</th>
+          <th class="wb3">Age</th>
+          <th class="wb4">Relationship</th>
         </tr>
       </thead>
       <tbody>${beneficiaryRows}</tbody>
