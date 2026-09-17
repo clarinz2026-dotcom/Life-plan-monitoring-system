@@ -109,6 +109,36 @@ export function parseMoney(raw: string): number {
   return parseFloat(value);
 }
 
+/**
+ * Match a contract number from a file against the system's stored numbers,
+ * forgivingly: exact → trimmed → leading-zero-insensitive (Excel strips the
+ * leading zero when "014101" is stored as the number 14101) → digits-only.
+ * Returns the system's original contract number, or undefined.
+ */
+export function matchContractNumber(
+  knownNumbers: string[],
+  value: string,
+): string | undefined {
+  const raw = value.trim();
+  if (!raw) return undefined;
+
+  const byExact = new Map(knownNumbers.map((n) => [n.toLowerCase(), n]));
+  const hit = byExact.get(raw.toLowerCase());
+  if (hit) return hit;
+
+  // Normalize: digits (and letters) only, then drop leading zeros on pure
+  // numeric codes so "014101" matches "14101" and vice versa.
+  const norm = (s: string) => s.replace(/[^A-Za-z0-9]/g, "");
+  const canon = (s: string) => {
+    const n = norm(s).toLowerCase();
+    return /^\d+$/.test(n) ? n.replace(/^0+(?=\d)/, "") : n;
+  };
+
+  const target = canon(raw);
+  if (!target) return undefined;
+  return knownNumbers.find((n) => canon(n) === target);
+}
+
 /** A plausible contract number: a short code without spaces. Rejects things like "O.R. Date". */
 function looksLikeContractNumber(value: string): boolean {
   const v = value.trim();
@@ -122,9 +152,12 @@ async function readGrids(file: File): Promise<SheetGrid[]> {
     const workbook = XLSX.read(buffer, { type: "array" });
     const sheets: SheetGrid[] = [];
     for (const name of workbook.SheetNames) {
+      // raw:false reads the formatted cell text, so date cells come through as
+      // "17-Dec-2025" instead of a raw serial number and currency as "650.00".
       const grid = XLSX.utils.sheet_to_json(workbook.Sheets[name], {
         header: 1,
         defval: "",
+        raw: false,
       }) as unknown[][];
       if (grid.length > 0) sheets.push({ name, grid });
     }

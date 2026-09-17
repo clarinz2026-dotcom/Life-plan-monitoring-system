@@ -36,7 +36,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { parsePaymentUpload, parseUploadDate } from "@/lib/parsePaymentUpload";
+import { parsePaymentUpload, parseUploadDate, matchContractNumber } from "@/lib/parsePaymentUpload";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { ScrollableTable } from "@/components/ScrollableTable";
@@ -284,15 +284,15 @@ export default function Payments() {
     setUploadWorking(true);
     setUploadError(null);
     try {
-      // Resolve contract numbers to IDs
-      const contractMap = new Map<string, string>();
-      for (const c of contracts) contractMap.set(c.contractNumber.toLowerCase(), String(c._id));
+      // Resolve contract numbers to IDs (forgiving: leading zeros, spacing)
+      const knownNumbers = contracts.map((c) => c.contractNumber);
+      const idByNumber = new Map(contracts.map((c) => [c.contractNumber, String(c._id)]));
       const paymentEntries = [] as typeof uploadPreview;
       const errors: string[] = [];
       for (let i = 0; i < uploadPreview.length; i++) {
         const row = uploadPreview[i];
-        const contractId = contractMap.get(row.contractNumber.toLowerCase());
-        if (!contractId) {
+        const systemNumber = matchContractNumber(knownNumbers, row.contractNumber);
+        if (!systemNumber) {
           errors.push(`Row ${i + 1}: contract "${row.contractNumber}" not found`);
           continue;
         }
@@ -300,7 +300,7 @@ export default function Payments() {
           errors.push(`Row ${i + 1}: invalid amount`);
           continue;
         }
-        paymentEntries.push({ ...row });
+        paymentEntries.push({ ...row, contractNumber: systemNumber });
       }
       if (errors.length > 0 && paymentEntries.length === 0) {
         setUploadError(errors.join("\n"));
@@ -309,7 +309,7 @@ export default function Payments() {
       }
       const result = await bulkRecordPayments({
         payments: paymentEntries.map((p) => ({
-          contractId: contractMap.get(p.contractNumber.toLowerCase()) as any,
+          contractId: idByNumber.get(p.contractNumber) as any,
           amount: p.amount,
           paymentChannel: (p.channel as any) || "cash",
           paymentDate: p.date ? new Date(p.date).getTime() : Date.now(),

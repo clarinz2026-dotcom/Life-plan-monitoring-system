@@ -20,7 +20,7 @@ import {
   Archive,
   Upload,
 } from "lucide-react";
-import { parsePaymentUpload, parseUploadDate } from "@/lib/parsePaymentUpload";
+import { parsePaymentUpload, parseUploadDate, matchContractNumber } from "@/lib/parsePaymentUpload";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useState, useCallback, useEffect } from "react";
@@ -255,21 +255,21 @@ export default function ClientDetail() {
     setUploadWorking(true);
     setUploadError(null);
     try {
-      const contractMap = new Map<string, string>();
-      for (const c of contracts) contractMap.set(c.contractNumber.toLowerCase(), String(c._id));
-      const entries: { contractId: string; amount: number; channel: string; date: string; orNumber: string; remarks: string }[] = [];
+      const knownNumbers = contracts.map((c) => c.contractNumber);
+      const idByNumber = new Map(contracts.map((c) => [c.contractNumber, String(c._id)]));
+      const entries: { contractNumber: string; amount: number; channel: string; date: string; orNumber: string; remarks: string }[] = [];
       const errors: string[] = [];
       for (let i = 0; i < uploadPreview.length; i++) {
         const row = uploadPreview[i];
-        const contractId = contractMap.get(row.contractNumber.toLowerCase());
-        if (!contractId) { errors.push(`Row ${i + 1}: contract "${row.contractNumber}" not found`); continue; }
+        const systemNumber = matchContractNumber(knownNumbers, row.contractNumber);
+        if (!systemNumber) { errors.push(`Row ${i + 1}: contract "${row.contractNumber}" not found`); continue; }
         if (!row.amount || row.amount <= 0) { errors.push(`Row ${i + 1}: invalid amount`); continue; }
-        entries.push({ ...row, contractId });
+        entries.push({ ...row, contractNumber: systemNumber });
       }
       if (errors.length > 0 && entries.length === 0) { setUploadError(errors.join("\n")); setUploadWorking(false); return; }
       const result = await bulkRecordPayments({
         payments: entries.map((p) => ({
-          contractId: p.contractId as any,
+          contractId: idByNumber.get(p.contractNumber) as any,
           amount: p.amount,
           paymentChannel: (p.channel as any) || "cash",
           paymentDate: p.date ? new Date(p.date).getTime() : Date.now(),
