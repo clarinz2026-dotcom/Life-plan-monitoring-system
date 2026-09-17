@@ -308,7 +308,7 @@ export default function Plans() {
                           className="mt-0.5 text-[12px] text-stone"
                           style={STATEMENT_FONT}
                         >
-                          Plan No. {contract.contractNumber}
+                          Plan No. {contract.contractNumber} · Eff. {fmtDate(contract.startDate)}
                         </p>
                       </div>
                       <StatusPill map={CONTRACT_PILL} status={contract.contractStatus} />
