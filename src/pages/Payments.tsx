@@ -80,9 +80,20 @@ export default function Payments() {
 
   const rows = payments ?? [];
   const rowIds = rows.map((p) => String(p._id));
-  const selectedVisibleCount = rowIds.filter((id) => selectedIds.has(id)).length;
-  const allSelected = rowIds.length > 0 && selectedVisibleCount === rowIds.length;
-  const someSelected = selectedVisibleCount > 0 && !allSelected;
+  /**
+   * The header box selects as many rows as a single bulk action can carry
+   * (MAX_BULK_PAYMENTS), not the whole ledger — so "select all" on a long list
+   * can never build a selection the server would refuse.
+   */
+  const selectableIds = rowIds.slice(0, MAX_BULK_PAYMENTS);
+  const capReached = rowIds.length > MAX_BULK_PAYMENTS;
+  const selectedSelectableCount = selectableIds.filter((id) =>
+    selectedIds.has(id)
+  ).length;
+  const allSelected =
+    selectableIds.length > 0 &&
+    selectedSelectableCount === selectableIds.length;
+  const someSelected = selectedIds.size > 0 && !allSelected;
   const selectedAmount = rows
     .filter((p) => selectedIds.has(String(p._id)))
     .reduce((sum, p) => sum + p.amount, 0);
@@ -90,17 +101,17 @@ export default function Payments() {
   const overBulkCap = selectedIds.size > MAX_BULK_PAYMENTS;
 
   /**
-   * Select every payment in the list — not just the rows in view. The list is
-   * unpaginated, but it is branch-scoped and can be long, so the header box
-   * always works on the whole set the user is looking at.
+   * Select the newest payments — up to one action's worth. Deselecting only
+   * clears what the header box picked, so manually chosen rows outside that
+   * window are left alone.
    */
   const toggleSelectAll = () => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (allSelected) {
-        rowIds.forEach((id) => next.delete(id));
+        selectableIds.forEach((id) => next.delete(id));
       } else {
-        rowIds.forEach((id) => next.add(id));
+        selectableIds.forEach((id) => next.add(id));
       }
       return next;
     });
@@ -241,6 +252,8 @@ export default function Payments() {
             {rows.length} record{rows.length !== 1 && "s"}
             {showArchived &&
               ` · ${rows.filter((p) => p.archivedAt).length} reversed`}
+            {capReached &&
+              ` · the header checkbox picks the newest ${MAX_BULK_PAYMENTS}`}
           </p>
           <Button
             variant={showArchived ? "default" : "outline"}
@@ -495,11 +508,13 @@ export default function Payments() {
                       allSelected ? true : someSelected ? "indeterminate" : false
                     }
                     onCheckedChange={toggleSelectAll}
-                    aria-label={`Select all ${rows.length} payments in the ledger`}
+                    aria-label={`Select ${selectableIds.length} payments`}
                     title={
                       allSelected
-                        ? `Deselect all ${rows.length} payments`
-                        : `Select all ${rows.length} payments`
+                        ? `Deselect these ${selectableIds.length} payments`
+                        : capReached
+                          ? `Select the newest ${MAX_BULK_PAYMENTS} payments (the limit for one action)`
+                          : `Select all ${selectableIds.length} payments`
                     }
                   />
                 </TableHead>
