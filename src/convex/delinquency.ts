@@ -1,6 +1,7 @@
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { query, mutation } from "./_generated/server";
 import { assertStaff, resolveBranchFilter } from "./access";
+import { lastLivePaymentDate } from "./paymentLedger";
 import { effectiveRole } from "./roles";
 
 /** Roles allowed to trigger a global status recalculation. */
@@ -69,17 +70,13 @@ export const updateAllContractStatuses = mutation({
         continue;
       }
 
-      // Latest payment only — one indexed row instead of the whole history.
-      const latestPayment = await ctx.db
-        .query("payments")
-        .withIndex("by_contract_paymentDate", (q) =>
-          q.eq("contractId", contract._id)
-        )
-        .order("desc")
-        .take(1);
+      // Last payment that still counts — a reversed payment is not a payment,
+      // so a plan whose latest entry was reversed falls back to whatever came
+      // before it (see paymentLedger.lastLivePaymentDate).
+      const lastPaymentDate = await lastLivePaymentDate(ctx, contract._id);
 
-      // Determine reference date: last payment date or contract start date
-      const referenceDate = latestPayment[0]?.paymentDate ?? contract.startDate;
+      // Determine reference date: last live payment date or contract start date
+      const referenceDate = lastPaymentDate ?? contract.startDate;
 
       const days = daysSince(referenceDate);
       const isFullyPaid = contract.totalPaid >= contract.planAmount;

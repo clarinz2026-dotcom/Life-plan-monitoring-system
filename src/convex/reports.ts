@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { resolveBranchFilter } from "./access";
+import { liveOnly } from "./paymentLedger";
 import {
   MS_PER_DAY,
   manilaDayOfMonth,
@@ -37,6 +38,8 @@ export const collectionSummary = query({
       .query("payments")
       .withIndex("by_paymentDate", (q) => q.gte("paymentDate", rangeStart))
       .collect();
+    // A reversed payment is no longer a collection.
+    payments = liveOnly(payments);
     if (branchId) {
       payments = payments.filter((p) => p.branchId === branchId);
     }
@@ -96,6 +99,8 @@ export const byChannel = query({
       .query("payments")
       .withIndex("by_paymentDate", (q) => q.gte("paymentDate", monthStart))
       .collect();
+    // A reversed payment is no longer a collection.
+    payments = liveOnly(payments);
     if (branchId) {
       payments = payments.filter((p) => p.branchId === branchId);
     }
@@ -132,6 +137,8 @@ export const byCashier = query({
       .query("payments")
       .withIndex("by_paymentDate", (q) => q.gte("paymentDate", monthStart))
       .collect();
+    // A reversed payment is no longer a collection.
+    payments = liveOnly(payments);
     if (branchId) {
       payments = payments.filter((p) => p.branchId === branchId);
     }
@@ -175,6 +182,8 @@ export const dailyCollections = query({
       .query("payments")
       .withIndex("by_paymentDate", (q) => q.gte("paymentDate", monthStart))
       .collect();
+    // A reversed payment is no longer a collection.
+    payments = liveOnly(payments);
     if (branchId) {
       payments = payments.filter((p) => p.branchId === branchId);
     }
@@ -279,6 +288,7 @@ export const monthlyTrend = query({
       .query("payments")
       .withIndex("by_paymentDate", (q) => q.gte("paymentDate", trendStart))
       .collect();
+    allPayments = liveOnly(allPayments);
     if (branchId) {
       allPayments = allPayments.filter((p) => p.branchId === branchId);
     }

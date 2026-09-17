@@ -2,6 +2,7 @@ import { getAuthUserId } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { assertCanAccessRecord, resolveBranchFilter } from "./access";
+import { liveOnly } from "./paymentLedger";
 import { MS_PER_DAY, manilaDayStart } from "./datetime";
 
 /**
@@ -28,13 +29,16 @@ export const create = mutation({
     const todayStart = manilaDayStart();
     const todayEnd = todayStart + MS_PER_DAY;
 
-    // Get all payments recorded today (scoped to the cashier's branch)
-    const todayPayments = (await ctx.db
-      .query("payments")
-      .withIndex("by_paymentDate", (q) =>
-        q.gte("paymentDate", todayStart).lt("paymentDate", todayEnd)
-      )
-      .collect()).filter((p) => !user?.branchId || p.branchId === user.branchId);
+    // Get all payments recorded today (scoped to the cashier's branch).
+    // Reversed payments are excluded — they are not in the drawer.
+    const todayPayments = liveOnly(
+      await ctx.db
+        .query("payments")
+        .withIndex("by_paymentDate", (q) =>
+          q.gte("paymentDate", todayStart).lt("paymentDate", todayEnd)
+        )
+        .collect()
+    ).filter((p) => !user?.branchId || p.branchId === user.branchId);
 
     const totalRecorded = todayPayments.reduce((sum, p) => sum + p.amount, 0);
 
@@ -170,12 +174,14 @@ export const todaySummary = query({
     const todayStart = manilaDayStart();
     const todayEnd = todayStart + MS_PER_DAY;
 
-    let payments = await ctx.db
-      .query("payments")
-      .withIndex("by_paymentDate", (q) =>
-        q.gte("paymentDate", todayStart).lt("paymentDate", todayEnd)
-      )
-      .collect();
+    let payments = liveOnly(
+      await ctx.db
+        .query("payments")
+        .withIndex("by_paymentDate", (q) =>
+          q.gte("paymentDate", todayStart).lt("paymentDate", todayEnd)
+        )
+        .collect()
+    );
     if (branchId) {
       payments = payments.filter((p) => p.branchId === branchId);
     }

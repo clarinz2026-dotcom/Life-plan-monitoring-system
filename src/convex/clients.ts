@@ -12,11 +12,12 @@ import {
   resolveBranchFilter,
 } from "./access";
 import { effectiveRole } from "./roles";
+import { lastLivePaymentDate } from "./paymentLedger";
 
 /**
  * Compute delinquency status based on days since last payment.
  */
-function computeDelinquencyStatus(
+export function computeDelinquencyStatus(
   contractStatus: string,
   lastPaymentDate: number | null,
   totalPaid: number,
@@ -518,20 +519,17 @@ export const listWithStatus = query({
         continue;
       }
 
-      // Most recent payment for this contract. Uses the compound
+      // Most recent payment that still counts. Uses the compound
       // [contractId, paymentDate] index so we read a single row instead of the
       // contract's entire payment history (the old version also ordered by
       // creation time, which mis-reported the last payment date for back-dated
-      // entries and skewed the delinquency status).
-      const lastPayment = await ctx.db
-        .query("payments")
-        .withIndex("by_contract_paymentDate", (q) =>
-          q.eq("contractId", activeContract!._id)
-        )
-        .order("desc")
-        .take(1);
-
-      const lastPaymentDate = lastPayment[0]?.paymentDate ?? null;
+      // entries and skewed the delinquency status). Reversed payments are
+      // skipped, so a plan whose latest entry was reversed falls back to the
+      // payment before it.
+      const lastPaymentDate = await lastLivePaymentDate(
+        ctx,
+        activeContract!._id
+      );
       const daysSincePayment = lastPaymentDate
         ? Math.floor((now - lastPaymentDate) / (1000 * 60 * 60 * 24))
         : null;

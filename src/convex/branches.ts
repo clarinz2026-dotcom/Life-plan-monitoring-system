@@ -8,6 +8,7 @@ import {
   assertStaff,
   isAdminRole,
 } from "./access";
+import { liveOnly } from "./paymentLedger";
 import { manilaMonthStart } from "./datetime";
 
 /**
@@ -333,10 +334,13 @@ export const summary = query({
         }
 
         // Payments this month
-        const payments = await ctx.db
-          .query("payments")
-          .withIndex("by_branch", (q) => q.eq("branchId", b._id))
-          .collect();
+        // Reversed payments are not collections.
+        const payments = liveOnly(
+          await ctx.db
+            .query("payments")
+            .withIndex("by_branch", (q) => q.eq("branchId", b._id))
+            .collect()
+        );
         const monthPayments = payments.filter((p) => p.paymentDate >= monthStart);
         const monthAmount = monthPayments.reduce((sum, p) => sum + p.amount, 0);
         const totalPaymentAmount = payments.reduce((sum, p) => sum + p.amount, 0);
@@ -450,7 +454,9 @@ async function branchHistoryCounts(
     ctx.db
       .query("payments")
       .withIndex("by_branch", (q) => q.eq("branchId", branchId))
-      .collect(),
+      .collect()
+      // Reversed payments are excluded from the branch's figures.
+      .then(liveOnly),
     ctx.db
       .query("receipts")
       .withIndex("by_branch", (q) => q.eq("branchId", branchId))

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { resolveBranchFilter } from "./access";
+import { liveOnly } from "./paymentLedger";
 import {
   MS_PER_DAY,
   lastManilaDays,
@@ -77,6 +78,9 @@ export const summary = query({
     } else {
       payments = await ctx.db.query("payments").collect();
     }
+    // Reversed payments are not collections — they never count toward the
+    // totals, the channel split, or today's figure.
+    payments = liveOnly(payments);
     const totalPayments = payments.length;
     const totalPaymentAmount = payments.reduce((sum, p) => sum + p.amount, 0);
 
@@ -142,10 +146,12 @@ export const weeklyTrend = query({
     // index instead of scanning every payment ever recorded.
     const dayStarts = lastManilaDays(7);
 
-    let payments = await ctx.db
-      .query("payments")
-      .withIndex("by_paymentDate", (q) => q.gte("paymentDate", dayStarts[0]))
-      .collect();
+    let payments = liveOnly(
+      await ctx.db
+        .query("payments")
+        .withIndex("by_paymentDate", (q) => q.gte("paymentDate", dayStarts[0]))
+        .collect()
+    );
     if (branchId) {
       payments = payments.filter((p) => p.branchId === branchId);
     }
@@ -179,13 +185,17 @@ export const recentPayments = query({
         .query("payments")
         .withIndex("by_branch", (q) => q.eq("branchId", branchId!))
         .order("desc")
-        .take(20);
+        .take(40);
     } else {
       payments = await ctx.db
         .query("payments")
         .order("desc")
-        .take(20);
+        .take(40);
     }
+
+    // A reversed payment is not a receipt of money. A few extra rows are read
+    // up front so the feed still fills its twenty slots after they are dropped.
+    payments = liveOnly(payments).slice(0, 20);
 
     const enriched = await Promise.all(
       payments.map(async (p) => {

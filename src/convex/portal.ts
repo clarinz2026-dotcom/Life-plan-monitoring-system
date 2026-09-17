@@ -137,11 +137,15 @@ export const myOverview = query({
             .withIndex("by_client", (q) => q.eq("clientId", cid))
             .collect())
         );
+        // Reversed payments are hidden: the amount has already been taken
+        // back off the plan, so showing the row would print a ledger entry
+        // that no longer matches the balance and the SOA.
         allPayments.push(
           ...(await ctx.db
             .query("payments")
             .withIndex("by_client", (q) => q.eq("clientId", cid))
-            .collect())
+            .collect()
+          ).filter((p) => !p.archivedAt)
         );
         allSchedules.push(
           ...(await ctx.db

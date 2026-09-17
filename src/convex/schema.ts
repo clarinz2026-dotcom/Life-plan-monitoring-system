@@ -191,6 +191,12 @@ const schema = defineSchema(
       remarks: v.optional(v.string()),
       branchId: v.optional(v.id("branches")),
       recordedBy: v.id("users"),
+      // Reversal (soft delete). A payment is never silently dropped from the
+      // ledger: it is archived, the amount comes off the plan's total, and the
+      // row can be restored (see payments.archive / payments.restore).
+      archivedAt: v.optional(v.number()),
+      archivedBy: v.optional(v.id("users")),
+      archiveReason: v.optional(v.string()),
       createdAt: v.number(),
     })
       .index("by_contract", ["contractId"])
