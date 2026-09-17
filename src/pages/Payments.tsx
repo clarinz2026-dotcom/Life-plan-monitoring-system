@@ -36,8 +36,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import { parsePaymentUpload, parseUploadDate } from "@/lib/parsePaymentUpload";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { ScrollableTable } from "@/components/ScrollableTable";
@@ -73,7 +72,7 @@ export default function Payments() {
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadPreview, setUploadPreview] = useState<
-    { contractId: string; amount: number; channel: string; date: string; orNumber: string; remarks: string }[]
+    { contractNumber: string; amount: number; channel: string; date: string; orNumber: string; remarks: string }[]
   >([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadWorking, setUploadWorking] = useState(false);
@@ -259,39 +258,22 @@ export default function Payments() {
     setUploadError(null);
     setUploadPreview([]);
     try {
-      let rows: Record<string, string>[] = [];
-      if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
-        const buffer = await file.arrayBuffer();
-        const workbook = XLSX.read(buffer, { type: "array" });
-        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        rows = XLSX.utils.sheet_to_json<Record<string, string>>(worksheet, { defval: "" });
-      } else {
-        const text = await file.text();
-        const result = Papa.parse<Record<string, string>>(text, {
-          header: true,
-          skipEmptyLines: true,
-          transformHeader: (h: string) => h.trim(),
-        });
-        if (result.errors.length > 0) {
-          setUploadError(`CSV parse error: ${result.errors[0].message}`);
-          return;
-        }
-        rows = result.data;
-      }
+      const { rows, warnings } = await parsePaymentUpload(file);
       if (rows.length === 0) {
-        setUploadError("The file has no data rows");
+        setUploadError(warnings.join("\n") || "No payment rows could be read from the file.");
         return;
       }
-      const preview = rows.map((row) => {
-        const contractNum = (row.contractNumber || row.contract || row.ContractNumber || row.Contract || "").trim();
-        const amount = parseFloat(String(row.amount || row.Amount || "0").replace(/,/g, ""));
-        const channel = (row.channel || row.Channel || row.paymentChannel || "cash").trim().toLowerCase().replace(/\s+/g, "_");
-        const date = (row.date || row.Date || row.paymentDate || "").trim();
-        const orNumber = (row.orNumber || row.or || row.OR || row["OR #"] || "").trim();
-        const remarks = (row.remarks || row.Remarks || "").trim();
-        return { contractId: contractNum, amount, channel, date, orNumber, remarks };
-      });
-      setUploadPreview(preview);
+      setUploadPreview(
+        rows.map((row) => ({
+          contractNumber: row.contractNumber,
+          amount: row.amount,
+          channel: row.channel,
+          date: parseUploadDate(row.date) || row.date,
+          orNumber: row.orNumber,
+          remarks: row.remarks,
+        })),
+      );
+      if (warnings.length > 0) setUploadError(warnings.join("\n"));
     } catch (err: any) {
       setUploadError(`Failed to parse file: ${err?.message || "unknown error"}`);
     }
@@ -309,9 +291,9 @@ export default function Payments() {
       const errors: string[] = [];
       for (let i = 0; i < uploadPreview.length; i++) {
         const row = uploadPreview[i];
-        const contractId = contractMap.get(row.contractId.toLowerCase());
+        const contractId = contractMap.get(row.contractNumber.toLowerCase());
         if (!contractId) {
-          errors.push(`Row ${i + 1}: contract "${row.contractId}" not found`);
+          errors.push(`Row ${i + 1}: contract "${row.contractNumber}" not found`);
           continue;
         }
         if (!row.amount || row.amount <= 0) {
@@ -540,12 +522,12 @@ export default function Payments() {
             <DialogHeader>
               <DialogTitle className="text-xl font-bold">Bulk Upload Payments</DialogTitle>
               <DialogDescription className="text-sm">
-                Upload a CSV or XLSX file with columns: contractNumber, amount, channel, date, orNumber, remarks
+                Upload a CSV or XLSX file. Two formats are accepted: the simple ledger (columns: contractNumber, amount, channel, date, orNumber, remarks) or a statement export with a contract header block followed by a Pay Class / O.R. Date / O.R. No. / Amount table.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-3">
               <div>
-                <Label className="text-[14px]">CSV File *</Label>
+                <Label className="text-[14px]">Payment File (CSV or XLSX) *</Label>
                 <Input
                   type="file"
                   accept=".csv,.xlsx,.xls"
@@ -581,7 +563,7 @@ export default function Payments() {
                     <tbody>
                       {uploadPreview.slice(0, 20).map((row, i) => (
                         <tr key={i} className="border-t border-border/50">
-                          <td className="px-3 py-1.5">{row.contractId}</td>
+                          <td className="px-3 py-1.5">{row.contractNumber}</td>
                           <td className="px-3 py-1.5 text-right font-medium">{formatPHP(row.amount)}</td>
                           <td className="px-3 py-1.5">{row.channel}</td>
                           <td className="px-3 py-1.5">{row.date}</td>
