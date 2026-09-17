@@ -16,8 +16,7 @@ import {
   FilePlus2,
 } from "lucide-react";
 import { useState, useRef, useCallback } from "react";
-import Papa from "papaparse";
-import * as XLSX from "xlsx";
+import { parseClientUpload, parseClientUploadDate } from "@/lib/parseClientUpload";
 import { useBranch } from "@/hooks/use-branch";
 
 interface UploadRow {
@@ -28,10 +27,13 @@ interface UploadRow {
   effectivityDate: string;
   dueDate: string;
   installment: string;
+  /** Monthly installment amount (₱ per month), per the collection report. */
   amount: string;
   due30: string;
   due60: string;
   due90: string;
+  nonComm: string;
+  orNumber: string;
   contactNumber: string;
   address: string;
 }
@@ -39,86 +41,6 @@ interface UploadRow {
 interface ValidationResult {
   row: number;
   errors: string[];
-}
-
-const HEADER_ALIASES: Record<string, keyof UploadRow> = {
-  no: "no",
-  number: "no",
-  "#": "no",
-  planholdername: "planholderName",
-  planholder: "planholderName",
-  clientname: "planholderName",
-  name: "planholderName",
-  fullname: "planholderName",
-  lpano: "lpaNo",
-  lpa: "lpaNo",
-  lpanumber: "lpaNo",
-  contractnumber: "lpaNo",
-  contractno: "lpaNo",
-  plantype: "planType",
-  plan: "planType",
-  type: "planType",
-  effectivitydate: "effectivityDate",
-  effectivity: "effectivityDate",
-  startdate: "effectivityDate",
-  duedate: "dueDate",
-  due: "dueDate",
-  paymentduedate: "dueDate",
-  installment: "installment",
-  installments: "installment",
-  monthspaid: "installment",
-  ins: "installment",
-  insinstallment: "installment",
-  insinstallments: "installment",
-  amount: "amount",
-  planamount: "amount",
-  total: "amount",
-  "30": "due30",
-  "30days": "due30",
-  "60": "due60",
-  "60days": "due60",
-  "90": "due90",
-  "90days": "due90",
-  contactnumber: "contactNumber",
-  contactno: "contactNumber",
-  contact: "contactNumber",
-  phonenumber: "contactNumber",
-  phone: "contactNumber",
-  mobile: "contactNumber",
-  address: "address",
-  completeaddress: "address",
-  fulladdress: "address",
-  homeaddress: "address",
-};
-
-function compactHeader(header: string): string {
-  return header.trim().toLowerCase().replace(/[^a-z0-9#]/g, "");
-}
-
-function mapHeader(header: string): keyof UploadRow | "" {
-  return HEADER_ALIASES[compactHeader(header)] || "";
-}
-
-function str(value: unknown): string {
-  return value === undefined || value === null ? "" : String(value);
-}
-
-function toUploadRow(row: Record<string, unknown>): UploadRow {
-  return {
-    no: str(row.no),
-    planholderName: str(row.planholderName),
-    lpaNo: str(row.lpaNo),
-    planType: str(row.planType),
-    effectivityDate: str(row.effectivityDate),
-    dueDate: str(row.dueDate),
-    installment: str(row.installment),
-    amount: str(row.amount),
-    due30: str(row.due30),
-    due60: str(row.due60),
-    due90: str(row.due90),
-    contactNumber: str(row.contactNumber),
-    address: str(row.address),
-  };
 }
 
 function validateRow(row: UploadRow, rowNum: number): ValidationResult {
@@ -137,15 +59,13 @@ function validateRow(row: UploadRow, rowNum: number): ValidationResult {
     }
   }
   if (row.amount?.trim()) {
-    const amount = parseFloat(String(row.amount).replace(/,/g, ""));
+    const amount = parseFloat(String(row.amount).replace(/[₱,]/g, ""));
     if (isNaN(amount) || amount <= 0) {
       errors.push(`Invalid amount: ${row.amount}`);
     }
   }
   return { row: rowNum, errors };
 }
-
-const VALID_FIELDS = Object.values(HEADER_ALIASES);
 
 const peso = (n: number) => `₱${n.toLocaleString()}`;
 
@@ -170,6 +90,7 @@ export default function BulkUpload() {
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<UploadRow[]>([]);
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
+  const [parseWarnings, setParseWarnings] = useState<string[]>([]);
   const [monthlyRates, setMonthlyRates] = useState<Record<number, string>>({});
   const [isParsing, setIsParsing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -205,9 +126,10 @@ export default function BulkUpload() {
 
   const getSuggestedMonthly = useCallback(
     (row: UploadRow, plan: { price: number; monthlyRate?: number }): number | null => {
-      const amount = parseFloat(String(row.amount).replace(/,/g, ""));
-      const months = parseInt(row.installment || "", 10) || 0;
-      if (!isNaN(amount) && amount > 0 && months > 0) return Math.round(amount / months);
+      // In the collection-report format, Amount IS the monthly installment
+      // (₱350/mo over N months paid) — never divide it by months.
+      const amount = parseFloat(String(row.amount).replace(/[₱,]/g, ""));
+      if (!isNaN(amount) && amount > 0) return Math.round(amount);
       return planMonthly(plan);
     },
     [],
@@ -225,46 +147,36 @@ export default function BulkUpload() {
       setIsParsing(true);
 
       try {
-        let data: UploadRow[] = [];
-        if (selectedFile.name.endsWith(".csv")) {
-          const text = await selectedFile.text();
-          const result = Papa.parse<Record<string, unknown>>(text, {
-            header: true,
-            skipEmptyLines: true,
-            transformHeader: mapHeader,
-          });
-          data = result.data
-            .filter((row) => Object.keys(row).length > 0)
-            .map((row) => toUploadRow(row));
-        } else if (
-          selectedFile.name.endsWith(".xlsx") ||
-          selectedFile.name.endsWith(".xls")
-        ) {
-          const buffer = await selectedFile.arrayBuffer();
-          const workbook = XLSX.read(buffer, { type: "array" });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(
-            worksheet,
-            { defval: "" },
-          );
-          data = jsonData.map((row) => {
-            const normalizedRow: Record<string, unknown> = {};
-            for (const key of VALID_FIELDS) {
-              normalizedRow[key] = "";
-            }
-            Object.entries(row).forEach(([key, value]) => {
-              const field = mapHeader(key);
-              if (field) normalizedRow[field] = value;
-            });
-            return toUploadRow(normalizedRow);
-          });
-        }
+        const { rows, warnings } = await parseClientUpload(selectedFile);
+        // Normalize dates to YYYY-MM-DD and amounts to plain numbers so the
+        // "22-Feb-2022" / "₱350.00" cells in collection-report exports parse
+        // like the flat template's "01/15/2025" / "750".
+        const data: UploadRow[] = rows.map((row) => ({
+          no: row.no,
+          planholderName: row.planholderName,
+          lpaNo: row.lpaNo,
+          planType: row.planType,
+          effectivityDate: parseClientUploadDate(row.effectivityDate) || row.effectivityDate,
+          dueDate: row.dueDate,
+          installment: row.installment,
+          amount: row.amount.replace(/[₱,\s]/g, ""),
+          due30: row.due30,
+          due60: row.due60,
+          due90: row.due90,
+          nonComm: row.nonComm,
+          orNumber: row.orNumber,
+          contactNumber: row.contactNumber,
+          address: row.address,
+        }));
         const results = data.map((row, i) => validateRow(row, i + 1));
         setParsedData(data);
         setValidationResults(results);
+        setParseWarnings(warnings);
       } catch (error) {
         console.error("Failed to parse file:", error);
+        setParseWarnings([
+          error instanceof Error ? error.message : "Failed to parse the file.",
+        ]);
       } finally {
         setIsParsing(false);
       }
@@ -283,12 +195,13 @@ export default function BulkUpload() {
       const row = parsedData[origIdx];
       const plan = getMatchedPlan(row);
       const months = parseInt(row.installment || "", 10) || 0;
-      const amount = parseFloat(String(row.amount).replace(/,/g, ""));
+      const amount = parseFloat(String(row.amount).replace(/[₱,]/g, ""));
+      // Amount is the monthly installment rate. The per-row override only
+      // applies when the sheet has no usable Amount.
       let monthlyRate: number | undefined;
-      if (plan && months > 0 && (isNaN(amount) || amount <= 0)) {
-        const v = parseFloat(monthlyRates[origIdx] || "");
-        if (!isNaN(v) && v > 0) monthlyRate = v;
-      }
+      const v = parseFloat(monthlyRates[origIdx] || "");
+      if (!isNaN(v) && v > 0) monthlyRate = v;
+      else if (isNaN(amount) || amount <= 0) monthlyRate = undefined;
       return {
         no: row.no,
         planholderName: row.planholderName,
@@ -299,8 +212,10 @@ export default function BulkUpload() {
         installment: row.installment,
         amount: row.amount,
         due30: row.due30,
-        due60: row.due60,
+        due60: row.due60, 
         due90: row.due90,
+        nonComm: row.nonComm,
+        orNumber: row.orNumber,
         contactNumber: row.contactNumber,
         address: row.address,
         selectedPrice: monthlyRate,
@@ -357,6 +272,7 @@ export default function BulkUpload() {
     setFile(null);
     setParsedData([]);
     setValidationResults([]);
+    setParseWarnings([]);
     setMonthlyRates({});
     setUploadResult(null);
     if (fileInputRef.current) fileInputRef.current.value = "";

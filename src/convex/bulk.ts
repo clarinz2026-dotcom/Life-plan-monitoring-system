@@ -19,7 +19,7 @@ import { getViewer, isAdminRole } from "./access";
  * A client record is always created. When the Plan Type matches an active
  * plan on the Plans page (case-insensitive), a CONTRACT is created too:
  *   - contract number  = LPA NO (if present) else auto-generated
- *   - monthly rate     = Amount ÷ months paid when the sheet has an Amount,
+ *   - monthly rate     = the sheet's Amount (the monthly installment itself),
  *                        else the per-row price chosen in the upload preview,
  *                        else the plan's monthly payment
  *   - plan amount      = monthly rate x 60 months (full plan price)
@@ -51,6 +51,8 @@ export const bulkCreateClients = mutation({
         due30: v.optional(v.string()),
         due60: v.optional(v.string()),
         due90: v.optional(v.string()),
+        nonComm: v.optional(v.string()),
+        orNumber: v.optional(v.string()),
         contactNumber: v.optional(v.string()),
         address: v.optional(v.string()),
         // Chosen monthly rate for this client (plan old/current price pick).
@@ -207,6 +209,8 @@ async function createContractWithBackdatedPayments(
       effectivityDate?: string;
       installment?: string;
       amount?: string;
+      orNumber?: string;
+      nonComm?: string;
       selectedPrice?: number;
     };
     plan: { name: string; price: number; monthlyRate?: number };
@@ -235,6 +239,7 @@ async function createContractWithBackdatedPayments(
   });
 
   // One backdated cash payment per month already paid, dated from effectivity.
+  const importOr = (opts.row.orNumber || "").trim() || undefined;
   let paymentsCreated = 0;
   for (let m = 0; m < monthsPaid; m++) {
     await ctx.db.insert("payments", {
@@ -243,11 +248,13 @@ async function createContractWithBackdatedPayments(
       amount: monthly,
       paymentChannel: "cash",
       paymentDate: addMonths(startDate, m),
-      orNumber: undefined,
+      // The collection report carries one OR # per planholder; it lands on the
+      // first backdated installment so receipt lookups resolve to something.
+      orNumber: m === 0 ? importOr : undefined,
       referenceNumber: undefined,
       chequeNumber: undefined,
       bankName: undefined,
-      remarks: "Backdated (bulk import)",
+      remarks: importOr && m === 0 ? `Backdated (bulk import) · OR #${importOr}` : "Backdated (bulk import)",
       branchId: opts.branchId,
       recordedBy: opts.userId,
       createdAt: Date.now(),
@@ -279,23 +286,20 @@ async function createContractWithBackdatedPayments(
 /**
  * The monthly payment to bill a bulk-imported row when auto-creating its
  * contract:
- *  1. Spreadsheet Amount ÷ months paid (the client's actual rate)
- *  2. The per-row override chosen in the upload preview
+ *  1. The per-row override chosen in the upload preview
+ *  2. Spreadsheet Amount — the monthly installment itself (the collection
+ *     report carries ₱350/mo × months paid, never a total to divide)
  *  3. The plan's monthly payment
  */
 function resolveRowMonthly(
   row: { installment?: string; amount?: string; selectedPrice?: number },
   plan: { price: number; monthlyRate?: number },
 ): number {
-  const monthsPaid = parseInt(row.installment || "", 10) || 0;
-  const amount = parseFloat(String(row.amount ?? "").replace(/,/g, ""));
-  if (monthsPaid > 0 && !isNaN(amount) && amount > 0) {
-    const derived = Math.round(amount / monthsPaid);
-    if (derived > 0) return derived;
-  }
   if (row.selectedPrice && row.selectedPrice > 0) {
     return Math.round(row.selectedPrice);
   }
+  const amount = parseFloat(String(row.amount ?? "").replace(/[₱,]/g, ""));
+  if (!isNaN(amount) && amount > 0) return Math.round(amount);
   return resolveMonthlyPrice(plan);
 }
 
@@ -352,6 +356,7 @@ function buildReferenceNotes(row: {
   due30?: string;
   due60?: string;
   due90?: string;
+  nonComm?: string;
 }): string | null {
   const refs: Array<[string, string | undefined]> = [
     ["No.", row.no],
@@ -360,10 +365,11 @@ function buildReferenceNotes(row: {
     ["Effectivity Date", row.effectivityDate],
     ["Due Date", row.dueDate],
     ["Months Paid", row.installment],
-    ["Amount", row.amount],
+    ["Monthly Amount", row.amount],
     ["30", row.due30],
     ["60", row.due60],
     ["90", row.due90],
+    ["Non-Comm", row.nonComm],
   ];
 
   const parts = refs
