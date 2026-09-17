@@ -170,7 +170,7 @@ export const MAIN_OFFICE = {
   address: "2nd Floor, Gabrinez Building",
   city: "Malaybalay City",
   province: "Bukidnon",
-  contactNumber: "(02) 8-700-0000",
+  contactNumber: "0955 399 1034",
   managerId: null,
 } as const;
 

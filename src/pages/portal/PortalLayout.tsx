@@ -72,7 +72,7 @@ export default function PortalLayout() {
               className="hidden items-center gap-1.5 text-[12px] font-semibold text-evergreen md:flex"
             >
               <Phone className="h-3.5 w-3.5 text-gold" />
-              24/7 (02) 8-700-0000
+              24/7 0955 399 1034
             </a>
             <span className="hidden max-w-[150px] truncate text-[12px] text-stone xl:block">
               {user?.name || user?.email || ""}

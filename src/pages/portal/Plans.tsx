@@ -516,7 +516,7 @@ export default function Plans() {
                             href="tel:+63287000000"
                             className="font-bold text-evergreen underline underline-offset-2 hover:text-gold"
                           >
-                            (02) 8-700-0000
+                            0955 399 1034
                           </a>{" "}
                           or visit any branch — we can print it on the spot.
                         </p>

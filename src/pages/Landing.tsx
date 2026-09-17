@@ -1037,12 +1037,12 @@ export default function Landing() {
                 <li className="flex items-start gap-3">
                   <Phone className="mt-0.5 h-4 w-4 shrink-0 text-gold-soft" />
                   <span>
-                    <span className="text-white">24/7 Hotline:</span> (02) 8-700-0000
+                    <span className="text-white">24/7 Hotline:</span> 0955 399 1034
                   </span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Mail className="mt-0.5 h-4 w-4 shrink-0 text-gold-soft" />
-                  <span>care@evangelistfuneral.com</span>
+                  <span>evangelistfuneralservices@gmail.com</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <Clock className="mt-0.5 h-4 w-4 shrink-0 text-gold-soft" />
