@@ -1,7 +1,7 @@
 {
-  "name": "freebuff.com application",
-  "short_name": "freebuff.com",
-  "description": "freebuff.com application",
+  "name": "Evangelist Funeral Services",
+  "short_name": "Evangelist FS",
+  "description": "Pre-Need deathcare plan management platform for Evangelist Funeral Services",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
