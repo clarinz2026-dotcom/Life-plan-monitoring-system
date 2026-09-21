@@ -19,6 +19,7 @@ import {
   Building2,
   Archive,
   Upload,
+  X,
 } from "lucide-react";
 import { parsePaymentUpload, parseUploadDate, matchContractNumber } from "@/lib/parsePaymentUpload";
 import { format } from "date-fns";
@@ -84,6 +85,55 @@ import {
 } from "@/lib/generateSOA";
 import type { SOAData } from "@/components/SOADocument";
 
+/** The Statement of Account prints at most four beneficiaries. */
+const MAX_BENEFICIARIES = 4;
+
+/** One row of the beneficiary editor — age is held as text while typing. */
+interface BeneficiaryDraft {
+  name: string;
+  age: string;
+  relationship: string;
+}
+
+/** Just the parts of a client record the beneficiary helpers care about. */
+type BeneficiarySource = {
+  beneficiaries?: { name: string; age?: number; relationship: string }[];
+  beneficiaryName?: string;
+  beneficiaryRelationship?: string;
+};
+
+/** Placeholder the app writes into fields that were never filled in. */
+const isBlankValue = (value?: string) => !value || /^[-—\s]*$/.test(value);
+
+/**
+ * The beneficiaries to show for a client: the stored list when there is one,
+ * otherwise the legacy single-beneficiary fields older records still carry.
+ */
+function beneficiariesOf(client: BeneficiarySource) {
+  if (client.beneficiaries && client.beneficiaries.length > 0) {
+    return client.beneficiaries.slice(0, MAX_BENEFICIARIES);
+  }
+  if (!isBlankValue(client.beneficiaryName)) {
+    return [
+      {
+        name: client.beneficiaryName as string,
+        relationship: client.beneficiaryRelationship || "",
+        age: undefined as number | undefined,
+      },
+    ];
+  }
+  return [];
+}
+
+/** The same list, shaped for the editor's text inputs. */
+function beneficiaryDrafts(client: BeneficiarySource): BeneficiaryDraft[] {
+  return beneficiariesOf(client).map((b) => ({
+    name: b.name,
+    age: b.age === undefined ? "" : String(b.age),
+    relationship: b.relationship,
+  }));
+}
+
 export default function ClientDetail() {
   const { clientId } = useParams<{ clientId: string }>();
   const navigate = useNavigate();
@@ -133,6 +183,7 @@ export default function ClientDetail() {
     gender: "male" | "female" | "other";
     dateOfBirth: string;
     address: string;
+    beneficiaries: BeneficiaryDraft[];
   }>({
     firstName: "",
     middleName: "",
@@ -140,6 +191,7 @@ export default function ClientDetail() {
     gender: "male",
     dateOfBirth: "",
     address: "",
+    beneficiaries: [],
   });
 
   const createContract = useMutation(api.contracts.create);
@@ -470,15 +522,48 @@ export default function ClientDetail() {
       gender: client.gender,
       dateOfBirth: tsToDateInput(client.dateOfBirth),
       address: client.address || "",
+      beneficiaries: beneficiaryDrafts(client),
     });
     setEditDialogOpen(true);
   }, [client]);
+
+  const updateBeneficiary = useCallback(
+    (index: number, patch: Partial<BeneficiaryDraft>) => {
+      setEditForm((form) => ({
+        ...form,
+        beneficiaries: form.beneficiaries.map((b, i) =>
+          i === index ? { ...b, ...patch } : b
+        ),
+      }));
+    },
+    []
+  );
+
+  const removeBeneficiary = useCallback((index: number) => {
+    setEditForm((form) => ({
+      ...form,
+      beneficiaries: form.beneficiaries.filter((_, i) => i !== index),
+    }));
+  }, []);
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientId || !client) return;
     setSavingEdit(true);
     try {
+      // Blank rows are dropped, age is optional, and a missing relationship
+      // becomes a dash so the statement never prints an empty cell.
+      const beneficiaries = editForm.beneficiaries
+        .map((b) => {
+          const age = Number(b.age);
+          return {
+            name: b.name.trim(),
+            relationship: b.relationship.trim() || "—",
+            ...(b.age.trim() !== "" && Number.isFinite(age) ? { age } : {}),
+          };
+        })
+        .filter((b) => b.name.length > 0);
+
       await updateClient({
         clientId: clientId as any,
         firstName: editForm.firstName.trim(),
@@ -489,6 +574,7 @@ export default function ClientDetail() {
           ? new Date(editForm.dateOfBirth).getTime()
           : client.dateOfBirth,
         address: editForm.address.trim(),
+        beneficiaries,
       });
       toast.success("Client updated successfully");
       setEditDialogOpen(false);
@@ -586,7 +672,7 @@ export default function ClientDetail() {
 
       {/* Edit Client Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto mx-2 sm:mx-0">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto mx-2 sm:mx-0">
           <DialogHeader>
             <DialogTitle className="">
               <span className="text-terminal-green">$</span> Edit Client
@@ -674,6 +760,104 @@ export default function ClientDetail() {
               />
             </div>
 
+            {/* Beneficiaries — printed on the Statement of Account */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Beneficiaries</Label>
+                <span className="text-[11px] text-muted-foreground">
+                  {editForm.beneficiaries.length} of {MAX_BENEFICIARIES}
+                </span>
+              </div>
+
+              {editForm.beneficiaries.length === 0 && (
+                <p className="text-[11px] text-muted-foreground">
+                  None recorded yet.
+                </p>
+              )}
+
+              {editForm.beneficiaries.map((b, index) => (
+                <div
+                  key={index}
+                  className="grid grid-cols-[1fr_4.5rem_1fr_auto] items-end gap-2"
+                >
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">
+                      Name
+                    </Label>
+                    <Input
+                      value={b.name}
+                      onChange={(e) =>
+                        updateBeneficiary(index, { name: e.target.value })
+                      }
+                      className="h-8 text-sm"
+                      placeholder="Full name"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">
+                      Age
+                    </Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={130}
+                      value={b.age}
+                      onChange={(e) =>
+                        updateBeneficiary(index, { age: e.target.value })
+                      }
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-[10px] text-muted-foreground">
+                      Relationship
+                    </Label>
+                    <Input
+                      value={b.relationship}
+                      onChange={(e) =>
+                        updateBeneficiary(index, {
+                          relationship: e.target.value,
+                        })
+                      }
+                      className="h-8 text-sm"
+                      placeholder="Spouse, Child…"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                    onClick={() => removeBeneficiary(index)}
+                    aria-label={`Remove beneficiary ${index + 1}`}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+
+              {editForm.beneficiaries.length < MAX_BENEFICIARIES && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  onClick={() =>
+                    setEditForm((form) => ({
+                      ...form,
+                      beneficiaries: [
+                        ...form.beneficiaries,
+                        { name: "", age: "", relationship: "" },
+                      ],
+                    }))
+                  }
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                  Add beneficiary
+                </Button>
+              )}
+            </div>
+
             <Button
               type="submit"
               disabled={savingEdit || !editForm.firstName.trim() || !editForm.lastName.trim()}
@@ -756,22 +940,27 @@ export default function ClientDetail() {
           </CardContent>
         </Card>
 
-        {/* Beneficiary */}
+        {/* Beneficiaries */}
         <Card className="border-border/60 shadow-none">
           <CardHeader className="pb-3">
             <CardTitle className="text-xs uppercase tracking-widest text-muted-foreground">
-              Beneficiary
+              Beneficiaries
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Name</span>
-              <span className="font-medium">{client.beneficiaryName}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Relationship</span>
-              <span>{client.beneficiaryRelationship}</span>
-            </div>
+            {beneficiariesOf(client).length === 0 ? (
+              <p className="text-muted-foreground">None recorded</p>
+            ) : (
+              beneficiariesOf(client).map((b, index) => (
+                <div key={index} className="flex justify-between gap-3">
+                  <span className="min-w-0 truncate font-medium">{b.name}</span>
+                  <span className="shrink-0 text-right text-muted-foreground">
+                    {b.relationship}
+                    {b.age !== undefined ? ` · ${b.age}` : ""}
+                  </span>
+                </div>
+              ))
+            )}
             {client.beneficiaryContact && (
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Contact</span>

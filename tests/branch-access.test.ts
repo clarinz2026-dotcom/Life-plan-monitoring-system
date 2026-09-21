@@ -485,11 +485,22 @@ describe("Historical data is preserved", () => {
 
   test("permanent deletion is refused once a payment exists", async () => {
     const { t, ceo, clientA } = await seed();
-    await expect(
-      t
-        .withIdentity({ subject: ceo })
-        .mutation(api.clients.bulkDelete, { clientIds: [clientA] })
-    ).rejects.toThrow(/archive this planholder instead/i);
+    const asCeo = t.withIdentity({ subject: ceo });
+
+    const result = await asCeo.mutation(api.clients.bulkDelete, {
+      clientIds: [clientA],
+    });
+
+    // A planholder with payments is never hard-deleted. The record is skipped
+    // and reported rather than aborting the whole batch, so selecting one
+    // protected planholder alongside others still deletes the rest.
+    expect(result.deleted).toBe(0);
+    expect(result.names).toHaveLength(0);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].reason).toMatch(/archive instead/i);
+
+    const stillThere = await asCeo.query(api.clients.get, { clientId: clientA });
+    expect(stillThere).not.toBeNull();
   });
 
   test("a manager cannot permanently delete at all", async () => {

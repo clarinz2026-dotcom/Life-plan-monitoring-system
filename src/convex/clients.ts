@@ -181,6 +181,19 @@ export const update = mutation({
     beneficiaryName: v.optional(v.string()),
     beneficiaryRelationship: v.optional(v.string()),
     beneficiaryContact: v.optional(v.string()),
+    /*
+     * Up to four beneficiaries, as printed on the Statement of Account.
+     * Passing an empty array clears them.
+     */
+    beneficiaries: v.optional(
+      v.array(
+        v.object({
+          name: v.string(),
+          age: v.optional(v.number()),
+          relationship: v.string(),
+        })
+      )
+    ),
     notes: v.optional(v.string()),
     // Reassign the client to another branch (CEO/Super Admin only).
     branchId: v.optional(v.id("branches")),
@@ -193,7 +206,7 @@ export const update = mutation({
     const viewer = await assertCanAccessRecord(ctx, client.branchId);
 
     // Only admins may change the branch assignment.
-    const { branchId, ...rest } = updates;
+    const { branchId, beneficiaries, ...rest } = updates;
     if (branchId !== undefined) {
       if (!isAdminRole(viewer.role)) {
         throw new Error("Only the Super Admin or CEO can reassign a client to a branch.");
@@ -207,9 +220,25 @@ export const update = mutation({
       Object.entries(rest).filter(([, v]) => v !== undefined)
     );
     if (branchId !== undefined) cleanUpdates.branchId = branchId;
-    if (Object.keys(cleanUpdates).length === 0) return;
 
-    await ctx.db.patch(clientId, cleanUpdates);
+    if (Object.keys(cleanUpdates).length > 0) {
+      await ctx.db.patch(clientId, cleanUpdates);
+    }
+
+    /*
+     * The statement falls back to the legacy single-beneficiary fields whenever
+     * the list is empty, so they are kept mirroring the first beneficiary.
+     * Without this, clearing the list would resurrect a beneficiary the office
+     * had just removed.
+     */
+    if (beneficiaries !== undefined) {
+      const lead = beneficiaries[0];
+      await ctx.db.patch(clientId, {
+        beneficiaries,
+        beneficiaryName: lead ? lead.name : "",
+        beneficiaryRelationship: lead ? lead.relationship : "",
+      });
+    }
   },
 });
 
