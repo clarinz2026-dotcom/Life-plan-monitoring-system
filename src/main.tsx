@@ -99,6 +99,7 @@ const Branches = lazyRoute("Branches", () => import("./pages/Branches.tsx"));
 const PortalLayout = lazyRoute("PortalLayout", () => import("./pages/portal/PortalLayout.tsx"));
 const PortalPlans = lazyRoute("PortalPlans", () => import("./pages/portal/Plans.tsx"));
 const PortalLinkAccount = lazyRoute("PortalLinkAccount", () => import("./pages/portal/LinkAccount.tsx"));
+const SystemDeck = lazyRoute("SystemDeck", () => import("./pages/SystemDeck.tsx"));
 const NotFound = lazyRoute("NotFound", () => import("./pages/NotFound.tsx"));
 
 // Lightweight, on-brand fallback for route transitions
@@ -251,6 +252,9 @@ createRoot(document.getElementById("root")!).render(
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/auth" element={<AuthPage />} />
+              {/* Proposal deck. Public on purpose: it is opened from whatever
+                  device is being used to present, and carries no client data. */}
+              <Route path="/deck" element={<SystemDeck />} />
 
               {/* Protected routes with AppLayout */}
               <Route
