@@ -42,6 +42,32 @@ const C = {
 const SERIF = "Georgia";
 const SANS = "Arial";
 
+// ── Screenshots ───────────────────────────────────────────────────────
+
+/**
+ * Slides that can carry a real screenshot. Slots are filled by
+ * `captureShots.ts` (or by the user uploading an image) and handed to
+ * `buildSystemDeck`; any slot left empty keeps its diagram instead, so the
+ * deck is always complete.
+ */
+export type ShotId =
+  | "landing"
+  | "clients"
+  | "dashboard"
+  | "payments"
+  | "portal"
+  | "linking"
+  | "bulk";
+
+export interface ShotImage {
+  /** `data:image/...;base64,...` — held in memory, never written to disk. */
+  dataUrl: string;
+  width: number;
+  height: number;
+}
+
+export type ShotMap = Partial<Record<ShotId, ShotImage>>;
+
 type Tone = "outline" | "evergreen" | "moss" | "gold" | "sand";
 
 interface Step {
@@ -407,11 +433,269 @@ function addBand(
   });
 }
 
+// ── Screenshot placement ────────────────────────────────────────────────────
+
+/** A framed screenshot, scaled to fit `box` without ever being stretched. */
+function addShotFrame(
+  pptx: PptxGenJS,
+  slide: PptxGenJS.Slide,
+  shot: ShotImage,
+  box: { x: number; y: number; w: number; h: number }
+) {
+  const scale = Math.min(box.w / shot.width, box.h / shot.height);
+  const w = shot.width * scale;
+  const h = shot.height * scale;
+  const x = box.x + (box.w - w) / 2;
+  const y = box.y + (box.h - h) / 2;
+
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x: x - 0.07,
+    y: y - 0.07,
+    w: w + 0.14,
+    h: h + 0.14,
+    rectRadius: 0.05,
+    fill: { color: C.paper },
+    line: { color: C.line, width: 1 },
+  });
+  slide.addImage({ data: shot.dataUrl, x, y, w, h });
+  slide.addShape(pptx.ShapeType.rect, {
+    x,
+    y,
+    w,
+    h,
+    fill: { type: "none", color: C.paper },
+    line: { color: C.line, width: 0.75 },
+  });
+}
+
+/**
+ * The screenshot layout: the real screen on the left, the flow as a numbered
+ * rail on the right. Used for any flow slide that has a capture.
+ */
+function addShotLayout(
+  pptx: PptxGenJS,
+  slide: PptxGenJS.Slide,
+  shot: ShotImage,
+  rail: { title: string; route: string; items: Step[] }
+) {
+  const railW = 2.62;
+  const gap = 0.3;
+  const top = CONTENT_TOP + 0.08;
+  const shotH = 3.34;
+  const shotW = CW - railW - gap;
+
+  addShotFrame(pptx, slide, shot, { x: M, y: top, w: shotW, h: shotH });
+
+  const railX = M + shotW + gap;
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x: railX,
+    y: top,
+    w: railW,
+    h: shotH,
+    rectRadius: 0.08,
+    fill: { color: C.mist },
+    line: { color: C.line, width: 1 },
+  });
+  slide.addText(rail.title, {
+    x: railX + 0.16,
+    y: top + 0.15,
+    w: railW - 0.32,
+    h: 0.24,
+    fontSize: 9,
+    bold: true,
+    color: C.evergreen,
+    charSpacing: 1,
+    fontFace: SANS,
+  });
+  slide.addText(rail.route, {
+    x: railX + 0.16,
+    y: top + 0.39,
+    w: railW - 0.32,
+    h: 0.2,
+    fontSize: 7.5,
+    color: C.stone,
+    fontFace: SANS,
+  });
+
+  const listTop = top + 0.66;
+  const step = (shotH - 0.8) / rail.items.length;
+  rail.items.forEach((item, i) => {
+    const y = listTop + i * step;
+    const chipY = y + step / 2 - 0.11;
+    slide.addShape(pptx.ShapeType.ellipse, {
+      x: railX + 0.17,
+      y: chipY,
+      w: 0.22,
+      h: 0.22,
+      fill: { color: C.evergreen },
+      line: { color: C.evergreen, width: 0 },
+    });
+    slide.addText(String(i + 1), {
+      x: railX + 0.17,
+      y: chipY,
+      w: 0.22,
+      h: 0.22,
+      fontSize: 7.5,
+      bold: true,
+      color: C.white,
+      align: "center",
+      valign: "middle",
+      fontFace: SANS,
+    });
+    slide.addText(item.label, {
+      x: railX + 0.45,
+      y,
+      w: railW - 0.61,
+      h: item.sub ? step * 0.55 : step,
+      fontSize: 8.5,
+      bold: true,
+      color: C.ink,
+      valign: "middle",
+      fontFace: SANS,
+    });
+    if (item.sub) {
+      slide.addText(item.sub, {
+        x: railX + 0.45,
+        y: y + step * 0.53,
+        w: railW - 0.61,
+        h: step * 0.47,
+        fontSize: 7,
+        color: C.stone,
+        valign: "middle",
+        fontFace: SANS,
+        lineSpacingMultiple: 0.95,
+      });
+    }
+  });
+}
+
+// ── Shared flow content ─────────────────────────────────────────────────────
+
+/* One source per flow, so the diagram row and the screenshot rail can never
+ * drift apart. */
+
+const STAFF_LOOP: Step[] = [
+  { n: "1", label: "Sign in", sub: "Role and branch scope applied", tone: "evergreen" },
+  { n: "2", label: "Client file", sub: "Created, or bulk-imported", tone: "outline" },
+  { n: "3", label: "Plan & contract", sub: "Type, value, monthly, beneficiaries", tone: "outline" },
+  { n: "4", label: "Record payment", sub: "Single entry or bulk upload", tone: "outline" },
+  { n: "5", label: "Receipt & ledger", sub: "Auto-numbered receipt; balance updated", tone: "gold" },
+];
+
+const MONEY_THREAD: Step[] = [
+  { n: "1", label: "Payment recorded", sub: "Cashier or finance staff", tone: "evergreen" },
+  { n: "2", label: "Official receipt", sub: "Numbered automatically", tone: "outline" },
+  { n: "3", label: "Ledger entry", sub: "Written against the contract", tone: "outline" },
+  { n: "4", label: "Balance & status", sub: "Recomputed from the ledger", tone: "outline" },
+  { n: "5", label: "Seen everywhere", sub: "Staff, SOA, portal, reports", tone: "gold" },
+];
+
+const CLIENT_FLOW: Step[] = [
+  { n: "1", label: "Create an account", sub: "On the website, with an email", tone: "evergreen" },
+  { n: "2", label: "Request the link", sub: "Name, number, email, preferred branch", tone: "outline" },
+  { n: "3", label: "Office verifies", sub: "Matched to the client file", tone: "outline" },
+  { n: "4", label: "Records unlock", sub: "Their plans appear in the portal", tone: "outline" },
+  { n: "5", label: "Their statement", sub: "Payments summary, SOA and receipts", tone: "gold" },
+];
+
+const MIGRATION_FLOW: Step[] = [
+  { n: "1", label: "Spreadsheet in", sub: "CSV or Excel upload", tone: "evergreen" },
+  { n: "2", label: "Layout detected", sub: "Recognises your existing reports", tone: "outline" },
+  { n: "3", label: "Columns mapped", sub: "Names, LPA, plan type, dates, amounts", tone: "outline" },
+  { n: "4", label: "Preview & correct", sub: "Every row checked before import", tone: "outline" },
+  { n: "5", label: "Records live", sub: "Clients and their payment history", tone: "gold" },
+];
+
+const MONITORING_ITEMS: Step[] = [
+  { label: "Dashboard", sub: "Collections at a glance and the accounts that need attention" },
+  { label: "Reports", sub: "Branch and company-wide totals, per period and per plan" },
+  { label: "Aging Report", sub: "Accounts by 30 / 60 / 90 days and lapsed" },
+  { label: "Reconciliation", sub: "The cashier's daily cash count, closed and recorded" },
+  { label: "Audit Log", sub: "Who changed what, and when — nothing is hidden" },
+  { label: "Notifications", sub: "Linking requests and system alerts, in one place" },
+];
+
+const LINKING_ITEMS: Step[] = [
+  { label: "The family files a request", sub: "Name, number, email, preferred branch" },
+  { label: "Every staff account is alerted", sub: "One open request at a time, so no duplicates" },
+  { label: "Staff match a client file", sub: "One email links to one planholder" },
+  { label: "Approved", sub: "The plan and payment history unlock in the portal" },
+  { label: "Declined", sub: "A reason is sent; visit a branch with a valid ID" },
+];
+
 // ── Slides ──────────────────────────────────────────────────────────────────
 
-function titleSlide(pptx: PptxGenJS) {
+function titleSlide(pptx: PptxGenJS, shot?: ShotImage) {
   const slide = pptx.addSlide();
   slide.background = { color: C.evergreen };
+
+  /*
+   * With a screenshot the cover splits: title on the left, a framed shot of
+   * the real landing page on the right. Without one it stays centred.
+   */
+  if (shot) {
+    addShotFrame(pptx, slide, shot, { x: 4.92, y: 1.06, w: 4.5, h: 3.5 });
+
+    slide.addText("EVANGELIST FUNERAL SERVICES OPC", {
+      x: 0.72,
+      y: 1.08,
+      w: 4.0,
+      h: 0.5,
+      fontSize: 9.5,
+      bold: true,
+      color: C.goldSoft,
+      charSpacing: 2.4,
+      fontFace: SANS,
+    });
+    slide.addShape(pptx.ShapeType.line, {
+      x: 0.72,
+      y: 1.66,
+      w: 1.5,
+      h: 0,
+      line: { color: C.gold, width: 1.25 },
+    });
+    slide.addText("Records, Payments\n& Client Portal", {
+      x: 0.68,
+      y: 1.84,
+      w: 4.1,
+      h: 1.5,
+      fontSize: 30,
+      bold: true,
+      color: C.white,
+      fontFace: SERIF,
+      lineSpacingMultiple: 0.95,
+    });
+    slide.addText("System Flow  —  the client side and the staff side", {
+      x: 0.72,
+      y: 3.42,
+      w: 4.0,
+      h: 0.5,
+      fontSize: 11,
+      color: C.goldSoft,
+      fontFace: SANS,
+    });
+    slide.addText('"To Care and To Serve"', {
+      x: 0.72,
+      y: 4.24,
+      w: 4.0,
+      h: 0.3,
+      fontSize: 11,
+      italic: true,
+      color: C.gold,
+      fontFace: SERIF,
+    });
+    slide.addText("Service Today.  Peace Forever.", {
+      x: 0.72,
+      y: 4.58,
+      w: 4.0,
+      h: 0.24,
+      fontSize: 8,
+      color: "9FB8A8",
+      charSpacing: 1.6,
+      fontFace: SANS,
+    });
+    return;
+  }
 
   // Gold hairline frame, like the ruled border of the printed statement.
   slide.addShape(pptx.ShapeType.rect, {
@@ -581,7 +865,7 @@ function overviewSlide(pptx: PptxGenJS, page: number) {
   addFooter(pptx, slide, page);
 }
 
-function staffDailySlide(pptx: PptxGenJS, page: number) {
+function staffDailySlide(pptx: PptxGenJS, page: number, shot?: ShotImage) {
   const slide = pptx.addSlide();
   addChrome(
     pptx,
@@ -591,19 +875,17 @@ function staffDailySlide(pptx: PptxGenJS, page: number) {
     "The five steps a branch repeats every working day."
   );
 
-  addStepRow(
-    pptx,
-    slide,
-    [
-      { n: "1", label: "Sign in", sub: "Role and branch scope applied", tone: "evergreen" },
-      { n: "2", label: "Client file", sub: "Created, or bulk-imported", tone: "outline" },
-      { n: "3", label: "Plan & contract", sub: "Type, value, monthly, beneficiaries", tone: "outline" },
-      { n: "4", label: "Record payment", sub: "Single entry or bulk upload", tone: "outline" },
-      { n: "5", label: "Receipt & ledger", sub: "Auto-numbered receipt; balance updated", tone: "gold" },
-    ],
-    CONTENT_TOP + 0.24,
-    1.25
-  );
+  if (shot) {
+    addShotLayout(pptx, slide, shot, {
+      title: "THE DAILY LOOP",
+      route: "Clients  ·  /clients",
+      items: STAFF_LOOP,
+    });
+    addFooter(pptx, slide, page);
+    return;
+  }
+
+  addStepRow(pptx, slide, STAFF_LOOP, CONTENT_TOP + 0.24, 1.25);
 
   addBand(
     pptx,
@@ -631,7 +913,7 @@ function staffDailySlide(pptx: PptxGenJS, page: number) {
   addFooter(pptx, slide, page);
 }
 
-function staffMonitoringSlide(pptx: PptxGenJS, page: number) {
+function staffMonitoringSlide(pptx: PptxGenJS, page: number, shot?: ShotImage) {
   const slide = pptx.addSlide();
   addChrome(
     pptx,
@@ -641,21 +923,20 @@ function staffMonitoringSlide(pptx: PptxGenJS, page: number) {
     "The manager's and head office's view of what the branches are actually collecting."
   );
 
+  if (shot) {
+    addShotLayout(pptx, slide, shot, {
+      title: "WHAT TO WATCH",
+      route: "Dashboard  ·  /dashboard",
+      items: MONITORING_ITEMS,
+    });
+    addFooter(pptx, slide, page);
+    return;
+  }
+
   const gap = 0.3;
   const boxW = (CW - gap * 2) / 3;
   const boxH = 1.16;
-  const rows: Step[][] = [
-    [
-      { label: "Dashboard", sub: "Collections at a glance and the accounts that need attention today" },
-      { label: "Reports", sub: "Branch and company-wide totals, per period and per plan" },
-      { label: "Aging Report", sub: "Accounts by 30 / 60 / 90 days and lapsed" },
-    ],
-    [
-      { label: "Reconciliation", sub: "The cashier's daily cash count, closed and recorded" },
-      { label: "Audit Log", sub: "Who changed what, and when — nothing is hidden" },
-      { label: "Notifications", sub: "Linking requests and system alerts, in one place" },
-    ],
-  ];
+  const rows: Step[][] = [MONITORING_ITEMS.slice(0, 3), MONITORING_ITEMS.slice(3, 6)];
 
   rows.forEach((row, r) => {
     row.forEach((step, c) => {
@@ -676,7 +957,7 @@ function staffMonitoringSlide(pptx: PptxGenJS, page: number) {
   addFooter(pptx, slide, page);
 }
 
-function staffMoneySlide(pptx: PptxGenJS, page: number) {
+function staffMoneySlide(pptx: PptxGenJS, page: number, shot?: ShotImage) {
   const slide = pptx.addSlide();
   addChrome(
     pptx,
@@ -686,19 +967,17 @@ function staffMoneySlide(pptx: PptxGenJS, page: number) {
     "One payment, followed all the way through — until it appears to the family."
   );
 
-  addStepRow(
-    pptx,
-    slide,
-    [
-      { n: "1", label: "Payment recorded", sub: "Cashier or finance staff", tone: "evergreen" },
-      { n: "2", label: "Official receipt", sub: "Numbered automatically", tone: "outline" },
-      { n: "3", label: "Ledger entry", sub: "Written against the contract", tone: "outline" },
-      { n: "4", label: "Balance & status", sub: "Recomputed from the ledger", tone: "outline" },
-      { n: "5", label: "Seen everywhere", sub: "Staff, SOA, portal, reports", tone: "gold" },
-    ],
-    CONTENT_TOP + 0.22,
-    1.22
-  );
+  if (shot) {
+    addShotLayout(pptx, slide, shot, {
+      title: "THE MONEY THREAD",
+      route: "Payments  ·  /payments",
+      items: MONEY_THREAD,
+    });
+    addFooter(pptx, slide, page);
+    return;
+  }
+
+  addStepRow(pptx, slide, MONEY_THREAD, CONTENT_TOP + 0.22, 1.22);
 
   const colW = (CW - 0.32) / 2;
   const y = CONTENT_TOP + 1.72;
@@ -727,7 +1006,7 @@ function staffMoneySlide(pptx: PptxGenJS, page: number) {
   addFooter(pptx, slide, page);
 }
 
-function clientFlowSlide(pptx: PptxGenJS, page: number) {
+function clientFlowSlide(pptx: PptxGenJS, page: number, shot?: ShotImage) {
   const slide = pptx.addSlide();
   addChrome(
     pptx,
@@ -737,19 +1016,17 @@ function clientFlowSlide(pptx: PptxGenJS, page: number) {
     "What the planholder does, and what they get back."
   );
 
-  addStepRow(
-    pptx,
-    slide,
-    [
-      { n: "1", label: "Create an account", sub: "On the website, with an email", tone: "evergreen" },
-      { n: "2", label: "Request the link", sub: "Name, number, email, preferred branch", tone: "outline" },
-      { n: "3", label: "Office verifies", sub: "Matched to the client file", tone: "outline" },
-      { n: "4", label: "Records unlock", sub: "Their plans appear in the portal", tone: "outline" },
-      { n: "5", label: "Their statement", sub: "Payments summary, SOA and receipts", tone: "gold" },
-    ],
-    CONTENT_TOP + 0.24,
-    1.25
-  );
+  if (shot) {
+    addShotLayout(pptx, slide, shot, {
+      title: "THE FAMILY'S VIEW",
+      route: "Client portal  ·  /portal/plans",
+      items: CLIENT_FLOW,
+    });
+    addFooter(pptx, slide, page);
+    return;
+  }
+
+  addStepRow(pptx, slide, CLIENT_FLOW, CONTENT_TOP + 0.24, 1.25);
 
   addBand(
     pptx,
@@ -787,7 +1064,7 @@ function clientFlowSlide(pptx: PptxGenJS, page: number) {
   addFooter(pptx, slide, page);
 }
 
-function accountLinkingSlide(pptx: PptxGenJS, page: number) {
+function accountLinkingSlide(pptx: PptxGenJS, page: number, shot?: ShotImage) {
   const slide = pptx.addSlide();
   addChrome(
     pptx,
@@ -796,6 +1073,16 @@ function accountLinkingSlide(pptx: PptxGenJS, page: number) {
     "Account linking — the family asks, the office decides",
     "A family can only ever see records the office has confirmed are theirs."
   );
+
+  if (shot) {
+    addShotLayout(pptx, slide, shot, {
+      title: "THE LINKING QUEUE",
+      route: "Account Linking  ·  /account-links",
+      items: LINKING_ITEMS,
+    });
+    addFooter(pptx, slide, page);
+    return;
+  }
 
   const laneLabelW = 1.15;
   const laneX = M + laneLabelW;
@@ -876,7 +1163,7 @@ function accountLinkingSlide(pptx: PptxGenJS, page: number) {
   addFooter(pptx, slide, page);
 }
 
-function migrationSlide(pptx: PptxGenJS, page: number) {
+function migrationSlide(pptx: PptxGenJS, page: number, shot?: ShotImage) {
   const slide = pptx.addSlide();
   addChrome(
     pptx,
@@ -886,19 +1173,17 @@ function migrationSlide(pptx: PptxGenJS, page: number) {
     "The handwritten and legacy records are loaded from the spreadsheets the office already keeps."
   );
 
-  addStepRow(
-    pptx,
-    slide,
-    [
-      { n: "1", label: "Spreadsheet in", sub: "CSV or Excel upload", tone: "evergreen" },
-      { n: "2", label: "Layout detected", sub: "Recognises your existing reports", tone: "outline" },
-      { n: "3", label: "Columns mapped", sub: "Names, LPA, plan type, dates, amounts", tone: "outline" },
-      { n: "4", label: "Preview & correct", sub: "Every row checked before import", tone: "outline" },
-      { n: "5", label: "Records live", sub: "Clients and their payment history", tone: "gold" },
-    ],
-    CONTENT_TOP + 0.24,
-    1.25
-  );
+  if (shot) {
+    addShotLayout(pptx, slide, shot, {
+      title: "THE IMPORT",
+      route: "Bulk Upload  ·  /bulk-upload",
+      items: MIGRATION_FLOW,
+    });
+    addFooter(pptx, slide, page);
+    return;
+  }
+
+  addStepRow(pptx, slide, MIGRATION_FLOW, CONTENT_TOP + 0.24, 1.25);
 
   const colW = (CW - 0.32) / 2;
   const y = CONTENT_TOP + 1.78;
@@ -1174,21 +1459,21 @@ export const DECK_OUTLINE = [
 ] as const;
 
 /** Builds the presentation. Kept separate from the download so it can be reused. */
-export function buildSystemDeck(): PptxGenJS {
+export function buildSystemDeck(shots: ShotMap = {}): PptxGenJS {
   const pptx = new PptxGenJS();
   pptx.layout = "LAYOUT_16x9";
   pptx.author = "Evangelist Funeral Services OPC";
   pptx.company = "Evangelist Funeral Services OPC";
   pptx.title = "Records, Payments & Client Portal — System Flow";
 
-  titleSlide(pptx);
+  titleSlide(pptx, shots.landing);
   overviewSlide(pptx, 2);
-  staffDailySlide(pptx, 3);
-  staffMonitoringSlide(pptx, 4);
-  staffMoneySlide(pptx, 5);
-  clientFlowSlide(pptx, 6);
-  accountLinkingSlide(pptx, 7);
-  migrationSlide(pptx, 8);
+  staffDailySlide(pptx, 3, shots.clients);
+  staffMonitoringSlide(pptx, 4, shots.dashboard);
+  staffMoneySlide(pptx, 5, shots.payments);
+  clientFlowSlide(pptx, 6, shots.portal);
+  accountLinkingSlide(pptx, 7, shots.linking);
+  migrationSlide(pptx, 8, shots.bulk);
   rolesSlide(pptx, 9);
   twoWindowsSlide(pptx, 10);
   closingSlide(pptx);
@@ -1197,6 +1482,6 @@ export function buildSystemDeck(): PptxGenJS {
 }
 
 /** Triggers the browser download of the deck. */
-export async function downloadSystemDeck(): Promise<void> {
-  await buildSystemDeck().writeFile({ fileName: DECK_FILE_NAME });
+export async function downloadSystemDeck(shots: ShotMap = {}): Promise<void> {
+  await buildSystemDeck(shots).writeFile({ fileName: DECK_FILE_NAME });
 }

@@ -1,17 +1,36 @@
 import { useState } from "react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
-import { DECK_FILE_NAME, DECK_OUTLINE, downloadSystemDeck } from "@/lib/systemDeck";
-import { Building2, Download, Loader2, Link2, Presentation, ShieldCheck, Users2 } from "lucide-react";
+import { DECK_FILE_NAME, DECK_OUTLINE, downloadSystemDeck, type ShotMap } from "@/lib/systemDeck";
+import { SHOT_SLOTS, captureRoute, fileToShot, type ShotSlot } from "@/lib/captureShots";
+import {
+  Building2,
+  Camera,
+  Check,
+  Download,
+  ImageIcon,
+  Loader2,
+  Link2,
+  Presentation,
+  RotateCcw,
+  ShieldCheck,
+  Trash2,
+  Upload,
+  Users2,
+  X,
+} from "lucide-react";
 
 /**
  * Presentation hub for the proposal deck.
  *
  * The two flows are laid out on screen exactly as they are separated in the
  * PowerPoint — client side first, staff side beside it — with the shared
- * account-linking handshake underneath. The .pptx itself is produced in the
- * browser by `downloadSystemDeck`, so what is shown here and what is downloaded
- * come from the same material.
+ * account-linking handshake underneath.
+ *
+ * Screenshots are captured here, in the browser: a hidden same-origin iframe
+ * loads each route with the current session, snapdom rasterises it, and the
+ * resulting image is embedded straight into the .pptx. Any slot that is left
+ * empty simply keeps its diagram, so the deck is never incomplete.
  */
 
 const CLIENT_STEPS = [
@@ -35,6 +54,12 @@ const LINK_LANES = [
   { lane: "System", icon: ShieldCheck, steps: ["Alerts every staff account", "Holds one open request", "Notifies the outcome"] },
   { lane: "Staff", icon: Building2, steps: ["Reviews the request", "Matches a client file", "Approves or declines"] },
 ];
+
+const ROLE_NOTE: Record<ShotSlot["asRole"], string> = {
+  public: "No sign-in needed",
+  staff: "Best captured signed in as staff",
+  client: "Best captured signed in as a client",
+};
 
 function FlowColumn({
   kicker,
@@ -113,20 +138,64 @@ function DownloadButton({ busy, onClick }: { busy: boolean; onClick: () => void 
 }
 
 export default function SystemDeck() {
+  const [shots, setShots] = useState<ShotMap>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [capturingAll, setCapturingAll] = useState(false);
+  const [activeSlot, setActiveSlot] = useState<string | null>(null);
+  const [slotErrors, setSlotErrors] = useState<Record<string, string>>({});
+
+  const capturedCount = SHOT_SLOTS.filter((s) => shots[s.id]).length;
 
   const handleDownload = async () => {
     setBusy(true);
     setError(null);
     try {
-      await downloadSystemDeck();
+      await downloadSystemDeck(shots);
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "The presentation could not be built. Please try again."
       );
     } finally {
       setBusy(false);
+    }
+  };
+
+  const runCapture = async (slot: ShotSlot) => {
+    setActiveSlot(slot.id);
+    setSlotErrors((prev) => ({ ...prev, [slot.id]: "" }));
+    try {
+      const shot = await captureRoute(slot);
+      setShots((prev) => ({ ...prev, [slot.id]: shot }));
+    } catch (e) {
+      setSlotErrors((prev) => ({
+        ...prev,
+        [slot.id]: e instanceof Error ? e.message : "Capture failed.",
+      }));
+    } finally {
+      setActiveSlot(null);
+    }
+  };
+
+  const captureAll = async () => {
+    setCapturingAll(true);
+    for (const slot of SHOT_SLOTS) {
+      await runCapture(slot);
+    }
+    setCapturingAll(false);
+  };
+
+  const handleUpload = async (slot: ShotSlot, file: File) => {
+    setSlotErrors((prev) => ({ ...prev, [slot.id]: "" }));
+    try {
+      const shot = await fileToShot(file);
+      setShots((prev) => ({ ...prev, [slot.id]: shot }));
+    } catch (e) {
+      setSlotErrors((prev) => ({
+        ...prev,
+        [slot.id]: e instanceof Error ? e.message : "That image could not be used.",
+      }));
     }
   };
 
@@ -166,9 +235,9 @@ export default function SystemDeck() {
             Records, Payments &amp; Client Portal
           </h1>
           <p className="mt-4 text-[15px] leading-relaxed text-stone">
-            An eleven-slide presentation covering how the system works from both sides — the
-            branch staff who run the records, and the families who can finally see their own plan.
-            Each flow is shown separately, then shown meeting.
+            An eleven-slide presentation covering how the system works from both sides — the branch
+            staff who run the records, and the families who can finally see their own plan. Capture
+            the real screens below and they are placed into the slides automatically.
           </p>
 
           <div className="mt-7 flex flex-wrap items-center gap-3">
@@ -183,6 +252,161 @@ export default function SystemDeck() {
               {error}
             </p>
           )}
+        </section>
+
+        {/* ── Screenshots ── */}
+        <section className="mt-16">
+          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line pb-4">
+            <div>
+              <span className="font-figures text-[10.5px] font-bold tracking-[0.16em] text-gold uppercase">
+                Screenshots
+              </span>
+              <h2 className="font-display mt-1.5 text-[26px] font-semibold text-evergreen">
+                Put the real screens in the deck
+              </h2>
+            </div>
+            <span className="font-figures text-[12.5px] text-stone">
+              {capturedCount} of {SHOT_SLOTS.length} captured
+            </span>
+          </div>
+
+          <p className="mt-5 max-w-3xl text-[13.5px] leading-relaxed text-stone">
+            Capturing happens in your own browser: each page is loaded into a hidden frame with your
+            current sign-in and photographed as it actually renders. Nothing is uploaded anywhere,
+            and the images go straight into the PowerPoint you download. Slots left empty keep their
+            flow diagram instead.
+          </p>
+
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Button
+              onClick={captureAll}
+              disabled={capturingAll || activeSlot !== null}
+              className="h-11 gap-2 px-5 text-[14px]"
+            >
+              {capturingAll ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Camera className="h-4 w-4" />
+              )}
+              {capturingAll ? "Capturing…" : "Capture all screenshots"}
+            </Button>
+            {capturedCount > 0 && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShots({});
+                  setSlotErrors({});
+                }}
+                disabled={capturingAll}
+                className="h-11 gap-2 px-4 text-[14px]"
+              >
+                <Trash2 className="h-4 w-4" />
+                Clear all
+              </Button>
+            )}
+            <span className="text-[12px] text-stone">
+              Sign in with the right account first — the client portal screens need a client login.
+            </span>
+          </div>
+
+          <ul className="mt-6 grid gap-4 md:grid-cols-2">
+            {SHOT_SLOTS.map((slot) => {
+              const shot = shots[slot.id];
+              const isActive = activeSlot === slot.id;
+              const err = slotErrors[slot.id];
+              return (
+                <li key={slot.id} className="flex gap-4 rounded-2xl border border-line bg-paper p-4">
+                  <div className="relative h-[86px] w-[138px] shrink-0 overflow-hidden rounded-lg border border-line bg-cream">
+                    {shot ? (
+                      <img
+                        src={shot.dataUrl}
+                        alt={slot.label}
+                        className="h-full w-full object-cover object-top"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-stone">
+                        {isActive ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <ImageIcon className="h-5 w-5" />
+                        )}
+                        <span className="text-[10px] tracking-wide uppercase">
+                          {isActive ? "Capturing" : "Empty"}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="text-[13.5px] font-semibold text-ink">{slot.label}</span>
+                      {shot ? (
+                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-evergreen text-white">
+                          <Check className="h-2.5 w-2.5" />
+                        </span>
+                      ) : err ? (
+                        <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-red-600 text-white">
+                          <X className="h-2.5 w-2.5" />
+                        </span>
+                      ) : null}
+                    </div>
+                    <span className="font-figures mt-0.5 text-[11px] text-stone">
+                      {slot.route} · {slot.usedOn}
+                    </span>
+                    <span className="mt-0.5 text-[11px] text-stone">{ROLE_NOTE[slot.asRole]}</span>
+
+                    {err && <span className="mt-1 text-[11px] text-red-700">{err}</span>}
+
+                    <div className="mt-auto flex items-center gap-2 pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => runCapture(slot)}
+                        disabled={isActive || capturingAll}
+                        className="h-7 gap-1.5 px-2.5 text-[12px]"
+                      >
+                        {isActive ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <RotateCcw className="h-3.5 w-3.5" />
+                        )}
+                        {shot ? "Retake" : "Capture"}
+                      </Button>
+                      <label className="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-md border border-line px-2.5 text-[12px] font-medium text-ink transition-colors hover:bg-cream">
+                        <Upload className="h-3.5 w-3.5" />
+                        Upload
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) void handleUpload(slot, file);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
+                      {shot && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setShots((prev) => {
+                              const next = { ...prev };
+                              delete next[slot.id];
+                              return next;
+                            })
+                          }
+                          className="text-[12px] text-stone transition-colors hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         </section>
 
         {/* ── The two flows, kept apart ── */}
@@ -305,8 +529,9 @@ export default function SystemDeck() {
             Ready to send or present
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-[13.5px] leading-relaxed text-stone">
-            The file opens in PowerPoint, Keynote, Google Slides and LibreOffice, and every slide
-            can be edited freely afterwards.
+            {capturedCount > 0
+              ? `${capturedCount} real screenshot${capturedCount === 1 ? "" : "s"} will be embedded. The file opens in PowerPoint, Keynote, Google Slides and LibreOffice.`
+              : "Captured screenshots are embedded into the slides. The file opens in PowerPoint, Keynote, Google Slides and LibreOffice."}
           </p>
           <div className="mt-6 flex justify-center">
             <DownloadButton busy={busy} onClick={handleDownload} />
