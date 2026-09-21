@@ -1,8 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { DECK_FILE_NAME, DECK_OUTLINE, downloadSystemDeck, type ShotMap } from "@/lib/systemDeck";
-import { SHOT_SLOTS, captureRoute, fileToShot, type ShotSlot } from "@/lib/captureShots";
+import {
+  SHOT_SLOTS,
+  captureRoute,
+  fileToShot,
+  loadBundledShots,
+  type ShotSlot,
+} from "@/lib/captureShots";
 import {
   Building2,
   Camera,
@@ -31,6 +37,9 @@ import {
  * loads each route with the current session, snapdom rasterises it, and the
  * resulting image is embedded straight into the .pptx. Any slot that is left
  * empty simply keeps its diagram, so the deck is never incomplete.
+ *
+ * Real screenshots are pre-loaded from `public/shots/` when they exist, so the
+ * deck already carries the live screens without anyone having to press capture.
  */
 
 const CLIENT_STEPS = [
@@ -145,6 +154,23 @@ export default function SystemDeck() {
   const [capturingAll, setCapturingAll] = useState(false);
   const [activeSlot, setActiveSlot] = useState<string | null>(null);
   const [slotErrors, setSlotErrors] = useState<Record<string, string>>({});
+  const [autoLoaded, setAutoLoaded] = useState(0);
+
+  // Screenshots already saved in `public/shots/` are picked up on mount, so the
+  // deck is ready to download without capturing anything.
+  useEffect(() => {
+    let cancelled = false;
+    void loadBundledShots().then((bundled) => {
+      if (cancelled) return;
+      const count = Object.keys(bundled).length;
+      if (!count) return;
+      setShots((prev) => ({ ...bundled, ...prev }));
+      setAutoLoaded(count);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const capturedCount = SHOT_SLOTS.filter((s) => shots[s.id]).length;
 
@@ -266,7 +292,8 @@ export default function SystemDeck() {
               </h2>
             </div>
             <span className="font-figures text-[12.5px] text-stone">
-              {capturedCount} of {SHOT_SLOTS.length} captured
+              {capturedCount} of {SHOT_SLOTS.length} ready
+              {autoLoaded > 0 && ` · ${autoLoaded} loaded from saved captures`}
             </span>
           </div>
 

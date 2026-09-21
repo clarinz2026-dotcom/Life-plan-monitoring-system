@@ -1,5 +1,5 @@
 import { snapdom } from "@zumer/snapdom";
-import type { ShotImage, ShotId } from "./systemDeck";
+import type { ShotImage, ShotId, ShotMap } from "./systemDeck";
 
 /**
  * Captures real screenshots of the app's own pages, inside the browser.
@@ -201,6 +201,56 @@ export async function captureRoute(slot: ShotSlot): Promise<ShotImage> {
   } finally {
     iframe.remove();
   }
+}
+
+function blobToDataUrl(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("That image could not be read."));
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.readAsDataURL(blob);
+  });
+}
+
+function measure(dataUrl: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onerror = () => reject(new Error("That image could not be decoded."));
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.src = dataUrl;
+  });
+}
+
+/**
+ * Screenshots that ship next to the app in `public/shots/`.
+ *
+ * Any that are present are loaded automatically, so the deck already carries
+ * real screens of the system without anyone having to press a button. Missing
+ * slots are simply skipped — those slides keep their flow diagram.
+ */
+export async function loadBundledShots(): Promise<ShotMap> {
+  const entries = await Promise.all(
+    SHOT_SLOTS.map(async (slot): Promise<[ShotId, ShotImage] | null> => {
+      try {
+        const res = await fetch(`/shots/${slot.id}.png`, { cache: "no-store" });
+        if (!res.ok) return null;
+        const blob = await res.blob();
+        /*
+         * The dev server answers unknown paths with index.html, so a 200 alone
+         * proves nothing — the content type is the real check.
+         */
+        if (!blob.type.startsWith("image/")) return null;
+        const dataUrl = await blobToDataUrl(blob);
+        return [slot.id, { dataUrl, ...(await measure(dataUrl)) }];
+      } catch {
+        return null;
+      }
+    })
+  );
+
+  const out: ShotMap = {};
+  for (const entry of entries) if (entry) out[entry[0]] = entry[1];
+  return out;
 }
 
 /** Reads a screenshot the user supplied by hand, so it can replace a capture. */
