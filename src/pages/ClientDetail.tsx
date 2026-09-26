@@ -1320,6 +1320,9 @@ export default function ClientDetail() {
                     Channel
                   </th>
                   <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Effectivity Date
+                  </th>
+                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground">
                     OR #
                   </th>
                   <th className="text-right py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -1338,6 +1341,11 @@ export default function ClientDetail() {
                     </td>
                     <td className="py-2.5 px-4 text-xs">
                       {p.paymentChannel.toUpperCase().replace("_", " ")}
+                    </td>
+                    <td className="py-2.5 px-4 text-xs">
+                      {p.contract?.startDate
+                        ? format(new Date(p.contract.startDate), "MMM d, yyyy")
+                        : "—"}
                     </td>
                     <td className="py-2.5 px-4 text-xs text-muted-foreground">
                       {p.orNumber || "—"}
