@@ -76,16 +76,46 @@ await page.waitForURL((u) => !u.pathname.startsWith("/auth"), { timeout: 45_000 
 console.log("signed in →", new URL(page.url()).pathname);
 
 await page.goto(`${ORIGIN}/clients`, { waitUntil: "load" });
-await sleep(3000);
-const firstClient = await page
-  .locator('a[href^="/clients/"], [href^="/clients/"]')
-  .first()
-  .getAttribute("href")
-  .catch(() => null);
-
-const target = firstClient ?? "/clients";
-await page.goto(ORIGIN + target, { waitUntil: "load" });
 await sleep(3500);
+
+// The list links through to a client with a button rather than an href, so
+// navigate by clicking a "View" action. Pick a row whose PLAN cell is not
+// empty: a planholder with no contract has no payments and therefore no
+// Payment History table to inspect.
+const rowIndex = await page.evaluate(() => {
+  const rows = Array.from(document.querySelectorAll("tbody tr"));
+  for (let i = 0; i < rows.length; i++) {
+    const cells = Array.from(rows[i].querySelectorAll("td")).map((c) =>
+      (c.innerText || "").trim()
+    );
+    if (cells.length >= 5 && cells[4] && cells[4] !== "—") return i;
+  }
+  return -1;
+});
+if (rowIndex < 0) throw new Error("No client with a plan found on /clients");
+await page.locator("tbody tr").nth(rowIndex).getByText("View").click();
+await page.waitForURL(/\/clients\/.+/, { timeout: 20_000 }).catch(() => {});
+await sleep(4000);
+const target = new URL(page.url()).pathname;
+
+// The detail view streams its data in; wait for the heading it renders once
+// payments have arrived rather than guessing at a delay.
+await page
+  .getByText(/Payment History/i)
+  .first()
+  .waitFor({ timeout: 25_000 })
+  .catch(() => console.log("(warning: 'Payment History' never appeared)"));
+await sleep(2500);
+
+const diag = await page.evaluate(() => ({
+  url: location.pathname,
+  hasPaymentHistory: /Payment History/i.test(document.body.innerText || ""),
+  tableCount: document.querySelectorAll("table").length,
+  bodyHead: (document.body.innerText || "")
+    .replace(/\s+/g, " ")
+    .slice(0, 300),
+}));
+console.log("DIAG:", JSON.stringify(diag, null, 2));
 
 const probe = await page.evaluate(() => {
   const tables = Array.from(document.querySelectorAll("table"));
@@ -104,6 +134,53 @@ for (const t of probe) {
   if (t.headers.length) console.log("headers:", JSON.stringify(t.headers));
   if (t.firstRow.length) console.log("row    :", JSON.stringify(t.firstRow));
   console.log("---");
+}
+
+// ── The SOA document itself ───────────────────────────────────────────────
+// SOAButton renders the statement into a same-origin iframe, so its table
+// headers can be read straight out of the DOM.
+const controls = await page.evaluate(() =>
+  Array.from(document.querySelectorAll("button, a"))
+    .map((el) => (el.textContent || "").replace(/\s+/g, " ").trim())
+    .filter((t) => t && t.length < 40)
+);
+console.log("\ncontrols on page:", JSON.stringify([...new Set(controls)]));
+
+const soaButton = page.getByText(/SOA/i).first();
+if (await soaButton.count()) {
+  await soaButton.click();
+  await sleep(6000);
+  const soa = await page.evaluate(() => {
+    const frames = Array.from(document.querySelectorAll("iframe"));
+    for (const f of frames) {
+      try {
+        const doc = f.contentDocument;
+        if (!doc) continue;
+        const all = Array.from(doc.querySelectorAll("table"));
+        const target = all.find((t) =>
+          /Payment History/i.test(
+            t.previousElementSibling?.textContent ?? ""
+          )
+        );
+        if (!target) continue;
+        return {
+          headers: Array.from(target.querySelectorAll("thead th")).map((th) =>
+            (th.textContent || "").replace(/\s+/g, " ").trim()
+          ),
+          row: Array.from(target.querySelectorAll("tbody tr td")).map((td) =>
+            (td.textContent || "").replace(/\s+/g, " ").trim()
+          ),
+        };
+      } catch {
+        continue;
+      }
+    }
+    return null;
+  });
+  console.log("\n=== SOA Payment History (from the rendered iframe) ===");
+  console.log(soa ? JSON.stringify(soa, null, 2) : "(no SOA iframe found)");
+} else {
+  console.log("\n(no 'View SOA' control found)");
 }
 
 await browser.close();
