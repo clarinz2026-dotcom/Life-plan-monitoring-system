@@ -433,18 +433,34 @@ export default function Payments() {
                 </div>
               </div>
 
-              <div>
-                <Label className="text-[14px]">Payment Date *</Label>
-                <Input
-                  type="date"
-                  value={form.paymentDate}
-                  onChange={(e) =>
-                    setForm({ ...form, paymentDate: e.target.value })
-                  }
-                  className={inputClass}
-                  required
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-[14px]">Payment Date *</Label>
+                  <Input
+                    type="date"
+                    value={form.paymentDate}
+                    onChange={(e) =>
+                      setForm({ ...form, paymentDate: e.target.value })
+                    }
+                    className={inputClass}
+                    required
+                  />
+                </div>
+                <div>
+                  <Label className="text-[14px]">O.R. Number</Label>
+                  <Input
+                    value={form.orNumber}
+                    onChange={(e) =>
+                      setForm({ ...form, orNumber: e.target.value })
+                    }
+                    placeholder="e.g. 000123"
+                    className={inputClass}
+                  />
+                </div>
               </div>
+              <p className="-mt-2 text-[13px] text-stone">
+                Printed on the official receipt and shown in the O.R. No. column of the Statement of Account.
+              </p>
 
               <div className="space-y-4">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">

@@ -1214,6 +1214,13 @@ export default function ClientDetail() {
                   <Label className="text-[14px]">Payment Date *</Label>
                   <Input type="date" value={paymentForm.paymentDate} onChange={(e) => setPaymentForm({ ...paymentForm, paymentDate: e.target.value })} className="h-11 text-base" required />
                 </div>
+                <div>
+                  <Label className="text-[14px]">O.R. Number</Label>
+                  <Input value={paymentForm.orNumber} onChange={(e) => setPaymentForm({ ...paymentForm, orNumber: e.target.value })} placeholder="e.g. 000123" className="h-11 text-base" />
+                </div>
+                <p className="-mt-2 text-[13px] text-stone">
+                  Printed on the official receipt and shown in the O.R. No. column of the Statement of Account.
+                </p>
                 <div className="space-y-3">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">Reference Details</p>
                   <div className="grid grid-cols-2 gap-3">
