@@ -33,11 +33,25 @@ export const generateForContract = mutation({
     // Calculate number of months
     const totalMonths = Math.ceil(contract.planAmount / monthlyAmount);
 
+    /*
+     * Installments fall due on the same day of the month as the plan's
+     * effectivity date, one month apart — a plan effective Aug 22 has its
+     * first installment due Sep 22, the second Oct 22, and so on. The day is
+     * clamped to the end of the target month, so a plan effective on the 31st
+     * lands on the 28th/29th in February instead of spilling into March.
+     *
+     * This mirrors `installmentDueDate` in src/components/SOADocument.tsx,
+     * which is what the printed statement and the staff/portal pages show.
+     */
+    const startDay = startDate.getDate();
+
     for (let i = 0; i < totalMonths; i++) {
-      const dueDate = new Date(startDate);
-      dueDate.setMonth(dueDate.getMonth() + i);
-      // Set to 1st of the month
-      dueDate.setDate(1);
+      const monthIndex = startDate.getMonth() + (i + 1);
+      const year = startDate.getFullYear() + Math.floor(monthIndex / 12);
+      const month = ((monthIndex % 12) + 12) % 12;
+      // Day 0 of the following month is the last day of the target month.
+      const lastDay = new Date(year, month + 1, 0).getDate();
+      const dueDate = new Date(year, month, Math.min(startDay, lastDay));
 
       await ctx.db.insert("payment_schedules", {
         contractId: args.contractId,

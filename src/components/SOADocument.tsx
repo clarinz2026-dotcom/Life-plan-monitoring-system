@@ -90,20 +90,30 @@ const MS_PER_DAY = 86_400_000;
 /**
  * Due date of the nth installment (1-based).
  *
- * Mirrors the rule in `paymentSchedules.generate`: the installment falls due
- * on the 1st of the month, n months after the plan's start date. Derivation is
- * necessary because `payment_schedules` holds no rows — nothing is stored that
- * could simply be read.
+ * Mirrors the rule in `paymentSchedules.generate`: the installment falls due on
+ * the SAME day of the month as the plan's start date (its effectivity date), n
+ * months later — a plan effective Aug 22 has its first installment due Sep 22,
+ * the second Oct 22, and so on. Derivation is necessary because
+ * `payment_schedules` holds no rows — nothing is stored that could simply be
+ * read.
+ *
+ * Days are clamped to the end of the target month, so a plan effective on the
+ * 31st has its February installment land on the 28th/29th rather than spilling
+ * into March.
  */
 export function installmentDueDate(
   startDate: number,
   installment: number
 ): number | null {
   if (!Number.isFinite(startDate) || installment < 1) return null;
-  const due = new Date(startDate);
-  due.setMonth(due.getMonth() + (installment - 1));
-  due.setDate(1);
-  return due.getTime();
+  const start = new Date(startDate);
+  const day = start.getDate();
+  const monthIndex = start.getMonth() + installment;
+  const year = start.getFullYear() + Math.floor(monthIndex / 12);
+  const month = ((monthIndex % 12) + 12) % 12;
+  // Day 0 of the following month is the last day of the target month.
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return new Date(year, month, Math.min(day, lastDay)).getTime();
 }
 
 /**
