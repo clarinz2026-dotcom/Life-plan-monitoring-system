@@ -15,7 +15,7 @@ import { format } from "date-fns";
  * the aging report reads, but every label here uses the three-way wording.
  */
 const STATUS_LABELS: Record<string, string> = {
-  current: "Current",
+  current: "Updated",
   delinquent_30: "30 Days Late",
   delinquent_60: "60 Days Late",
   delinquent_90: "90 Days Late",
@@ -42,7 +42,7 @@ function formatPHP(amount: number) {
 
 const TABS = [
   { key: "all", label: "All" },
-  { key: "current", label: "Current" },
+  { key: "current", label: "Updated" },
   { key: "delinquent", label: "Delinquent" },
   { key: "lapsed", label: "Lapsed" },
   { key: "fully_paid", label: "Fully Paid" },

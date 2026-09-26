@@ -48,7 +48,7 @@ import { SMSDialog, type SmsRecipient } from "@/components/SMSDialog";
  * the aging report reads, but every label here uses the three-way wording.
  */
 const STATUS_LABELS: Record<string, string> = {
-  current: "Current",
+  current: "Updated",
   delinquent_30: "30 Days Late",
   delinquent_60: "60 Days Late",
   delinquent_90: "90 Days Late",
@@ -69,7 +69,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 const FILTER_TABS = [
   { key: "all", label: "All" },
-  { key: "current", label: "Current" },
+  { key: "current", label: "Updated" },
   { key: "delinquent_30", label: "30 Days Late" },
   { key: "delinquent_60", label: "60 Days Late" },
   { key: "delinquent_90", label: "90 Days Late" },

@@ -69,7 +69,7 @@ export default function AgingReport() {
     ];
 
     const allGroups = [
-      { label: "Current", items: groups.current },
+      { label: "Updated", items: groups.current },
       { label: "30 Days", items: groups.delinquent_30 },
       { label: "60 Days", items: groups.delinquent_60 },
       { label: "90 Days", items: groups.delinquent_90 },
@@ -129,7 +129,7 @@ export default function AgingReport() {
       {/* Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         {[
-          { label: "Current", count: groups.current.length, color: "text-terminal-green" },
+          { label: "Updated", count: groups.current.length, color: "text-terminal-green" },
           { label: "30 Days", count: groups.delinquent_30.length, color: "text-terminal-amber" },
           { label: "60 Days", count: groups.delinquent_60.length, color: "text-orange-500" },
           { label: "90 Days", count: groups.delinquent_90.length, color: "text-terminal-red" },
@@ -184,7 +184,7 @@ export default function AgingReport() {
               </TableHeader>
               <TableBody>
                 {[
-                  { label: "Current", items: groups.current, style: "text-terminal-green" },
+                  { label: "Updated", items: groups.current, style: "text-terminal-green" },
                   { label: "30 Days Late", items: groups.delinquent_30, style: "text-terminal-amber" },
                   { label: "60 Days Late", items: groups.delinquent_60, style: "text-orange-500" },
                   { label: "90 Days Late", items: groups.delinquent_90, style: "text-terminal-red" },

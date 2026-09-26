@@ -53,7 +53,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  current: "Current",
+  current: "Updated",
   "30_days": "30 Days Late",
   "60_days": "60 Days Late",
   "90_days": "90 Days Late",

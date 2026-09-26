@@ -53,7 +53,7 @@ const STATUS_COLORS: Record<string, string> = {
  * records how far behind a plan is, which the aging report reads.
  */
 const STATUS_LABELS: Record<string, string> = {
-  current: "Current",
+  current: "Updated",
   delinquent_30: "30 Days Late",
   delinquent_60: "60 Days Late",
   delinquent_90: "90 Days Late",
@@ -1296,7 +1296,7 @@ export default function ClientDetail() {
                   className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                 >
                   {[
-                    ["current", "Current"],
+                    ["current", "Updated"],
                     ["delinquent_30", "30 Days Late"],
                     ["delinquent_60", "60 Days Late"],
                     ["delinquent_90", "90 Days Late"],

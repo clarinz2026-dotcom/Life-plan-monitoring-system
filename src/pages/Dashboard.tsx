@@ -32,7 +32,7 @@ import { useBranch } from "@/hooks/use-branch";
  * wording.
  */
 const STATUS_LABELS: Record<string, string> = {
-  current: "Current",
+  current: "Updated",
   delinquent_30: "30 Days Late",
   delinquent_60: "60 Days Late",
   delinquent_90: "90 Days Late",
