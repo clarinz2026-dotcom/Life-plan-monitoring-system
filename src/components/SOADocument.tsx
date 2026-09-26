@@ -286,13 +286,6 @@ const SOA_STYLES = `
     text-transform: uppercase;
     color: #1b4332;
   }
-  .lh-motto {
-    margin-top: 5px;
-    font-size: 8px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #5c6b60;
-  }
   .lh-right { text-align: right; padding-top: 4px; }
   .lh-tag {
     font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
@@ -437,14 +430,6 @@ const SOA_STYLES = `
     font-size: 12.5px;
     color: #211f1a;
     white-space: nowrap;
-  }
-  .foot-motto {
-    margin-top: 7px;
-    text-align: center;
-    font-size: 8.5px;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: #5c6b60;
   }
 
   /* ── Seal watermark ─────────────────────────────────────────────────── */
@@ -628,7 +613,6 @@ export function generateSOAHTML(data: SOAData): string {
         <div>
           <p class="lh-brand">Evangelist</p>
           <p class="lh-sub">Funeral Services</p>
-          <p class="lh-motto">In life and beyond, we care.</p>
         </div>
       </div>
       <div class="lh-right">
@@ -689,7 +673,6 @@ export function generateSOAHTML(data: SOAData): string {
         <p class="foot-sign">Prepared by: Evangelist Funeral Services</p>
         <div class="foot-rule"></div>
       </div>
-      <p class="foot-motto">Service Today. Peace Forever.</p>
     </div>
 
     ${
