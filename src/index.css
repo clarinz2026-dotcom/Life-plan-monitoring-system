@@ -292,11 +292,20 @@
   --sidebar-foreground: #f6f3ea;
   --sidebar-accent: #1b4332;
   --sidebar-border: #23472f;
-}
+}  /*
+   * The client portal is set in Arial throughout — headings, body, tables and
+   * buttons — as requested by the office. `.portal-shell` wraps every portal
+   * route, so this one rule covers the whole section; `:where()` keeps the
+   * specificity at zero so utilities (sizes, weights) still win.
+   */
+  :where(.portal-shell),
+  :where(.portal-shell) :where(h1, h2, h3, p, span, a, button, input, select, textarea, td, th, strong, label) {
+    font-family: Arial, "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
+  }
 
-/*
+  /*
    * Display serif for headings and card titles, exactly as on the landing page
-   * and in the client portal. `:where()` keeps the specificity at zero so any
+   * and in the staff area. `:where()` keeps the specificity at zero so any
    * utility written on the element (a colour, a size, a weight) still wins.
    */
   :where(.staff-shell) :where(h1, h2, h3, [data-slot="card-title"]) {

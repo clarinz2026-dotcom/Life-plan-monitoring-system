@@ -177,7 +177,7 @@ export function PortalShell({
         <span className="h-px w-8 bg-current" />
         {eyebrow}
       </p>
-      <h1 className="mt-3 font-display text-3xl font-semibold tracking-tight text-evergreen sm:text-4xl">
+      <h1 className="mt-3 text-3xl font-semibold tracking-tight text-evergreen sm:text-4xl">
         {title}
       </h1>
       {subtitle && (

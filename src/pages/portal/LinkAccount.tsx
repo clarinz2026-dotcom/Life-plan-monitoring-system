@@ -313,7 +313,7 @@ export default function LinkAccount() {
       {/* History */}
       {requests.length > 0 && (
         <section>
-          <h2 className="mb-3 font-display text-xl font-semibold text-evergreen">
+          <h2 className="mb-3 text-xl font-semibold text-evergreen">
             Request history
           </h2>
           <div className="space-y-2.5">

@@ -23,12 +23,13 @@ import {
 import type { Doc } from "@/convex/_generated/dataModel";
 
 /**
- * The statement face. The printed SOA is set in Times New Roman, so the digital
- * twin uses the same serif for every label, figure and table cell — the app's
- * own UI font stays on the chrome (navigation, buttons) around it.
+ * The statement face. The portal is set in Arial throughout — headings,
+ * statement body, figures and table cells — so every label reads the same as
+ * the figures beside it. (The printed SOA keeps its own serif styling; this is
+ * the on-screen presentation.)
  */
 const STATEMENT_FONT = {
-  fontFamily: '"Times New Roman", Times, Georgia, serif',
+  fontFamily: 'Arial, "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif',
 } as const;
 
 /** Payment channels, spelled out in the statement's REMARKS column. */
@@ -196,7 +197,7 @@ export default function Plans() {
                     {initials(`${c.firstName} ${c.lastName}`)}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate font-display text-[18px] font-semibold text-white">
+                    <p className="truncate text-[18px] font-semibold text-white">
                       {c.firstName} {c.middleName ? `${c.middleName} ` : ""}
                       {c.lastName}
                     </p>
@@ -345,7 +346,7 @@ export default function Plans() {
                   >
                     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-cream px-5 py-3.5 lg:px-7">
                       <div className="min-w-0">
-                        <p className="truncate font-display text-[19px] font-semibold text-evergreen">
+                        <p className="truncate text-[19px] font-semibold text-evergreen">
                           {contract.planType || "Memorial Plan"}
                         </p>
                         <p
