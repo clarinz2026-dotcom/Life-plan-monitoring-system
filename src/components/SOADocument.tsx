@@ -247,25 +247,25 @@ const SOA_STYLES = `
   /* html2canvas ignores <colgroup> entirely, so column widths are declared
      directly on the header cells. Every bordered table then spans the full
      content width in both the on-screen preview and the PDF. */
-  table.grid { width: 100% !important; table-layout: fixed; }
+  table.soa-grid { display: table; width: 100% !important; table-layout: fixed; }
   /* Payment-history columns — the ten widths sum to exactly 100%, which
      table-layout: fixed requires to keep every column at its designed size
      (an over-100 total gets silently rescaled, and html2canvas rescales it
      again differently, which is what knocked the printed table out of line). */
-  table.grid th.wc0 { width: 8.5%; }
-  table.grid th.wc1 { width: 11.5%; }
-  table.grid th.wc1b { width: 11%; }
-  table.grid th.wc1c { width: 9%; }
-  table.grid th.wc2 { width: 8.5%; }
-  table.grid th.wc2b { width: 8.5%; }
-  table.grid th.wc3 { width: 11%; }
-  table.grid th.wc3b { width: 8%; }
-  table.grid th.wc4 { width: 10%; }
-  table.grid th.wc5 { width: 14%; }
-  table.grid th.wb1 { width: 6%; }
-  table.grid th.wb2 { width: 54%; }
-  table.grid th.wb3 { width: 15%; }
-  table.grid th.wb4 { width: 25%; }
+  table.soa-grid th.wc0 { width: 8.5%; }
+  table.soa-grid th.wc1 { width: 11.5%; }
+  table.soa-grid th.wc1b { width: 11%; }
+  table.soa-grid th.wc1c { width: 9%; }
+  table.soa-grid th.wc2 { width: 8.5%; }
+  table.soa-grid th.wc2b { width: 8.5%; }
+  table.soa-grid th.wc3 { width: 11%; }
+  table.soa-grid th.wc3b { width: 8%; }
+  table.soa-grid th.wc4 { width: 10%; }
+  table.soa-grid th.wc5 { width: 14%; }
+  table.soa-grid th.wb1 { width: 6%; }
+  table.soa-grid th.wb2 { width: 54%; }
+  table.soa-grid th.wb3 { width: 15%; }
+  table.soa-grid th.wb4 { width: 25%; }
 
   /* ── Letterhead ─────────────────────────────────────────────────────── */
   .lh { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
@@ -353,8 +353,14 @@ const SOA_STYLES = `
   .fld-value.narrow { padding-right: 6px !important; }
 
   /* ── Bordered tables (beneficiaries, payments) ──────────────────────── */
-  table.grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  table.grid th, table.grid td {
+  /* The display is stated outright and the class is "soa-grid" on purpose. The
+     PDF is produced by injecting this document into the live app page, where
+     the app's Tailwind stylesheet is also in force: a generic class name like
+     "grid" picks up the .grid { display: grid } utility there, which turns
+     these tables into grid containers and collapses every column to its
+     content — correct in the standalone preview, broken in the download. */
+  table.soa-grid { display: table; width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.soa-grid th, table.soa-grid td {
     border: 1px solid #a9b4ab;
     padding: 4px 5px;
     font-size: 10.5px;
@@ -364,7 +370,7 @@ const SOA_STYLES = `
      "EFFECTIVITY"), so they are set compact and allowed to break inside a
      word: a long label then wraps instead of spilling across its neighbours
      in the narrow on-screen preview. */
-  table.grid thead th {
+  table.soa-grid thead th {
     background: #eef1ea;
     color: #1b4332;
     font-size: 8.5px;
@@ -375,16 +381,16 @@ const SOA_STYLES = `
     text-align: center;
     overflow-wrap: break-word;
   }
-  table.grid td.c { text-align: center; }
-  table.grid td.num { text-align: center; font-variant-numeric: tabular-nums; }
-  table.grid td.r { text-align: right; font-variant-numeric: tabular-nums; }
-  table.grid td.empty { text-align: center; font-style: italic; color: #6b7269; padding: 10px 7px; }
-  table.grid tr.alt td { background: #fafbf9; }
+  table.soa-grid td.c { text-align: center; }
+  table.soa-grid td.num { text-align: center; font-variant-numeric: tabular-nums; }
+  table.soa-grid td.r { text-align: right; font-variant-numeric: tabular-nums; }
+  table.soa-grid td.empty { text-align: center; font-style: italic; color: #6b7269; padding: 10px 7px; }
+  table.soa-grid tr.alt td { background: #fafbf9; }
   /* Header text follows its column's data alignment — figures sit over the
      right edge they sum from, text columns over their left edge. Declared
      after the thead rule so it wins on equal specificity. */
-  table.grid th.th-r { text-align: right; }
-  table.grid th.th-l { text-align: left; }
+  table.soa-grid th.th-r { text-align: right; }
+  table.soa-grid th.th-l { text-align: left; }
 
   /* ── Account summary strip ──────────────────────────────────────────── */
   .summary { display: flex; border: 1px solid #a9b4ab; background: #f1f4ef; }
@@ -536,7 +542,7 @@ export function generateSOAHTML(data: SOAData): string {
         </table>
 
         <span class="sec-bar">Payment History</span>
-        <table class="grid">
+        <table class="soa-grid">
           <thead>
             <tr>
               <th class="wc1">Payment Date<br />(MM/DD/YYYY)</th>
@@ -643,7 +649,7 @@ export function generateSOAHTML(data: SOAData): string {
 
     <!-- ── Beneficiaries ── -->
     <span class="sec-bar">Beneficiaries</span>
-    <table class="grid">
+    <table class="soa-grid">
       <thead>
         <tr>
           <th class="wb1">#</th>
@@ -659,7 +665,7 @@ export function generateSOAHTML(data: SOAData): string {
     ${
       plansHTML ||
       `<span class="sec-bar">Plan Information</span>
-       <table class="grid">
+       <table class="soa-grid">
          <tbody>
            <tr><td class="empty">No plan records on file for this planholder.</td></tr>
          </tbody>

@@ -59,7 +59,7 @@ const page = await browser.newPage({ viewport: { width: 900, height: 1400 } });
 await page.setContent(html, { waitUntil: "load" });
 
 const result = await page.evaluate(() => {
-  const tables = Array.from(document.querySelectorAll("table.grid"));
+  const tables = Array.from(document.querySelectorAll("table.soa-grid"));
   const target = tables.find((t) =>
     /Payment History/i.test(t.previousElementSibling?.textContent ?? "")
   );

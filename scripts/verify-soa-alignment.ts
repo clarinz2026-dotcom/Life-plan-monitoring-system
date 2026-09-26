@@ -38,7 +38,7 @@ const page = await browser.newPage({ viewport: { width: 900, height: 1400 } });
 await page.setContent(generateSOAHTML(data), { waitUntil: "networkidle" });
 
 const report = await page.evaluate(() => {
-  const tables = document.querySelectorAll("table.grid");
+  const tables = document.querySelectorAll("table.soa-grid");
   const payment = tables[tables.length - 1];
   const heads = Array.from(payment.querySelectorAll("thead th"));
   const firstCells = Array.from(payment.querySelectorAll("tbody tr:first-child td"));

@@ -51,7 +51,7 @@ for (const [label, data] of [
   });
   await page.setContent(generateSOAHTML(data as SOAData), { waitUntil: "networkidle" });
   const report = await page.evaluate(() => {
-    const table = Array.from(document.querySelectorAll("table.grid")).find((t) =>
+    const table = Array.from(document.querySelectorAll("table.soa-grid")).find((t) =>
       /payment date/i.test(t.textContent || ""),
     ) as HTMLTableElement | undefined;
     if (!table) return { error: "payment history table not found" };

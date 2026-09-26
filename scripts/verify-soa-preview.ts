@@ -65,7 +65,7 @@ for (const boxWidth of [380, 576, 848]) {
     const f = document.getElementById("f") as HTMLIFrameElement;
     const doc = f.contentDocument;
     const soa = doc?.getElementById("soa") as HTMLElement | null;
-    const table = Array.from(doc?.querySelectorAll("table.grid") ?? []).find((t) =>
+    const table = Array.from(doc?.querySelectorAll("table.soa-grid") ?? []).find((t) =>
       /payment date/i.test(t.textContent || ""),
     ) as HTMLElement | undefined;
     const ths = table

@@ -1,0 +1,172 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>SOA PDF probe</title>
+    <!-- The app's own stylesheet (Tailwind), which is what the statement gets
+         injected into when the PDF is generated. -->
+    <link rel="stylesheet" href="../src/index.css" />
+  </head>
+  <body>
+    <script type="module">
+      import html2canvas from "html2canvas";
+      import { generateSOAHTML } from "../src/components/SOADocument";
+
+      const DAY = 86400000;
+      const data = {
+        clientName: "Abraasaldo, Clarinz",
+        clientAddress: "Malaybalay City, Bukidnon",
+        clientEmail: "clarinz2026@gmail.com",
+        clientContact: "09353991034",
+        clientBirthDate: "February 6, 2002",
+        clientAge: 24,
+        generatedDate: "September 26, 2026",
+        accountNumber: "0001",
+        beneficiaries: [{ name: "Liezl Abraasaldo", age: 24, relationship: "Mother" }],
+        contracts: [
+          {
+            contractNumber: "000001",
+            planType: "St. Isidore",
+            planAmount: 30000,
+            monthlyAmortization: 500,
+            totalPaid: 2500,
+            contractStatus: "current",
+            startDate: new Date("2026-09-01").getTime(),
+          },
+        ],
+        payments: Array.from({ length: 5 }, (_, i) => ({
+          paymentDate: new Date("2026-09-26").getTime(),
+          amount: 500,
+          paymentChannel: "cash",
+          orNumber: `01234${9 - i}`,
+          contractNumber: "000001",
+        })),
+      };
+
+      function withTimeout(p, ms) {
+        return Promise.race([
+          p.then(() => undefined),
+          new Promise((r) => setTimeout(r, ms)),
+        ]);
+      }
+
+      window.__probe = async () => {
+        const container = document.createElement("div");
+        container.style.position = "fixed";
+        container.style.top = "0";
+        container.style.left = "0";
+        container.style.width = "794px";
+        container.style.background = "white";
+        container.style.zIndex = "-1";
+        container.innerHTML = generateSOAHTML(data);
+        document.body.appendChild(container);
+
+        // Let the injected Google Fonts stylesheet land.
+        await withTimeout(
+          Promise.all(
+            Array.from(container.querySelectorAll("link[rel=stylesheet]")).map(
+              (l) =>
+                new Promise((res) => {
+                  if (l.sheet) return res();
+                  l.addEventListener("load", res, { once: true });
+                  l.addEventListener("error", res, { once: true });
+                }),
+            ),
+          ),
+          3000,
+        );
+        await withTimeout(document.fonts.ready, 3000);
+
+        const fonts = {
+          playfairAvailable: document.fonts.check('700 29px "Playfair Display"'),
+          loadedFaces: Array.from(document.fonts).map((f) => `${f.family}/${f.style}/${f.weight}/${f.status}`),
+        };
+
+        const widths = () => {
+          const soa = container.querySelector("#soa");
+          const tables = Array.from(container.querySelectorAll("table.soa-grid"));
+          return {
+            soaW: soa ? Math.round(soa.getBoundingClientRect().width) : 0,
+            tables: tables.map((t) => {
+              const r = t.getBoundingClientRect();
+              const cs = getComputedStyle(t);
+              return {
+                head: (t.querySelector("th")?.textContent || "").replace(/\s+/g, " ").trim().slice(0, 22),
+                w: Math.round(r.width),
+                cssWidth: cs.width,
+                layout: cs.tableLayout,
+              };
+            }),
+          };
+        };
+
+        const live = widths();
+        const styles = Array.from(container.querySelectorAll("table")).map((t) => ({
+          display: getComputedStyle(t).display,
+          cls: t.className,
+        }));
+        live.styles = styles;
+
+        const canvas = await html2canvas(container, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+          width: 794,
+          windowWidth: 794,
+          scrollX: 0,
+          scrollY: 0,
+        });
+
+        const result = { live, fonts, canvasW: canvas.width, canvasH: canvas.height, dataUrl: canvas.toDataURL("image/png") };
+
+        // Pixel analysis of the capture: how wide is each drawn table really?
+        const ctx = canvas.getContext("2d");
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        const at = (x, y) => {
+          const i = (y * canvas.width + x) * 4;
+          return [img[i], img[i + 1], img[i + 2], img[i + 3]];
+        };
+        const near = (p, r, g, b, tol = 12) =>
+          Math.abs(p[0] - r) <= tol && Math.abs(p[1] - g) <= tol && Math.abs(p[2] - b) <= tol;
+        // Header fill #eef1ea and grid line #a9b4ab
+        const bands = [];
+        for (let y = 0; y < canvas.height; y++) {
+          let minX = -1;
+          let maxX = -1;
+          let count = 0;
+          for (let x = 0; x < canvas.width; x++) {
+            const p = at(x, y);
+            if (near(p, 238, 241, 234, 6) || near(p, 169, 180, 171, 10)) {
+              count++;
+              if (minX < 0) minX = x;
+              maxX = x;
+            }
+          }
+          if (count > canvas.width * 0.2) bands.push({ y, minX, maxX, count });
+        }
+        const merged = [];
+        for (const b of bands) {
+          const last = merged[merged.length - 1];
+          if (last && b.y - last.y1 <= 2) {
+            last.y1 = b.y;
+            last.minX = Math.min(last.minX, b.minX);
+            last.maxX = Math.max(last.maxX, b.maxX);
+          } else merged.push({ y0: b.y, y1: b.y, minX: b.minX, maxX: b.maxX });
+        }
+        result.drawnBands = merged.map((m) => ({
+          y: m.y0,
+          h: m.y1 - m.y0 + 1,
+          x0: m.minX,
+          x1: m.maxX,
+          w: m.maxX - m.minX + 1,
+        }));
+        result.canvasW = canvas.width;
+
+        document.body.removeChild(container);
+        return result;
+      };
+      window.__ready = true;
+    </script>
+  </body>
+</html>
