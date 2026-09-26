@@ -152,6 +152,27 @@ export function agingCell(
   return LAPSED_AGING_LABEL;
 }
 
+/**
+ * True when the planholder has settled more installments than have actually
+ * fallen due — i.e. they are paying ahead of schedule and the plan's payment
+ * status reads "Advanced" rather than the stored contract status.
+ *
+ * Shared by the portal pill and the printed statement so both always agree.
+ */
+export function isAdvancedStatus(
+  startDate: number,
+  paymentCount: number,
+  now: number
+): boolean {
+  if (paymentCount < 1) return false;
+  let fallenDue = 0;
+  for (let i = 1; i <= paymentCount; i++) {
+    const due = installmentDueDate(startDate, i);
+    if (due !== null && due <= now) fallenDue++;
+  }
+  return paymentCount > fallenDue;
+}
+
 /** Escape user-entered text before it lands in the generated HTML. */
 function esc(value: string | number | undefined | null) {
   if (value === undefined || value === null) return "";
@@ -383,6 +404,7 @@ const SOA_STYLES = `
 `;
 
 export function generateSOAHTML(data: SOAData): string {
+  const now = Date.now();
   /** A label sitting on the same ruled line as its value. */
   const fld = (label: string, value: string, valueClass = "") =>
     `<td class="fld-label">${esc(label)}</td><td class="fld-value ${valueClass}">${esc(value)}</td>`;
@@ -447,7 +469,18 @@ export function generateSOAHTML(data: SOAData): string {
         .join("");
 
       const outstanding = Math.max(0, c.planAmount - c.totalPaid);
-      const status = STATUS_LABELS[c.contractStatus] ?? c.contractStatus;
+      /*
+       * Payment status on the printed statement mirrors the portal: a
+       * planholder paying ahead of schedule reads "Advanced", fully paid stays
+       * "Good Payer" (solid, in the portal), and everything else uses the
+       * stored contract status.
+       */
+      const status =
+        c.contractStatus === "fully_paid"
+          ? "Good Payer"
+          : isAdvancedStatus(c.startDate, contractPayments.length, now)
+            ? "Advanced"
+            : (STATUS_LABELS[c.contractStatus] ?? c.contractStatus);
 
       return `
       <div class="plan-block">

@@ -15,7 +15,11 @@ import {
   initials,
 } from "./shared";
 import { SOAButton } from "./SOAButton";
-import { agingCell, installmentDueDate } from "@/components/SOADocument";
+import {
+  agingCell,
+  installmentDueDate,
+  isAdvancedStatus,
+} from "@/components/SOADocument";
 import type { Doc } from "@/convex/_generated/dataModel";
 
 /**
@@ -324,17 +328,13 @@ export default function Plans() {
                  * "Good Payer", so the family can see at a glance that they
                  * are paying in advance. Fully paid keeps its own pill, and
                  * everything else falls back to the stored contract status.
+                 * The rule lives in the SOA module so the printed statement
+                 * agrees with this pill.
                  */
-                const dueSoFar = Array.from(
-                  { length: cd.payments.length + 1 },
-                  (_, i) => installmentDueDate(contract.startDate, i + 1)
-                ).filter(
-                  (d): d is number => d !== null && d <= now
-                ).length;
                 const statusKey =
                   isFullyPaid
                     ? "fully_paid"
-                    : cd.payments.length > dueSoFar
+                    : isAdvancedStatus(contract.startDate, cd.payments.length, now)
                       ? "advanced"
                       : contract.contractStatus;
 
