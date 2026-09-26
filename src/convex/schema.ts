@@ -223,6 +223,7 @@ const schema = defineSchema(
         v.literal("contract"),
         v.literal("payment"),
         v.literal("receipt"),
+        v.literal("or_series"),
       ),
       entityId: v.string(),
       userId: v.id("users"),
@@ -314,6 +315,40 @@ const schema = defineSchema(
       .index("by_date", ["reconciliationDate"])
       .index("by_status", ["status"])
       .index("by_branch", ["branchId"]),
+
+    // ─── Official Receipt series assignation ─────────────────────────────
+    // One row per receipt-book series handed to a collector or branch manager.
+    // The row is the ledger entry: who holds which series, over what number
+    // range, in which branch, and who released it.
+    or_series: defineTable({
+      /** Printed series code, e.g. "2026-A". Unique across the company. */
+      seriesCode: v.string(),
+      /** Optional prefix printed before the number, e.g. "EVF". */
+      prefix: v.optional(v.string()),
+      /** First O.R. number of the block, inclusive. */
+      startNumber: v.number(),
+      /** Last O.R. number of the block, inclusive. */
+      endNumber: v.number(),
+      /** The collector / branch manager holding the series. */
+      assignedTo: v.id("users"),
+      /** Branch the series was released against. */
+      branchId: v.optional(v.id("branches")),
+      status: v.union(
+        v.literal("active"),
+        v.literal("consumed"),
+        v.literal("revoked"),
+      ),
+      assignedBy: v.id("users"),
+      assignedAt: v.number(),
+      /** Set when the series is taken back. */
+      returnedAt: v.optional(v.number()),
+      notes: v.optional(v.string()),
+    })
+      .index("by_assignedTo", ["assignedTo"])
+      .index("by_branch", ["branchId"])
+      .index("by_seriesCode", ["seriesCode"])
+      .index("by_status", ["status"])
+      .index("by_assignedAt", ["assignedAt"]),
 
     // ─── NEW: Notifications ──────────────────────────────────────────────
     notifications: defineTable({

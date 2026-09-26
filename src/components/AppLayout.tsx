@@ -19,6 +19,7 @@ import {
   Calculator,
   AlertTriangle,
   Bell,
+  BookMarked,
   Link2,
   Moon,
   UserCog,
@@ -48,6 +49,10 @@ const NAV_ITEMS = [
 
   { to: "/audit", icon: History, label: "Audit Log", roles: ["super_admin", "ceo", "manager"] },
   { to: "/reconciliation", icon: Calculator, label: "Reconciliation", roles: ["super_admin", "ceo", "manager", "cashier"] },
+  // Receipt-book register. Collectors and branch managers see the series held
+  // by them; Finance sees the whole company ledger and is one of the roles
+  // allowed to assign a new series (see convex/orSeries.ts).
+  { to: "/or-series", icon: BookMarked, label: "OR Series", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
   { to: "/aging-report", icon: AlertTriangle, label: "Aging Report", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
   { to: "/account-links", icon: Link2, label: "Account Linking", roles: ["super_admin", "ceo", "manager"] },
   { to: "/notifications", icon: Bell, label: "Notifications", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
