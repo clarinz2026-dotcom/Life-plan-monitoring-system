@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { Navigate, useNavigate, useLocation } from "react-router";
+import { NavLink, Navigate, useNavigate, useLocation } from "react-router";
 import {
   LayoutDashboard,
   Users,
@@ -9,7 +9,10 @@ import {
   Receipt,
   CreditCard,
   LogOut,
+  ChevronLeft,
+  ChevronRight,
   Menu,
+  X,
   BarChart3,
   History,
   Upload,
@@ -22,20 +25,12 @@ import {
   UserCog,
   Package,
   Building2,
-  PanelLeft,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
+import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useBranch } from "@/hooks/use-branch";
 import { BranchScopeSelector } from "@/components/BranchScopeSelector";
-import {
-  DesktopSidebar,
-  MobileSidebar,
-  Sidebar,
-  SidebarAction,
-  SidebarBrand,
-  SidebarLink,
-} from "@/components/StaffSidebar";
 
 const NAV_ITEMS = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
@@ -110,10 +105,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     : userBranch?.name ?? "Your branch";
   const navigate = useNavigate();
   const location = useLocation();
-  // One open state for both surfaces: the desktop rail reveals labels on hover
-  // (or stays out while pinned), and the mobile menu button toggles the panel.
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [railPinned, setRailPinned] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("theme") === "dark" ||
@@ -121,6 +114,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
     return false;
   });
+
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
 
   // Apply dark mode class
   useEffect(() => {
@@ -187,6 +185,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     });
   }, [userRole, hasSuperAdmin]);
 
+  const bottomNavItems = visibleNav.slice(0, 5);
 
   // Early return placed after every hook so the hook order stays stable across
   // renders (React throws when a conditional return changes it).
@@ -196,123 +195,114 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="staff-shell flex min-h-screen flex-col bg-background overflow-visible md:flex-row">
-      <Sidebar open={sidebarOpen} setOpen={setSidebarOpen}>
-        {/* Desktop rail: labels reveal on hover, or stay out when pinned. */}
-        <DesktopSidebar>
-          <div className="flex min-h-0 flex-1 flex-col px-3">
-            <div className="flex items-center gap-2">
-              <SidebarBrand />
-              <button
-                type="button"
-                onClick={() => setRailPinned(!railPinned)}
-                title={railPinned ? "Unpin sidebar" : "Keep sidebar open"}
-                aria-label={railPinned ? "Unpin sidebar" : "Keep sidebar open"}
-                aria-pressed={railPinned}
-                className={`ml-auto shrink-0 rounded-full p-1.5 transition-colors hover:bg-white/10 hover:text-white ${
-                  sidebarOpen ? "block" : "hidden"
-                } ${railPinned ? "text-gold-soft" : "text-white/50"}`}
-              >
-                <PanelLeft className="h-4 w-4" />
-              </button>
-            </div>
+      {/* Desktop sidebar */}
+      <aside
+        className={`hidden shrink-0 flex-col border-r border-sidebar-border bg-gradient-to-b from-[#1b4332] to-[#0f2a1d] transition-all duration-200 md:flex ${
+          collapsed ? "w-[72px]" : "w-[260px]"
+        }`}
+      >
+        {/* Header — same lockup as the client portal header */}
+        <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
+          <div
+            className={`flex items-center gap-3 min-w-0 ${
+              collapsed ? "flex-1 justify-center px-1" : ""
+            }`}
+          >
+            <BrandLogo className="h-9 w-9 shrink-0 rounded-[9px] ring-1 ring-white/15" />
+            {!collapsed && (
+              <div className="flex min-w-0 flex-col leading-tight">
+                <span className="font-brand truncate text-[17px] leading-none text-white">
+                  Evangelist
+                </span>
+                <span className="truncate text-[10px] font-medium uppercase tracking-[0.16em] text-white/45">
+                  Staff Portal
+                </span>
+              </div>
+            )}
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto h-8 w-8 shrink-0 text-white/60 hover:text-white hover:bg-white/10"
+            onClick={() => setCollapsed(!collapsed)}
+          >
+            {collapsed ? (
+              <ChevronRight className="h-4 w-4" />
+            ) : (
+              <ChevronLeft className="h-4 w-4" />
+            )}
+          </Button>
+        </div>
 
-            <nav className="flex-1 space-y-1 overflow-y-auto pb-3">
-              {visibleNav.map((item) => (
-                <SidebarLink
-                  key={item.to}
-                  to={item.to}
-                  label={item.label}
-                  icon={<item.icon className="h-5 w-5" />}
-                />
-              ))}
-            </nav>
+        {/* Nav */}
+        <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
+          {visibleNav.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex items-center gap-3 rounded-full px-4 py-2.5 text-[14.5px] font-medium transition-colors ${
+                  isActive
+                    ? "bg-cream text-pine shadow-sm"
+                    : "text-white/65 hover:bg-white/10 hover:text-white"
+                } ${collapsed ? "justify-center px-0" : ""}`}
+            >
+              <item.icon className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>{item.label}</span>}
+            </NavLink>
+          ))}
+        </nav>
 
-            <div className="space-y-1 border-t border-white/10 py-3">
-              {sidebarOpen && (
-                <div className="px-4 pb-3 pt-1">
-                  <p className="truncate text-[13.5px] font-semibold text-white">
-                    {user?.name || user?.email || "User"}
+        {/* User section */}
+        <div className="border-t border-sidebar-border px-4 py-4">
+          {!collapsed && (
+            <div className="mb-3 min-w-0">
+              <p className="truncate text-[13.5px] font-semibold text-white">
+                {user?.name || user?.email || "User"}
+              </p>
+              <p className="truncate text-[10px] font-bold uppercase tracking-[0.16em] text-gold-soft">
+                {roleLabel}
+              </p>
+              {isBranchStaff && userBranch && (
+                <div className="mt-2 flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 ring-1 ring-white/10">
+                  <Building2 className="h-3 w-3 text-gold-soft" />
+                  <p className="text-[11px] text-white/75 truncate">
+                    {userBranch.name}
                   </p>
-                  <p className="truncate text-[10px] font-bold uppercase tracking-[0.16em] text-gold-soft">
-                    {roleLabel}
-                  </p>
-                  {isBranchStaff && userBranch && (
-                    <div className="mt-2 flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 ring-1 ring-white/10">
-                      <Building2 className="h-3 w-3 shrink-0 text-gold-soft" />
-                      <p className="truncate text-[11px] text-white/75">{userBranch.name}</p>
-                    </div>
-                  )}
                 </div>
               )}
-              <SidebarAction
-                label={darkMode ? "Light Mode" : "Dark Mode"}
-                icon={<Moon className="h-5 w-5" />}
-                onClick={() => setDarkMode(!darkMode)}
-              />
-              <SidebarAction label="Sign out" icon={<LogOut className="h-5 w-5" />} onClick={handleSignOut} />
             </div>
-          </div>
-        </DesktopSidebar>
-
-        {/* Mobile menu: full-screen panel over the page. */}
-        <MobileSidebar>
-          <div className="flex min-h-full flex-col px-4 pt-4">
-            <div className="px-1">
-              <SidebarBrand />
-            </div>
-            <nav className="flex-1 space-y-1 py-2">
-              {visibleNav.map((item) => (
-                <SidebarLink
-                  key={item.to}
-                  to={item.to}
-                  label={item.label}
-                  icon={<item.icon className="h-5 w-5" />}
-                  className="py-3"
-                />
-              ))}
-            </nav>
-            <div className="space-y-1 border-t border-white/10 py-4">
-              <div className="px-4 pb-3">
-                <p className="truncate text-[13.5px] font-semibold text-white">
-                  {user?.name || user?.email || "User"}
-                </p>
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gold-soft">
-                  {roleLabel}
-                </p>
-                <p className="mt-1 text-[11.5px] text-white/60">
-                  {isCeoOrAdmin ? "Scope: " : "Branch: "}
-                  <span className="text-white/85">{scopeLabel}</span>
-                </p>
-                {isCeoOrAdmin && (
-                  <div className="mt-2.5">
-                    <BranchScopeSelector tone="chrome" className="w-full justify-between" />
-                  </div>
-                )}
-              </div>
-              <SidebarAction
-                label={darkMode ? "Light Mode" : "Dark Mode"}
-                icon={<Moon className="h-5 w-5" />}
-                onClick={() => setDarkMode(!darkMode)}
-                className="py-3"
-              />
-              <SidebarAction
-                label="Sign out"
-                icon={<LogOut className="h-5 w-5" />}
-                onClick={handleSignOut}
-                className="py-3"
-              />
-            </div>
-          </div>
-        </MobileSidebar>
-      </Sidebar>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-white/60 hover:text-white hover:bg-white/10 justify-start gap-3 py-2.5"
+            onClick={() => setDarkMode(!darkMode)}
+          >
+            <Moon className="h-5 w-5" />
+            {!collapsed && <span className="text-[14px]">{darkMode ? "Light" : "Dark"} Mode</span>}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className={`w-full text-white/60 hover:text-white hover:bg-white/10 justify-start gap-3 py-2.5 ${
+              collapsed ? "px-0 justify-center" : ""
+            }`}
+            onClick={handleSignOut}
+          >
+            <LogOut className="h-5 w-5" />
+            {!collapsed && <span className="text-[14px]">Sign out</span>}
+          </Button>
+        </div>
+      </aside>
 
       {/* Mobile top bar */}
-      <div className="fixed left-0 right-0 top-0 z-40 flex items-center justify-between border-b border-white/10 bg-gradient-to-r from-[#1b4332] to-[#0f2a1d] px-4 py-3.5 md:hidden">
-        <div className="flex min-w-0 items-center gap-3">
-          <BrandLogo className="h-8 w-8 shrink-0 rounded-[9px] ring-1 ring-white/15" />
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="font-brand truncate text-[17px] leading-none text-white">Evangelist</span>
-            <span className="hidden max-w-[150px] items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/70 ring-1 ring-white/10 min-[420px]:inline-flex">
+      <div className="fixed left-0 right-0 top-0 z-[99999] flex items-center justify-between border-b border-white/10 bg-gradient-to-r from-[#1b4332] to-[#0f2a1d] px-4 py-3.5 md:hidden">
+        <div className="flex items-center gap-3">
+          <BrandLogo className="h-8 w-8 rounded-[9px] ring-1 ring-white/15" />
+          <div>
+            <span className="font-brand text-[17px] leading-none text-white">Evangelist</span>
+            <span className="ml-2 inline-flex max-w-[150px] items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/70 ring-1 ring-white/10">
               <Building2 className="h-2.5 w-2.5 shrink-0" />
               <span className="truncate">
                 {isCeoOrAdmin ? scopeLabel : userBranch?.name ?? "Your branch"}
@@ -320,21 +310,79 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </span>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-3">
-          <span className="hidden text-[10px] font-bold uppercase tracking-[0.16em] text-gold-soft min-[380px]:inline">
-            {roleLabel}
-          </span>
-          <button
-            type="button"
-            aria-label="Open menu"
-            aria-expanded={sidebarOpen}
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="rounded-full p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+        <div className="flex items-center gap-3">
+          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-gold-soft">{roleLabel}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-10 w-10 text-white/70 hover:text-white"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           >
-            <Menu className="h-5 w-5" />
-          </button>
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
         </div>
       </div>
+
+      {/* Mobile slide-out menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden fixed inset-0 z-[99990]">
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          <div className="absolute top-[60px] left-0 right-0 overflow-y-auto border-b border-white/10 bg-gradient-to-b from-[#1b4332] to-[#0f2a1d] shadow-xl max-h-[calc(100vh-60px-64px)]">
+            <nav className="py-3 px-3">
+              {visibleNav.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 rounded-full px-4 py-3 text-[14.5px] font-medium transition-colors ${
+                      isActive
+                        ? "bg-cream text-pine"
+                        : "text-white/65 hover:bg-white/10"
+                    }`}
+                >
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+              <div className="border-t border-white/10 mt-2 pt-2">
+                <div className="px-4 py-3">
+                  <p className="text-[13.5px] font-semibold text-white truncate">
+                    {user?.name || user?.email || "User"}
+                  </p>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gold-soft">{roleLabel}</p>
+                  <p className="mt-1 text-[11.5px] text-white/60">
+                    {isCeoOrAdmin ? "Scope: " : "Branch: "}
+                    <span className="text-white/85">{scopeLabel}</span>
+                  </p>
+                  {isCeoOrAdmin && (
+                    <div className="mt-2.5">
+                      <BranchScopeSelector tone="chrome" className="w-full justify-between" />
+                    </div>
+                  )}
+                </div>
+                <button
+                  onClick={() => setDarkMode(!darkMode)}
+                  className="flex items-center gap-3 w-full rounded-full px-4 py-3 text-[15px] font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                >
+                  <Moon className="h-5 w-5" />
+                  <span>{darkMode ? "Light" : "Dark"} Mode</span>
+                </button>
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-3 w-full rounded-full px-4 py-3 text-[15px] font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span>Sign out</span>
+                </button>
+              </div>
+            </nav>
+          </div>
+        </div>
+      )}
 
       {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -376,11 +424,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </header>
         )}
 
-        <main className="mx-auto w-full max-w-[1500px] flex-1 pb-10 md:pb-0">
+        <main className="mx-auto w-full max-w-[1500px] flex-1 pb-20 md:pb-0">
           {canRenderPage ? children : null}
         </main>
       </div>
 
+      {/* Mobile bottom nav */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-gradient-to-r from-[#1b4332] to-[#0f2a1d] md:hidden">
+        <div className="flex items-center justify-around py-2 px-1">
+          {bottomNavItems.map((item) => {
+            const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={`flex flex-col items-center gap-1 px-3 py-1.5 rounded-full min-w-0 transition-colors ${
+                  isActive
+                    ? "text-gold-soft"
+                    : "text-white/60"
+                }`}
+              >
+                <item.icon className="h-5 w-5" />
+                <span className="text-[11px] font-medium truncate">{item.label}</span>
+              </NavLink>
+            );
+          })}
+        </div>
+      </nav>
     </div>
   );
 }
