@@ -88,6 +88,25 @@ function fmtDateShort(ts: number) {
 const MS_PER_DAY = 86_400_000;
 
 /**
+ * Due date of the nth installment (1-based).
+ *
+ * Mirrors the rule in `paymentSchedules.generate`: the installment falls due
+ * on the 1st of the month, n months after the plan's start date. Derivation is
+ * necessary because `payment_schedules` holds no rows — nothing is stored that
+ * could simply be read.
+ */
+export function installmentDueDate(
+  startDate: number,
+  installment: number
+): number | null {
+  if (!Number.isFinite(startDate) || installment < 1) return null;
+  const due = new Date(startDate);
+  due.setMonth(due.getMonth() + (installment - 1));
+  due.setDate(1);
+  return due.getTime();
+}
+
+/**
  * Aging shown in the Payment History table: the exact number of days the
  * payment sits past its due date.
  *
@@ -97,7 +116,10 @@ const MS_PER_DAY = 86_400_000;
  */
 const CURRENT_AGING_LABEL = "30";
 
-function agingCell(dueDate: number | null, paymentDate: number): string {
+export function agingCell(
+  dueDate: number | null,
+  paymentDate: number
+): string {
   // No due date means the contract has no usable start date; show a dash
   // rather than inventing a figure.
   if (dueDate === null) return "—";
@@ -370,17 +392,8 @@ export function generateSOAHTML(data: SOAData): string {
         ? fmtDateShort(c.startDate)
         : "";
 
-      // There is no `payment_schedules` data in the database (the table is
-      // empty), so due dates are derived here. This mirrors the rule in
-      // `paymentSchedules.generate`: the nth installment falls due on the
-      // 1st of the month, n months after the plan's start date.
-      const dueDateFor = (installment: number): number | null => {
-        if (!Number.isFinite(c.startDate)) return null;
-        const due = new Date(c.startDate);
-        due.setMonth(due.getMonth() + (installment - 1));
-        due.setDate(1);
-        return due.getTime();
-      };
+      const dueDateFor = (installment: number): number | null =>
+        installmentDueDate(c.startDate, installment);
 
       const ledgerRows = contractPayments
         .map((p, i) => {

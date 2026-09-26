@@ -83,7 +83,11 @@ import {
   generateSOAPDFBlob,
   type PreparedSOAPDF,
 } from "@/lib/generateSOA";
-import type { SOAData } from "@/components/SOADocument";
+import {
+  agingCell,
+  installmentDueDate,
+  type SOAData,
+} from "@/components/SOADocument";
 
 /** The Statement of Account prints at most four beneficiaries. */
 const MAX_BENEFICIARIES = 4;
@@ -210,6 +214,49 @@ export default function ClientDetail() {
 
   const clientContracts = contracts || [];
   const clientPayments = payments || [];
+
+  /**
+   * Derived ledger for the Payment History table.
+   *
+   * Installment number, due date, aging and running balance are not stored on
+   * a payment, and `payment_schedules` is empty, so they are computed here.
+   * The due-date and aging rules come from `SOADocument` so this screen and the
+   * printed statement always agree.
+   */
+  const paymentLedger = (() => {
+    const rows = new Map<
+      string,
+      { installment: number; dueDate: number | null; balance: number }
+    >();
+    const byContract = new Map<string, typeof clientPayments>();
+    for (const p of clientPayments) {
+      const key = String(p.contractId);
+      const list = byContract.get(key);
+      if (list) list.push(p);
+      else byContract.set(key, [p]);
+    }
+    for (const [, list] of byContract) {
+      // Oldest first, so installments number from the start of the plan and the
+      // balance counts down the way the statement shows it.
+      const chronological = [...list].sort(
+        (a, b) => a.paymentDate - b.paymentDate
+      );
+      let balance = chronological[0]?.contract?.planAmount ?? 0;
+      chronological.forEach((p, i) => {
+        const installment = i + 1;
+        balance = Math.max(0, balance - p.amount);
+        rows.set(String(p._id), {
+          installment,
+          dueDate: installmentDueDate(
+            chronological[0]?.contract?.startDate ?? NaN,
+            installment
+          ),
+          balance,
+        });
+      });
+    }
+    return rows;
+  })();
 
   // ── Add payment dialog ───────────────────────────────────────────────
   const recordPayment = useMutation(api.payments.record);
@@ -1307,56 +1354,80 @@ export default function ClientDetail() {
       ) : (
         <Card className="border-border/60 shadow-none">
           <CardContent className="p-0">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Date
-                  </th>
-                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Contract
-                  </th>
-                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Channel
-                  </th>
-                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Effectivity Date
-                  </th>
-                  <th className="text-left py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    OR #
-                  </th>
-                  <th className="text-right py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Amount
-                  </th>
+                  {[
+                    { label: "Payment Date", align: "text-left" },
+                    { label: "Effectivity Date", align: "text-left" },
+                    { label: "Due Date", align: "text-left" },
+                    { label: "Amount", align: "text-right" },
+                    { label: "Aging", align: "text-center" },
+                    { label: "Installment No.", align: "text-center" },
+                    { label: "Balance", align: "text-right" },
+                    { label: "Remarks", align: "text-left" },
+                    { label: "OR #", align: "text-left" },
+                  ].map((col) => (
+                    <th
+                      key={col.label}
+                      className={`whitespace-nowrap ${col.align} py-3 px-4 text-[10px] uppercase tracking-wider text-muted-foreground`}
+                    >
+                      {col.label}
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {clientPayments.map((p) => (
-                  <tr key={p._id} className="border-b border-border/30 last:border-0">
-                    <td className="py-2.5 px-4 text-xs">
-                      {format(new Date(p.paymentDate), "MMM d, yyyy")}
-                    </td>
-                    <td className="py-2.5 px-4 text-xs">
-                      {p.contract?.contractNumber || "—"}
-                    </td>
-                    <td className="py-2.5 px-4 text-xs">
-                      {p.paymentChannel.toUpperCase().replace("_", " ")}
-                    </td>
-                    <td className="py-2.5 px-4 text-xs">
-                      {p.contract?.startDate
-                        ? format(new Date(p.contract.startDate), "MMM d, yyyy")
-                        : "—"}
-                    </td>
-                    <td className="py-2.5 px-4 text-xs text-muted-foreground">
-                      {p.orNumber || "—"}
-                    </td>
-                    <td className="py-2.5 px-4 text-right font-bold text-terminal-green">
-                      {formatPHP(p.amount)}
-                    </td>
-                  </tr>
-                ))}
+                {clientPayments.map((p) => {
+                  const ledger = paymentLedger.get(String(p._id));
+                  const dueDate = ledger?.dueDate ?? null;
+                  return (
+                    <tr
+                      key={p._id}
+                      className="border-b border-border/30 last:border-0"
+                    >
+                      <td className="whitespace-nowrap py-2.5 px-4 text-xs">
+                        {format(new Date(p.paymentDate), "MMM d, yyyy")}
+                      </td>
+                      <td className="whitespace-nowrap py-2.5 px-4 text-xs">
+                        {p.contract?.startDate
+                          ? format(
+                              new Date(p.contract.startDate),
+                              "MMM d, yyyy"
+                            )
+                          : "—"}
+                      </td>
+                      <td className="whitespace-nowrap py-2.5 px-4 text-xs">
+                        {dueDate
+                          ? format(new Date(dueDate), "MMM d, yyyy")
+                          : "—"}
+                      </td>
+                      <td className="whitespace-nowrap py-2.5 px-4 text-right text-xs font-bold text-terminal-green">
+                        {formatPHP(p.amount)}
+                      </td>
+                      <td className="whitespace-nowrap py-2.5 px-4 text-center text-xs">
+                        {agingCell(dueDate, p.paymentDate)}
+                      </td>
+                      <td className="whitespace-nowrap py-2.5 px-4 text-center text-xs">
+                        {ledger?.installment ?? "—"}
+                      </td>
+                      <td className="whitespace-nowrap py-2.5 px-4 text-right text-xs">
+                        {ledger ? formatPHP(ledger.balance) : "—"}
+                      </td>
+                      <td className="py-2.5 px-4 text-xs text-muted-foreground">
+                        {p.remarks ||
+                          p.paymentChannel.toUpperCase().replace("_", " ")}
+                      </td>
+                      <td className="whitespace-nowrap py-2.5 px-4 text-xs text-muted-foreground">
+                        {p.orNumber || "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
+            </div>
           </CardContent>
         </Card>
       )}
