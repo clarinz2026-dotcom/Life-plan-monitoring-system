@@ -48,7 +48,7 @@ const NAV_ITEMS = [
   { to: "/reports", icon: BarChart3, label: "Reports", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
 
   { to: "/audit", icon: History, label: "Audit Log", roles: ["super_admin", "ceo", "manager"] },
-  { to: "/reconciliation", icon: Calculator, label: "Reconciliation", roles: ["super_admin", "ceo", "manager", "cashier"] },
+  { to: "/reconciliation", icon: Calculator, label: "Close Register", roles: ["super_admin", "ceo", "manager", "cashier"] },
   // Receipt-book register. Collectors and branch managers see the series held
   // by them; Finance sees the whole company ledger and is one of the roles
   // allowed to assign a new series (see convex/orSeries.ts).

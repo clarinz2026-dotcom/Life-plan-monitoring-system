@@ -90,7 +90,7 @@ export default function Reconciliation() {
             <Calculator className="h-4.5 w-4.5 text-terminal-green" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Reconciliation</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Close Register</h1>
             <p className="text-xs text-muted-foreground">
               End-of-day cash register balancing
             </p>
