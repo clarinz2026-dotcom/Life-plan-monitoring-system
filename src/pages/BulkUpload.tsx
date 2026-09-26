@@ -85,12 +85,13 @@ export default function BulkUpload() {
   // Head Office can import into a chosen branch; branch staff always import
   // into their own. Without this, a Head Office import produced records with no
   // branch, which every branch could then see.
-  const { queryBranchId, isCeoOrAdmin } = useBranch();
+  const { queryBranchId } = useBranch();
 
   const [file, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<UploadRow[]>([]);
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
-  const [parseWarnings, setParseWarnings] = useState<string[]>([]);
+  // The parsed-warning list is only ever written (cleared/set), never read.
+  const [, setParseWarnings] = useState<string[]>([]);
   const [monthlyRates, setMonthlyRates] = useState<Record<number, string>>({});
   const [isParsing, setIsParsing] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -193,8 +194,6 @@ export default function BulkUpload() {
 
     const validRows = originalIndices.map((origIdx) => {
       const row = parsedData[origIdx];
-      const plan = getMatchedPlan(row);
-      const months = parseInt(row.installment || "", 10) || 0;
       const amount = parseFloat(String(row.amount).replace(/[₱,]/g, ""));
       // Amount is the monthly installment rate. The per-row override only
       // applies when the sheet has no usable Amount.

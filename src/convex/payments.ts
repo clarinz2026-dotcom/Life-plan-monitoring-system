@@ -607,17 +607,39 @@ export const bulkRecord = mutation({
     const deltasByPlan = new Map<Id<"contracts">, number>();
     const touchedBranch = new Set<Id<"branches">>();
 
+    /*
+     * Resolve every contract and client the upload touches up front, in two
+     * batched reads. Reading them inside the loop made a 200-row import issue
+     * 2 reads per row, each a round trip through the transaction.
+     */
+    const contractIds = Array.from(
+      new Set(args.payments.map((p) => p.contractId))
+    );
+    const contractDocs = await Promise.all(
+      contractIds.map((id) => ctx.db.get(id))
+    );
+    const contractById = new Map(
+      contractDocs.filter(Boolean).map((c) => [c!._id, c!] as const)
+    );
+    const clientIds = Array.from(
+      new Set(contractDocs.filter(Boolean).map((c) => c!.clientId))
+    );
+    const clientDocs = await Promise.all(clientIds.map((id) => ctx.db.get(id)));
+    const clientById = new Map(
+      clientDocs.filter(Boolean).map((c) => [c!._id, c!] as const)
+    );
+
     for (let i = 0; i < args.payments.length; i++) {
       const item = args.payments[i];
       try {
-        const contract = await ctx.db.get(item.contractId);
+        const contract = contractById.get(item.contractId);
         if (!contract) {
           errors.push(`Row ${i + 1}: contract not found`);
           continue;
         }
         await assertCanAccessRecord(ctx, contract.branchId);
 
-        const client = await ctx.db.get(contract.clientId);
+        const client = clientById.get(contract.clientId);
         if (!client) {
           errors.push(`Row ${i + 1}: client not found for contract ${contract.contractNumber}`);
           continue;

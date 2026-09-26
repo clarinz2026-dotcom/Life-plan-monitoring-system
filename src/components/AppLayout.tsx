@@ -23,7 +23,6 @@ import {
   Link2,
   Moon,
   UserCog,
-  Crown,
   Package,
   Building2,
 } from "lucide-react";
@@ -75,7 +74,7 @@ const STAFF_ROLES = ["super_admin", "ceo", "manager", "finance_staff", "cashier"
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
   const superAdminData = useQuery(api.users.hasSuperAdmin);
-  const { branchId, isBranchStaff, isCeoOrAdmin, isAllBranches } = useBranch();
+  const { branchId, isBranchStaff, isCeoOrAdmin } = useBranch();
 
   // The signed-in user document, not `hasRole`, is the authority for the role.
   // `hasRole` can still serve the signed-out shape (role: null) for a beat after

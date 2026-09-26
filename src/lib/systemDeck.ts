@@ -20,7 +20,6 @@ const H = 5.625;
 const M = 0.58;
 const CW = W - M * 2; // 8.84" of usable width
 const CONTENT_TOP = 1.46;
-const CONTENT_BOTTOM = H - 0.58;
 
 /** The app's own palette (see `src/index.css`), so the deck matches the product. */
 const C = {

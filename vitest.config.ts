@@ -21,6 +21,13 @@ export default defineConfig({
   test: {
     environment: "edge-runtime",
     include: ["tests/**/*.test.ts"],
+    /*
+     * Each test builds its own `convexTest` instance against the shared
+     * `modules` map, so the database is already isolated per test. Running the
+     * files in a reused worker (rather than one fresh process per file) skips
+     * re-importing the whole Convex module graph four times over.
+     */
+    isolate: false,
     server: {
       deps: {
         inline: ["convex-test"],

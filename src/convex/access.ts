@@ -35,9 +35,6 @@ export async function getViewer(
 export const isAdminRole = (role: string | null) =>
   role === "super_admin" || role === "ceo";
 
-/** Head Office administrators (the "global access" level). */
-export const isHeadOfficeRole = isAdminRole;
-
 /** A branch manager — full control of exactly one branch. */
 export const isManagerRole = (role: string | null) => role === "manager";
 

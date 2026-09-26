@@ -2,7 +2,6 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Bell,
   BellRing,
@@ -13,7 +12,6 @@ import {
   Check,
   CheckCheck,
 } from "lucide-react";
-import { useState } from "react";
 
 const TYPE_ICONS: Record<string, any> = {
   payment_reminder: DollarSign,

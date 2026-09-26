@@ -4,7 +4,6 @@ import { mutation, query } from "./_generated/server";
 import {
   assertCanAccessRecord,
   assertRecordVisible,
-  assertStaff,
   getViewer,
   resolveBranchFilter,
 } from "./access";
@@ -233,7 +232,6 @@ export const update = mutation({
       );
     }
 
-    const contractNumber = args.contractNumber.trim();
     const changes: Record<string, unknown> = {};
     const before: Record<string, unknown> = {};
     const fieldLabels: Record<string, string> = {
@@ -246,7 +244,7 @@ export const update = mutation({
       contractStatus: "Status",
     };
 
-    for (const [key, label] of Object.entries(fieldLabels)) {
+    for (const key of Object.keys(fieldLabels)) {
       const next = args[key as keyof typeof args];
       const prev = contract[key as keyof typeof contract];
       // Dates are stored as ms timestamps; the edit form rounds to the day, so

@@ -164,16 +164,6 @@ export const publicList = query({
  * Malaybalay City, Bukidnon 8700
  * Philippines
  */
-export const MAIN_OFFICE = {
-  name: "Evangelist Funeral Services — Main Office",
-  code: "MBS-001",
-  address: "2nd Floor, Gabrinez Building",
-  city: "Malaybalay City",
-  province: "Bukidnon",
-  contactNumber: "0955 399 1034",
-  managerId: null,
-} as const;
-
 /**
  * List all branches (staff only).
  */

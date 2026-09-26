@@ -23,9 +23,6 @@ import {
 } from "@/components/ui/table";
 import {
   Calculator,
-  AlertTriangle,
-  CheckCircle,
-  DollarSign,
   Plus,
 } from "lucide-react";
 import { useState } from "react";
@@ -59,7 +56,7 @@ export default function Reconciliation() {
   });
 
   const handleSubmit = async () => {
-    const result = await createReconciliation({
+    await createReconciliation({
       totalCash: form.totalCash,
       totalGCash: form.totalGCash,
       totalMaya: form.totalMaya,

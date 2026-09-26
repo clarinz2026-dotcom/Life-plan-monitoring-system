@@ -1,7 +1,6 @@
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   BarChart3,
@@ -24,7 +23,6 @@ import {
   LineChart,
   Line,
 } from "recharts";
-import { useState } from "react";
 import { useBranch } from "@/hooks/use-branch";
 
 function formatPHP(amount: number) {

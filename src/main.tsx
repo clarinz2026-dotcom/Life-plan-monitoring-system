@@ -46,7 +46,7 @@ function loadRoute<T>(name: string, load: () => Promise<T>): Promise<T> {
       routeStorage?.removeItem(RELOAD_FLAG);
       return mod;
     },
-    async (firstError: unknown) => {
+    async () => {
       // A short pause is enough for the dev server to finish re-optimizing deps.
       await new Promise((resolve) => setTimeout(resolve, 350));
       try {

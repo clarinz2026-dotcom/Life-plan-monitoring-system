@@ -24,14 +24,6 @@ const ALL_ROLES = [
   { value: "cashier", label: "Cashier", color: "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800" },
 ] as const;
 
-const ROLE_DESCRIPTIONS: Record<string, string> = {
-  super_admin: "Full system control. Can manage all users and roles. Only one allowed.",
-  ceo: "Full access to all data, reports, and operations.",
-  manager: "Manages operations, routes, and team oversight.",
-  finance_staff: "Handles payments, contracts, reports, and financial operations.",
-  cashier: "Records payments, manages receipts, and does daily reconciliation.",
-};
-
 export default function RoleManagement() {
   const roleData = useQuery(api.users.hasRole);
   const users = useQuery(api.users.list);

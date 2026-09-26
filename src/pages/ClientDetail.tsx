@@ -4,7 +4,6 @@ import { api } from "@/convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import {
   ArrowLeft,
   FileText,
@@ -24,7 +23,7 @@ import {
 import { parsePaymentUpload, parseUploadDate, matchContractNumber } from "@/lib/parsePaymentUpload";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -251,7 +250,9 @@ export default function ClientDetail() {
    * The due-date and aging rules come from `SOADocument` so this screen and the
    * printed statement always agree.
    */
-  const paymentLedger = (() => {
+  // Recomputed only when the payment list itself changes; this walked every
+  // payment on every render (and this page re-renders on each dialog keystroke).
+  const paymentLedger = useMemo(() => {
     const rows = new Map<
       string,
       { installment: number; dueDate: number | null; balance: number }
@@ -284,7 +285,7 @@ export default function ClientDetail() {
       });
     }
     return rows;
-  })();
+  }, [clientPayments]);
 
   // ── Add payment dialog ───────────────────────────────────────────────
   const recordPayment = useMutation(api.payments.record);

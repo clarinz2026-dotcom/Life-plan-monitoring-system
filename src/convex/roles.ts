@@ -31,12 +31,6 @@ export const ROLE_FROM_POSITION: Record<StaffPosition, Role> = {
   cashier: "cashier",
 };
 
-export const POSITION_FROM_ROLE: Partial<Record<Role, StaffPosition>> = {
-  manager: "branch_manager",
-  finance_staff: "collector",
-  cashier: "cashier",
-};
-
 export function roleFromPosition(
   position?: StaffPosition | null
 ): Role | null {

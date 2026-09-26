@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useBranch } from "@/hooks/use-branch";
-import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,7 +70,6 @@ export default function Payments() {
     includeArchived: showArchived,
   });
   const contracts = useQuery(api.contracts.list, { branchId: queryBranchId });
-  const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const recordPayment = useMutation(api.payments.record);
 

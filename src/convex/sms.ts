@@ -38,10 +38,6 @@ export function normalizePHNumber(raw: string): string | null {
   return null;
 }
 
-/** The app's messages must never blow past a carrier's segment limits silently. */
-function smsSegments(body: string): number {
-  return Math.max(1, Math.ceil(body.length / 160));
-}
 
 interface SendResult {
   to: string;

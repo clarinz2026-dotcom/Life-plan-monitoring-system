@@ -118,10 +118,19 @@ export const list = query({
         .collect();
     }
 
-    // Filter by branch through each cashier's assignment
+    // Filter by branch through each cashier's assignment. Every distinct
+    // cashier is read once (in parallel) rather than once per row.
+    const cashierIds = Array.from(new Set(records.map((r) => r.cashierId)));
+    const cashierDocs = await Promise.all(
+      cashierIds.map((id) => ctx.db.get(id))
+    );
+    const cashierById = new Map(
+      cashierDocs.filter(Boolean).map((c) => [c!._id, c!] as const)
+    );
+
     const enriched = [];
     for (const r of records) {
-      const cashier = await ctx.db.get(r.cashierId);
+      const cashier = cashierById.get(r.cashierId);
       if (branchId && cashier?.branchId !== branchId) continue;
       enriched.push({
         ...r,

@@ -225,27 +225,34 @@ export const delinquentContracts = query({
       "lapsed",
     ] as const;
 
-    const results = [];
-    for (const status of statuses) {
-      // Branch view uses the compound [branchId, contractStatus] index so we
-      // never read other branches' contracts.
-      const contracts = branchId
-        ? await ctx.db
-            .query("contracts")
-            .withIndex("by_branch_status", (q) =>
-              q.eq("branchId", branchId).eq("contractStatus", status)
-            )
-            .collect()
-        : await ctx.db
-            .query("contracts")
-            .withIndex("by_status", (q) => q.eq("contractStatus", status))
-            .collect();
+    // Read the four status buckets in parallel, then resolve each distinct
+    // client in one pass — a `db.get` per contract made this N+1 on any
+    // branch with real delinquency.
+    const buckets = await Promise.all(
+      statuses.map((status) =>
+        // Branch view uses the compound [branchId, contractStatus] index so we
+        // never read other branches' contracts.
+        branchId
+          ? ctx.db
+              .query("contracts")
+              .withIndex("by_branch_status", (q) =>
+                q.eq("branchId", branchId).eq("contractStatus", status)
+              )
+              .collect()
+          : ctx.db
+              .query("contracts")
+              .withIndex("by_status", (q) => q.eq("contractStatus", status))
+              .collect()
+      )
+    );
 
-      for (const c of contracts) {
-        const client = await ctx.db.get(c.clientId);
-        results.push({ ...c, client });
-      }
-    }
+    const contracts = buckets.flat();
+    const clientIds = Array.from(new Set(contracts.map((c) => c.clientId)));
+    const clientDocs = await Promise.all(clientIds.map((id) => ctx.db.get(id)));
+    const clientById = new Map(
+      clientDocs.filter(Boolean).map((c) => [c!._id, c!] as const)
+    );
+    const results = contracts.map((c) => ({ ...c, client: clientById.get(c.clientId) }));
 
     const severity: Record<string, number> = {
       lapsed: 4,

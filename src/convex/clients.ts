@@ -6,7 +6,6 @@ import {
   assertCanAccessRecord,
   assertRecordVisible,
   assertStaff,
-  getViewer,
   isAdminRole,
   isManagerRole,
   resolveBranchFilter,

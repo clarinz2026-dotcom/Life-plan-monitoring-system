@@ -114,7 +114,7 @@ function getPageItems(
 }
 
 export default function Clients() {
-  const { queryBranchId, isBranchStaff, isCeoOrAdmin, isManager } = useBranch();
+  const { queryBranchId, isCeoOrAdmin, isManager } = useBranch();
   // Archived planholders are hidden unless explicitly asked for.
   const [showArchived, setShowArchived] = useState(false);
   const clientsWithStatus = useQuery(api.clients.listWithStatus, {
