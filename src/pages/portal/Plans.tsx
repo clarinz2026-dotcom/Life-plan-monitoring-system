@@ -371,7 +371,8 @@ export default function Plans() {
                           <Field
                             label="Monthly Installment"
                             value={fmtPesoExact(contract.monthlyAmortization)}
-                          />                          <Field label="Due Date" value={nextDueLabel} />
+                          />
+                          <Field label="Due Date" value={nextDueLabel} />
                           <Field
                             label="EFS OPC Control No."
                             value={contract.contractNumber}
