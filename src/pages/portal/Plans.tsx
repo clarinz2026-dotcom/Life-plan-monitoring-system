@@ -295,6 +295,28 @@ export default function Plans() {
                   (s) => s.status === "overdue" || (s.status === "pending" && s.dueDate < now)
                 );
 
+                /*
+                 * The next installment still owed. It is counted from the
+                 * payments on record, so settling several installments at once
+                 * pushes this date further out — a plan effective Aug 22 with
+                 * four installments paid has its fifth due Jan 22. The stored
+                 * schedule rows are only a fallback: `payment_schedules` holds
+                 * no rows, so in practice this is always derived.
+                 */
+                const isFullyPaid = plan > 0 && paid >= plan;
+                const nextDueTs = isFullyPaid
+                  ? null
+                  : installmentDueDate(
+                      contract.startDate,
+                      cd.payments.length + 1
+                    );
+                const nextDueLabel =
+                  nextDueTs !== null
+                    ? fmtDate(nextDueTs)
+                    : nextDueSchedule
+                      ? fmtDate(nextDueSchedule.dueDate)
+                      : "—";
+
                 return (
                   <article
                     key={contract._id}
@@ -328,11 +350,7 @@ export default function Plans() {
                           <Field
                             label="Monthly Installment"
                             value={fmtPesoExact(contract.monthlyAmortization)}
-                          />
-                          <Field
-                            label="Sales Agent"
-                            value={cd.salesAgentName || "—"}
-                          />
+                          />                          <Field label="Due Date" value={nextDueLabel} />
                           <Field
                             label="EFS OPC Control No."
                             value={contract.contractNumber}
@@ -501,9 +519,7 @@ export default function Plans() {
                           <span className="text-stone">
                             Next Due Date:{" "}
                             <strong className="font-bold text-ink">
-                              {nextDueSchedule
-                                ? fmtDateNumeric(nextDueSchedule.dueDate)
-                                : "—"}
+                              {nextDueLabel}
                             </strong>
                           </span>
                           {hasPastDue && (

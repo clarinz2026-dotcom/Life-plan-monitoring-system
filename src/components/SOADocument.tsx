@@ -117,14 +117,18 @@ export function installmentDueDate(
 }
 
 /**
- * Aging shown in the Payment History table: the exact number of days the
- * payment sits past its due date.
+ * Aging shown in the Payment History table:
  *
- * Per the office's rule, a payment that is NOT late (paid on or before the due
- * date) is reported as "30" rather than zero. Change the returned constant
- * below if that figure should ever differ.
+ *  - paid after the due date   → the exact number of days late
+ *  - paid ON the due date      → "30" (the office's figure for a current plan)
+ *  - paid BEFORE the due date  → "Advanced"
+ *
+ * A planholder paying ahead of schedule is common: several installments are
+ * settled in one sitting, so those rows read "Advanced" instead of late.
+ * Change the constants below if those figures should ever differ.
  */
 const CURRENT_AGING_LABEL = "30";
+const ADVANCE_AGING_LABEL = "Advanced";
 
 export function agingCell(
   dueDate: number | null,
@@ -134,8 +138,9 @@ export function agingCell(
   // rather than inventing a figure.
   if (dueDate === null) return "—";
   const daysLate = Math.floor((paymentDate - dueDate) / MS_PER_DAY);
-  if (daysLate <= 0) return CURRENT_AGING_LABEL;
-  return String(daysLate);
+  if (daysLate > 0) return String(daysLate);
+  if (daysLate === 0) return CURRENT_AGING_LABEL;
+  return ADVANCE_AGING_LABEL;
 }
 
 /** Escape user-entered text before it lands in the generated HTML. */
