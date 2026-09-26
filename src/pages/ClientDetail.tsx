@@ -194,6 +194,8 @@ export default function ClientDetail() {
     lastName: string;
     gender: "male" | "female" | "other";
     dateOfBirth: string;
+    contactNumber: string;
+    email: string;
     address: string;
     beneficiaries: BeneficiaryDraft[];
   }>({
@@ -202,6 +204,8 @@ export default function ClientDetail() {
     lastName: "",
     gender: "male",
     dateOfBirth: "",
+    contactNumber: "",
+    email: "",
     address: "",
     beneficiaries: [],
   });
@@ -653,6 +657,8 @@ export default function ClientDetail() {
       lastName: client.lastName,
       gender: client.gender,
       dateOfBirth: tsToDateInput(client.dateOfBirth),
+      contactNumber: client.contactNumber || "",
+      email: client.email || "",
       address: client.address || "",
       beneficiaries: beneficiaryDrafts(client),
     });
@@ -705,6 +711,8 @@ export default function ClientDetail() {
         dateOfBirth: editForm.dateOfBirth
           ? new Date(editForm.dateOfBirth).getTime()
           : client.dateOfBirth,
+        contactNumber: editForm.contactNumber.trim() || undefined,
+        email: editForm.email.trim() || undefined,
         address: editForm.address.trim(),
         beneficiaries,
       });
@@ -884,6 +892,37 @@ export default function ClientDetail() {
                 </Select>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-xs">Contact Number</Label>
+                <Input
+                  type="tel"
+                  value={editForm.contactNumber}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, contactNumber: e.target.value })
+                  }
+                  placeholder="0917 000 0000"
+                  className="text-sm"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Email Address</Label>
+                <Input
+                  type="email"
+                  value={editForm.email}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, email: e.target.value })
+                  }
+                  placeholder="family@example.com"
+                  className="text-sm"
+                />
+              </div>
+            </div>
+            <p className="-mt-2 text-[11.5px] text-muted-foreground">
+              The planholder signs in to the client portal with this email, and
+              it is printed on their Statement of Account.
+            </p>
 
             <div>
               <Label className="text-xs">Address</Label>
