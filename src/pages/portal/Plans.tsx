@@ -422,9 +422,9 @@ export default function Plans() {
                               { label: "Amount", width: "12%", align: "right" },
                               { label: "Aging", width: "9%" },
                               { label: <>Installment<br />No.</>, width: "9%" },
+                              { label: "O.R. No.", width: "10%" },
                               { label: "Balance", width: "12%", align: "right" },
                               { label: "Remarks", width: "17%", align: "left" },
-                              { label: "O.R. No.", width: "10%" },
                             ]}
                           >
                             {sortedPayments.map((p, i) => {
@@ -462,6 +462,9 @@ export default function Plans() {
                                   <td className="border border-line px-2.5 py-2 text-center">
                                     {installment}
                                   </td>
+                                  <td className="border border-line px-2.5 py-2 text-center">
+                                    {p.orNumber || ""}
+                                  </td>
                                   <td className="border border-line px-2.5 py-2 text-right">
                                     {fmtPesoExact(runningBalance)}
                                   </td>
@@ -469,9 +472,6 @@ export default function Plans() {
                                     {p.remarks ||
                                       CHANNEL_LABEL[p.paymentChannel] ||
                                       p.paymentChannel}
-                                  </td>
-                                  <td className="border border-line px-2.5 py-2 text-center">
-                                    {p.orNumber || ""}
                                   </td>
                                 </tr>
                               );

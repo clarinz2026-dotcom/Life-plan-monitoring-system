@@ -1365,9 +1365,9 @@ export default function ClientDetail() {
                     { label: "Amount", align: "text-right" },
                     { label: "Aging", align: "text-center" },
                     { label: "Installment No.", align: "text-center" },
+                    { label: "OR #", align: "text-center" },
                     { label: "Balance", align: "text-right" },
                     { label: "Remarks", align: "text-left" },
-                    { label: "OR #", align: "text-left" },
                   ].map((col) => (
                     <th
                       key={col.label}
@@ -1412,15 +1412,15 @@ export default function ClientDetail() {
                       <td className="whitespace-nowrap py-2.5 px-4 text-center text-xs">
                         {ledger?.installment ?? "—"}
                       </td>
+                      <td className="whitespace-nowrap py-2.5 px-4 text-center text-xs text-muted-foreground">
+                        {p.orNumber || "—"}
+                      </td>
                       <td className="whitespace-nowrap py-2.5 px-4 text-right text-xs">
                         {ledger ? formatPHP(ledger.balance) : "—"}
                       </td>
                       <td className="py-2.5 px-4 text-xs text-muted-foreground">
                         {p.remarks ||
                           p.paymentChannel.toUpperCase().replace("_", " ")}
-                      </td>
-                      <td className="whitespace-nowrap py-2.5 px-4 text-xs text-muted-foreground">
-                        {p.orNumber || "—"}
                       </td>
                     </tr>
                   );

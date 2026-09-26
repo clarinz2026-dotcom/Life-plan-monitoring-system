@@ -205,9 +205,9 @@ const SOA_STYLES = `
   table.grid th.wc2 { width: 12%; }
   table.grid th.wc2b { width: 9%; }
   table.grid th.wc3 { width: 9%; }
+  table.grid th.wc3b { width: 10%; }
   table.grid th.wc4 { width: 12%; }
   table.grid th.wc5 { width: 17%; }
-  table.grid th.wc6 { width: 10%; }
   table.grid th.wb1 { width: 6%; }
   table.grid th.wb2 { width: 54%; }
   table.grid th.wb3 { width: 15%; }
@@ -437,9 +437,9 @@ export function generateSOAHTML(data: SOAData): string {
           <td class="r">${esc(peso(p.amount))}</td>
           <td class="num">${esc(agingLabel)}</td>
           <td class="num">${installmentCounter}</td>
+          <td class="c">${p.orNumber ? esc(p.orNumber) : ""}</td>
           <td class="r">${esc(peso(runningBalance))}</td>
           <td>${esc(remark)}</td>
-          <td class="c">${p.orNumber ? esc(p.orNumber) : ""}</td>
         </tr>`;
         })
         .join("");
@@ -477,9 +477,9 @@ export function generateSOAHTML(data: SOAData): string {
               <th class="wc2">Amount</th>
               <th class="wc2b">Aging</th>
               <th class="wc3">Installment<br />No.</th>
+              <th class="wc3b">O.R. No.</th>
               <th class="wc4">Balance</th>
               <th class="wc5">Remarks</th>
-              <th class="wc6">O.R. No.</th>
             </tr>
           </thead>
           <tbody>
