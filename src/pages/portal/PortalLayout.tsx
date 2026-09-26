@@ -40,7 +40,7 @@ export default function PortalLayout() {
           <a href="/" className="flex items-center gap-3" aria-label="Back to Evangelist website">
             <BrandLogo className="h-9 w-9 rounded-[9px] shadow-sm ring-1 ring-black/10" />
             <span className="hidden leading-tight sm:block">
-              <span className="font-brand block text-[16px] leading-tight text-evergreen">
+              <span className="font-brand block text-[18px] leading-tight text-evergreen">
                 Evangelist
               </span>
               <span className="block text-[10px] font-medium tracking-[0.16em] text-stone uppercase">

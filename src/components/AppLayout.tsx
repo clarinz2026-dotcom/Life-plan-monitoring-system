@@ -211,7 +211,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <BrandLogo className="h-9 w-9 shrink-0 rounded-[9px] ring-1 ring-white/15" />
             {!collapsed && (
               <div className="flex min-w-0 flex-col leading-tight">
-                <span className="font-brand truncate text-[15px] leading-none text-white">
+                <span className="font-brand truncate text-[17px] leading-none text-white">
                   Evangelist
                 </span>
                 <span className="truncate text-[10px] font-medium uppercase tracking-[0.16em] text-white/45">
@@ -302,7 +302,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-3">
           <BrandLogo className="h-8 w-8 rounded-[9px] ring-1 ring-white/15" />
           <div>
-            <span className="font-brand text-[15px] leading-none text-white">Evangelist</span>
+            <span className="font-brand text-[17px] leading-none text-white">Evangelist</span>
             <span className="ml-2 inline-flex max-w-[150px] items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/70 ring-1 ring-white/10">
               <Building2 className="h-2.5 w-2.5 shrink-0" />
               <span className="truncate">

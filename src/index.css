@@ -1,25 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-
-/*
- * Company wordmark face.
- *
- * Brayles is by Blankids Studio and its licence is PERSONAL USE ONLY — a
- * commercial licence is required to set the company name in it. Drop the
- * licensed web font at `public/fonts/Brayles.woff2` (a `.ttf` is picked up
- * too) and it loads on every page that carries the wordmark. Until that file
- * is present the `font-brand` stack falls back to the app's normal face, so
- * nothing renders broken in the meantime.
- */
-@font-face {
-  font-family: "Brayles";
-  src:
-    url("/fonts/Brayles.woff2") format("woff2"),
-    url("/fonts/Brayles.ttf") format("truetype");
-  font-weight: 400 700;
-  font-style: normal;
-  font-display: swap;
-}
 @custom-variant dark (&:is(.dark *));
 
 /* ─── Tailwind theme tokens ──────────────────────────────────────────────── */
@@ -416,13 +396,14 @@
   }
 
   /*
-   * The company name only. Unlayered, so it outranks the Arial rules above and
-   * the `font-display` utility on the landing page; the fallback keeps each
-   * surface's existing face when the licensed wordmark file is absent.
+   * The company name only, set in Pacifico (Google Fonts, SIL Open Font
+   * License — free for commercial use). Unlayered, so it outranks the Arial
+   * shell rules above and the `font-display` utility on the landing page; the
+   * fallback keeps the wordmark readable if the webfont is blocked.
    */
   .font-brand {
     font-family:
-      "Brayles", Arial, "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
+      "Pacifico", Arial, "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
   }
 
 /*
