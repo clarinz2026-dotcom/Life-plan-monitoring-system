@@ -104,10 +104,9 @@ function BrandBlock({ light = false }: { light?: boolean }) {
       <BrandLogo className="h-10 w-10 rounded-[10px] shadow-sm ring-1 ring-black/10" />
       <div className="leading-none">
         <p
-          className={`font-bold uppercase tracking-[0.14em] ${
+          className={`font-brand text-[19px] leading-none ${
             light ? "text-white" : "text-evergreen"
           }`}
-          style={{ fontSize: "15px" }}
         >
           Evangelist
         </p>
