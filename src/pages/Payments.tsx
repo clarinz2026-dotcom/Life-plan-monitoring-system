@@ -8,6 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -216,6 +223,12 @@ export default function Payments() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // The contract picker is a Radix Select (a button, not a form control), so
+    // the browser's `required` validation no longer applies to it.
+    if (!form.contractId) {
+      toast.error("Choose the contract this payment is for.");
+      return;
+    }
     try {
       const result = await recordPayment({
         contractId: form.contractId as any,
@@ -379,24 +392,23 @@ export default function Payments() {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-5 mt-3">
               <div>
-                <Label className="text-[14px]">Contract *</Label>
-                <select
+                <Label className="text-[14px]">Contract *</Label>                <Select
                   value={form.contractId}
-                  onChange={(e) =>
-                    setForm({ ...form, contractId: e.target.value })
-                  }
-                  className="text-base bg-background border border-border rounded-md h-11 px-3 w-full"
-                  required
+                  onValueChange={(value) => setForm({ ...form, contractId: value })}
                 >
-                  <option value="">Select contract...</option>
-                  {activeContracts.map((c) => (
-                    <option key={c._id} value={c._id}>
-                      {c.contractNumber} — {c.client?.lastName},{" "}
-                      {c.client?.firstName} — {c.planType} (
-                      {formatPHP(c.planAmount)})
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger className="w-full! h-11! text-base">
+                    <SelectValue placeholder="Select contract..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeContracts.map((c) => (
+                      <SelectItem key={c._id} value={c._id}>
+                        {c.contractNumber} — {c.client?.lastName},{" "}
+                        {c.client?.firstName} — {c.planType} (
+                        {formatPHP(c.planAmount)})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -414,22 +426,26 @@ export default function Payments() {
                 </div>
                 <div>
                   <Label className="text-[14px]">Channel *</Label>
-                  <select
+                  <Select
                     value={form.paymentChannel}
-                    onChange={(e) =>
+                    onValueChange={(value) =>
                       setForm({
                         ...form,
-                        paymentChannel: e.target.value as typeof form.paymentChannel,
+                        paymentChannel: value as typeof form.paymentChannel,
                       })
                     }
-                    className="text-base bg-background border border-border rounded-md h-11 px-3 w-full"
                   >
-                    <option value="cash">Cash</option>
-                    <option value="gcash">GCash</option>
-                    <option value="maya">Maya</option>
-                    <option value="bank_transfer">Bank Transfer</option>
-                    <option value="check">Check</option>
-                  </select>
+                    <SelectTrigger className="w-full! h-11! text-base">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cash">Cash</SelectItem>
+                      <SelectItem value="gcash">GCash</SelectItem>
+                      <SelectItem value="maya">Maya</SelectItem>
+                      <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="check">Check</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 

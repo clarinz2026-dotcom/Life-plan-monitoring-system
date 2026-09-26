@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { ScrollableTable } from "@/components/ScrollableTable";
 import {
   Table,
@@ -83,6 +90,14 @@ const POSITION_LABELS: Record<string, string> = {
   collector: "Collector",
   cashier: "Cashier",
 };
+
+/**
+ * Radix Select items cannot carry an empty value, so the two "no filter"
+ * choices in this page are real items under a sentinel that maps back to an
+ * empty filter before it reaches Convex.
+ */
+const ALL_BRANCHES = "__all__";
+const HOLDER_BRANCH = "__holder__";
 
 const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",
@@ -376,20 +391,26 @@ export default function ORSeries() {
         </div>
 
         {seesAll && (
-          <select
-            value={branchFilter}
-            onChange={(e) =>
-              setBranchFilter(e.target.value as Id<"branches"> | "")
+          <Select
+            value={branchFilter || ALL_BRANCHES}
+            onValueChange={(value) =>
+              setBranchFilter(
+                value === ALL_BRANCHES ? "" : (value as Id<"branches">)
+              )
             }
-            className="text-[15px] bg-background border border-border rounded-md h-11 px-3"
           >
-            <option value="">All branches</option>
-            {branches?.map((b) => (
-              <option key={b._id} value={b._id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger className="h-11! w-[220px] text-[15px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL_BRANCHES}>All branches</SelectItem>
+              {branches?.map((b) => (
+                <SelectItem key={b._id} value={b._id}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
 
         <div className="flex items-center gap-1 rounded-lg border border-border p-1">
@@ -670,46 +691,60 @@ export default function ORSeries() {
 
             <div>
               <Label className="text-[14px]">Assigned to *</Label>
-              <select
+              <Select
                 value={form.assignedTo}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setForm({
                     ...form,
-                    assignedTo: e.target.value as Id<"users">,
+                    assignedTo: value as Id<"users">,
                   })
                 }
-                className="text-[15px] bg-background border border-border rounded-md h-11 px-3 w-full"
-                required
               >
-                <option value="">Select collector or branch manager…</option>
-                {staff?.map((u) => (
-                  <option key={u._id} value={u._id}>
-                    {u.name} —{" "}
-                    {POSITION_LABELS[u.position ?? ""] ??
-                      ROLE_LABELS[u.role ?? ""] ??
-                      "Staff"}
-                    {u.branchName !== "—" ? ` @ ${u.branchName}` : ""}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full! h-11! text-[15px]">
+                  <SelectValue placeholder="Select collector or branch manager…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {staff?.map((u) => (
+                    <SelectItem key={u._id} value={u._id}>
+                      {u.name} —{" "}
+                      {POSITION_LABELS[u.position ?? ""] ??
+                        ROLE_LABELS[u.role ?? ""] ??
+                        "Staff"}
+                      {u.branchName !== "—" ? ` @ ${u.branchName}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
               <Label className="text-[14px]">Branch</Label>
-              <select
-                value={form.branchId}
-                onChange={(e) =>
-                  setForm({ ...form, branchId: e.target.value as Id<"branches"> })
+              <Select
+                value={form.branchId || HOLDER_BRANCH}
+                onValueChange={(value) =>
+                  setForm({
+                    ...form,
+                    branchId:
+                      value === HOLDER_BRANCH
+                        ? ""
+                        : (value as Id<"branches">),
+                  })
                 }
-                className="text-[15px] bg-background border border-border rounded-md h-11 px-3 w-full"
               >
-                <option value="">Use the holder's branch</option>
-                {branches?.map((b) => (
-                  <option key={b._id} value={b._id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full! h-11! text-[15px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={HOLDER_BRANCH}>
+                    Use the holder&apos;s branch
+                  </SelectItem>
+                  {branches?.map((b) => (
+                    <SelectItem key={b._id} value={b._id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div>

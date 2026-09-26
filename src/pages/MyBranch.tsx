@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -159,6 +166,16 @@ export default function MyBranch() {
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!branch) return;
+    // Both pickers are Radix Selects (buttons, not form controls), so the
+    // browser's `required` validation no longer guards them.
+    if (!teamForm.userId) {
+      toast.error("Choose the staff account to assign.");
+      return;
+    }
+    if (!teamForm.position) {
+      toast.error("Choose a position for this staff member.");
+      return;
+    }
     try {
       await assignBranch({
         userId: teamForm.userId as any,
@@ -715,45 +732,49 @@ export default function MyBranch() {
             </p>
             <div>
               <Label className="text-[14px]">Staff account *</Label>
-              <select
+              <Select
                 value={teamForm.userId}
-                onChange={(e) =>
-                  setTeamForm({ ...teamForm, userId: e.target.value })
+                onValueChange={(value) =>
+                  setTeamForm({ ...teamForm, userId: value })
                 }
-                className="h-11 w-full rounded-md border border-border bg-background px-3 text-base"
-                required
               >
-                <option value="">Select an account…</option>
-                {team?.map((m) => (
-                  <option key={m._id} value={m._id}>
-                    {m.name || m.email} — currently{" "}
-                    {m.positionLabel || m.role || "unassigned"}
-                  </option>
-                ))}
-                {unassigned?.map((u) => (
-                  <option key={u._id} value={u._id}>
-                    {u.name || u.email} — not in a branch
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full! h-11! text-base">
+                  <SelectValue placeholder="Select an account…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {team?.map((m) => (
+                    <SelectItem key={m._id} value={m._id}>
+                      {m.name || m.email} — currently{" "}
+                      {m.positionLabel || m.role || "unassigned"}
+                    </SelectItem>
+                  ))}
+                  {unassigned?.map((u) => (
+                    <SelectItem key={u._id} value={u._id}>
+                      {u.name || u.email} — not in a branch
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-[14px]">Position *</Label>
-              <select
+              <Select
                 value={teamForm.position}
-                onChange={(e) =>
-                  setTeamForm({ ...teamForm, position: e.target.value })
+                onValueChange={(value) =>
+                  setTeamForm({ ...teamForm, position: value })
                 }
-                className="h-11 w-full rounded-md border border-border bg-background px-3 text-base"
-                required
               >
-                <option value="">Select position…</option>
-                {POSITION_OPTIONS.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full! h-11! text-base">
+                  <SelectValue placeholder="Select position…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {POSITION_OPTIONS.map((p) => (
+                    <SelectItem key={p.value} value={p.value}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <Button
               type="submit"

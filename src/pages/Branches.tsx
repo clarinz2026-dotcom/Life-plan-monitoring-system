@@ -7,6 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -161,6 +168,20 @@ export default function Branches() {
 
   const handleAssign = async (e: React.FormEvent) => {
     e.preventDefault();
+    // The pickers are Radix Selects (buttons, not form controls), so the
+    // browser's `required` validation no longer guards them.
+    if (!assignForm.userId) {
+      toast.error("Choose the staff member to assign.");
+      return;
+    }
+    if (!assignForm.branchId) {
+      toast.error("Choose the branch to assign them to.");
+      return;
+    }
+    if (!assignForm.position) {
+      toast.error("Choose a position for this staff member.");
+      return;
+    }
     try {
       await assignBranch({
         userId: assignForm.userId as any,
@@ -428,18 +449,21 @@ export default function Branches() {
               <div className="space-y-4 py-2">
                 <div>
                   <Label className="text-[13px]">Target Branch *</Label>
-                  <select
+                  <Select
                     value={backfillBranchId}
-                    onChange={(e) => setBackfillBranchId(e.target.value)}
-                    className="w-full h-11 rounded-md border border-border bg-background px-3 text-[14px] mt-1"
+                    onValueChange={(value) => setBackfillBranchId(value)}
                   >
-                    <option value="">Select a branch…</option>
-                    {branches?.map((b) => (
-                      <option key={b._id} value={b._id}>
-                        {b.name}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="mt-1 w-full! h-11! text-[14px]">
+                      <SelectValue placeholder="Select a branch…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {branches?.map((b) => (
+                        <SelectItem key={b._id} value={b._id}>
+                          {b.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <p className="text-[13px] text-muted-foreground leading-relaxed">
                   Assigns every client, contract, payment, and receipt that has
@@ -936,55 +960,71 @@ export default function Branches() {
           <form onSubmit={handleAssign} className="space-y-4 mt-3">
             <div>
               <Label className="text-[14px]">Staff Member *</Label>
-              <select
+              <Select
                 value={assignForm.userId}
-                onChange={(e) =>
-                  setAssignForm({ ...assignForm, userId: e.target.value })
+                onValueChange={(value) =>
+                  setAssignForm({ ...assignForm, userId: value })
                 }
-                className="text-base bg-background border border-border rounded-md h-11 px-3 w-full"
-                required
               >
-                <option value="">Select staff member...</option>
-                {users?.map((u) => (
-                  <option key={u._id} value={u._id}>
-                    {u.name || u.email} — {u.role}{u.position ? ` / ${u.position === "branch_manager" ? "Branch Manager" : u.position === "collector" ? "Collector" : "Cashier"}` : ""}{u.branchName ? ` @ ${u.branchName}` : " (unassigned)"}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full! h-11! text-base">
+                  <SelectValue placeholder="Select staff member..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {users?.map((u) => (
+                    <SelectItem key={u._id} value={u._id}>
+                      {u.name || u.email} — {u.role}
+                      {u.position
+                        ? ` / ${
+                            u.position === "branch_manager"
+                              ? "Branch Manager"
+                              : u.position === "collector"
+                                ? "Collector"
+                                : "Cashier"
+                          }`
+                        : ""}
+                      {u.branchName ? ` @ ${u.branchName}` : " (unassigned)"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-[14px]">Branch *</Label>
-              <select
+              <Select
                 value={assignForm.branchId}
-                onChange={(e) =>
-                  setAssignForm({ ...assignForm, branchId: e.target.value })
+                onValueChange={(value) =>
+                  setAssignForm({ ...assignForm, branchId: value })
                 }
-                className="text-base bg-background border border-border rounded-md h-11 px-3 w-full"
-                required
               >
-                <option value="">Select branch...</option>
-                {branches?.map((b) => (
-                  <option key={b._id} value={b._id}>
-                    {b.name} ({b.code})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full! h-11! text-base">
+                  <SelectValue placeholder="Select branch..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches?.map((b) => (
+                    <SelectItem key={b._id} value={b._id}>
+                      {b.name} ({b.code})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label className="text-[14px]">Position *</Label>
-              <select
+              <Select
                 value={assignForm.position}
-                onChange={(e) =>
-                  setAssignForm({ ...assignForm, position: e.target.value })
+                onValueChange={(value) =>
+                  setAssignForm({ ...assignForm, position: value })
                 }
-                className="text-base bg-background border border-border rounded-md h-11 px-3 w-full"
-                required
               >
-                <option value="">Select position...</option>
-                <option value="branch_manager">Branch Manager</option>
-                <option value="collector">Collector</option>
-                <option value="cashier">Cashier</option>
-              </select>
+                <SelectTrigger className="w-full! h-11! text-base">
+                  <SelectValue placeholder="Select position..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="branch_manager">Branch Manager</SelectItem>
+                  <SelectItem value="collector">Collector</SelectItem>
+                  <SelectItem value="cashier">Cashier</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <Button
               type="submit"

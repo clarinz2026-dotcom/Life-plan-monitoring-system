@@ -26,6 +26,13 @@ import {
 } from "@/components/ui/table";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Search,
   Plus,
   Users,
@@ -431,17 +438,21 @@ export default function Clients() {
                   </div>
                   <div>
                     <Label className="text-[14px]">Gender *</Label>
-                    <select
+                    <Select
                       value={form.gender}
-                      onChange={(e) =>
-                        setForm({ ...form, gender: e.target.value as typeof form.gender })
+                      onValueChange={(value) =>
+                        setForm({ ...form, gender: value as typeof form.gender })
                       }
-                      className="text-base bg-background border border-border rounded-md h-11 px-3 w-full"
                     >
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="other">Other</option>
-                    </select>
+                      <SelectTrigger className="w-full! h-11! text-base">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
               </div>

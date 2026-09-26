@@ -36,6 +36,14 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { useBranch } from "@/hooks/use-branch";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -312,6 +320,12 @@ export default function ClientDetail() {
 
   const handlePaymentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // The contract picker is a Radix Select (a button, not a form control), so
+    // the browser's `required` validation no longer applies to it.
+    if (!paymentForm.contractId) {
+      toast.error("Choose the contract this payment is for.");
+      return;
+    }
     try {
       const result = await recordPayment({
         contractId: paymentForm.contractId as any,
@@ -849,20 +863,24 @@ export default function ClientDetail() {
               </div>
               <div>
                 <Label className="text-xs">Gender *</Label>
-                <select
+                <Select
                   value={editForm.gender}
-                  onChange={(e) =>
+                  onValueChange={(value) =>
                     setEditForm({
                       ...editForm,
-                      gender: e.target.value as typeof editForm.gender,
+                      gender: value as typeof editForm.gender,
                     })
                   }
-                  className="text-sm bg-background border border-border rounded-md h-9 px-2 w-full"
                 >
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </select>
+                  <SelectTrigger className="w-full! h-9! text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -1292,16 +1310,19 @@ export default function ClientDetail() {
               </div>
               <div>
                 <Label className="text-xs">Status</Label>
-                <select
+                <Select
                   value={editContractForm.contractStatus}
-                  onChange={(e) =>
+                  onValueChange={(value) =>
                     setEditContractForm({
                       ...editContractForm,
-                      contractStatus: e.target.value,
+                      contractStatus: value,
                     })
                   }
-                  className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
                 >
+                  <SelectTrigger className="w-full! h-10! text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
                   {[
                     ["current", "Updated"],
                     ["delinquent_30", "30 Days Late"],
@@ -1310,11 +1331,12 @@ export default function ClientDetail() {
                     ["lapsed", "Lapsed"],
                     ["fully_paid", "Fully Paid"],
                   ].map(([value, label]) => (
-                    <option key={value} value={value}>
+                    <SelectItem key={value} value={value}>
                       {label}
-                    </option>
+                    </SelectItem>
                   ))}
-                </select>
+                  </SelectContent>
+                </Select>
               </div>
               <Button type="submit" className="w-full" disabled={savingContract}>
                 {savingContract ? "Saving…" : "Save changes"}
@@ -1445,19 +1467,24 @@ export default function ClientDetail() {
               <form onSubmit={handlePaymentSubmit} className="space-y-4 mt-3">
                 <div>
                   <Label className="text-[14px]">Contract *</Label>
-                  <select
+                  <Select
                     value={paymentForm.contractId}
-                    onChange={(e) => setPaymentForm({ ...paymentForm, contractId: e.target.value })}
-                    className="h-11 w-full rounded-md border border-border bg-background px-3 text-base"
-                    required
+                    onValueChange={(value) =>
+                      setPaymentForm({ ...paymentForm, contractId: value })
+                    }
                   >
-                    <option value="">Select contract…</option>
-                    {activeContracts.map((c) => (
-                      <option key={c._id} value={c._id}>
-                        {c.contractNumber} — {c.planType} ({formatPHP(c.planAmount)})
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full! h-11! text-base">
+                      <SelectValue placeholder="Select contract…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activeContracts.map((c) => (
+                        <SelectItem key={c._id} value={c._id}>
+                          {c.contractNumber} — {c.planType} (
+                          {formatPHP(c.planAmount)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -1466,17 +1493,26 @@ export default function ClientDetail() {
                   </div>
                   <div>
                     <Label className="text-[14px]">Channel *</Label>
-                    <select
+                    <Select
                       value={paymentForm.paymentChannel}
-                      onChange={(e) => setPaymentForm({ ...paymentForm, paymentChannel: e.target.value as typeof paymentForm.paymentChannel })}
-                      className="h-11 w-full rounded-md border border-border bg-background px-3 text-base"
+                      onValueChange={(value) =>
+                        setPaymentForm({
+                          ...paymentForm,
+                          paymentChannel: value as typeof paymentForm.paymentChannel,
+                        })
+                      }
                     >
-                      <option value="cash">Cash</option>
-                      <option value="gcash">GCash</option>
-                      <option value="maya">Maya</option>
-                      <option value="bank_transfer">Bank Transfer</option>
-                      <option value="check">Check</option>
-                    </select>
+                      <SelectTrigger className="w-full! h-11! text-base">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">Cash</SelectItem>
+                        <SelectItem value="gcash">GCash</SelectItem>
+                        <SelectItem value="maya">Maya</SelectItem>
+                        <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                        <SelectItem value="check">Check</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div>
@@ -1718,7 +1754,10 @@ export default function ClientDetail() {
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
-                if (!transferForm.toBranchId) return;
+                if (!transferForm.toBranchId) {
+                  toast.error("Choose the branch receiving these records.");
+                  return;
+                }
                 setTransferring(true);
                 try {
                   const result = await transferClient({
@@ -1753,26 +1792,28 @@ export default function ClientDetail() {
               </p>
               <div>
                 <Label className="text-[14px]">Receiving branch *</Label>
-                <select
+                <Select
                   value={transferForm.toBranchId}
-                  onChange={(e) =>
+                  onValueChange={(value) =>
                     setTransferForm({
                       ...transferForm,
-                      toBranchId: e.target.value,
+                      toBranchId: value,
                     })
                   }
-                  className="h-11 w-full rounded-md border border-border bg-background px-3 text-base"
-                  required
                 >
-                  <option value="">Select branch…</option>
-                  {allBranches
-                    ?.filter((b) => b.isActive && b._id !== client.branchId)
-                    .map((b) => (
-                      <option key={b._id} value={b._id}>
-                        {b.name} ({b.code})
-                      </option>
-                    ))}
-                </select>
+                  <SelectTrigger className="w-full! h-11! text-base">
+                    <SelectValue placeholder="Select branch…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allBranches
+                      ?.filter((b) => b.isActive && b._id !== client.branchId)
+                      .map((b) => (
+                        <SelectItem key={b._id} value={b._id}>
+                          {b.name} ({b.code})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label className="text-[14px]">Reason (optional)</Label>
