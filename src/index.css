@@ -293,23 +293,32 @@
   --sidebar-accent: #1b4332;
   --sidebar-border: #23472f;
 }  /*
-   * The client portal is set in Arial throughout — headings, body, tables and
-   * buttons — as requested by the office. `.portal-shell` wraps every portal
-   * route, so this one rule covers the whole section; `:where()` keeps the
-   * specificity at zero so utilities (sizes, weights) still win.
+   * The whole app — client portal and staff area — is set in Arial, as
+   * requested by the office. `.portal-shell` and `.staff-shell` wrap every
+   * route in their sections, so setting the family on those two roots covers
+   * everything by inheritance; the descendant rules below state it again for
+   * the elements that commonly carry their own utility. `:where()` keeps the
+   * specificity at zero, so utilities (sizes, weights) still win.
    */
   :where(.portal-shell),
-  :where(.portal-shell) :where(h1, h2, h3, p, span, a, button, input, select, textarea, td, th, strong, label) {
+  :where(.staff-shell) {
+    font-family: Arial, "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
+  }
+
+  :where(.portal-shell),
+  :where(.staff-shell),
+  :where(.portal-shell) :where(h1, h2, h3, h4, h5, h6, p, span, a, button, input, select, textarea, td, th, strong, label, li, small, em, dt, dd, legend, option),
+  :where(.staff-shell) :where(h1, h2, h3, h4, h5, h6, p, span, a, button, input, select, textarea, td, th, strong, label, li, small, em, dt, dd, legend, option) {
     font-family: Arial, "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
   }
 
   /*
-   * Display serif for headings and card titles, exactly as on the landing page
-   * and in the staff area. `:where()` keeps the specificity at zero so any
-   * utility written on the element (a colour, a size, a weight) still wins.
+   * Staff headings keep the display weight and tight tracking, but no longer
+   * carry the serif family — Arial is the house face for the app now. The
+   * public landing page and the System Deck still use `font-display`, which is
+   * why the `--font-display` token stays.
    */
   :where(.staff-shell) :where(h1, h2, h3, [data-slot="card-title"]) {
-    font-family: var(--font-display);
     font-weight: 600;
     letter-spacing: -0.015em;
   }
@@ -325,8 +334,8 @@
     color: #ece7dd;
   }
 
-  /* Headline figures read like the client portal's — serif numerals in the
-     brand palette, instead of the UI sans. */
+  /* Headline figures keep their tight tracking so the big amounts still read
+     as a block, now in Arial like everything else. */
   :where(.staff-shell)
     :where(.font-bold, .font-semibold):where(
       .text-xl,
@@ -335,7 +344,6 @@
       .text-4xl,
       .text-5xl
     ) {
-    font-family: var(--font-display);
     letter-spacing: -0.01em;
   }
 
@@ -380,9 +388,8 @@
 
   /*
    * Arial for figures and record rows (dashboard totals, payment ledgers).
-   * Declared as a real class, not only as the `--font-figures` theme token, so
-   * it also wins over the serif `--font-display` rule above on the big bold
-   * numerals.
+   * Explicit rather than inherited, so a figure stays in the house face even
+   * if a parent re-points the family.
    */
   .font-figures {
     font-family: Arial, "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
