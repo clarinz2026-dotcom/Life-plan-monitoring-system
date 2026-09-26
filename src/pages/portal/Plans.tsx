@@ -119,7 +119,7 @@ function StatementTable({
             {columns.map((c, i) => (
               <th
                 key={i}
-                className={`border border-line bg-sage/50 px-2.5 py-2 text-[9.5px] font-bold uppercase tracking-[0.06em] text-evergreen ${
+                className={`border border-line bg-sage/50 px-2 py-1.5 align-middle text-[9px] font-bold uppercase leading-tight tracking-[0.03em] text-evergreen ${
                   c.align === "left"
                     ? "text-left"
                     : c.align === "right"
@@ -387,8 +387,8 @@ export default function Plans() {
 
                       {/* ── Payment history (same records as the SOA) ── */}
                       <div>
-                        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                          <p className="inline-flex items-center gap-2 bg-evergreen px-3.5 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.16em] text-white">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                          <p className="inline-flex h-8 items-center gap-2 whitespace-nowrap bg-evergreen px-3.5 text-[10.5px] font-bold uppercase leading-none tracking-[0.16em] text-white">
                             <Wallet className="h-3.5 w-3.5" />
                             Payment History
                           </p>
@@ -398,7 +398,7 @@ export default function Plans() {
                             label="View SOA"
                             variant="outline"
                             size="sm"
-                            className="h-8 rounded-full text-[12.5px]"
+                            className="h-8 shrink-0 rounded-full text-[12.5px]"
                           />
                         </div>
 
@@ -417,17 +417,17 @@ export default function Plans() {
                             columns={[
                               {
                                 label: <>Payment Date<br />(MM/DD/YYYY)</>,
-                                width: "10%",
+                                width: "11%",
                               },
-                              { label: "LPA Number", width: "9%" },
-                              { label: <>Effectivity<br />Date</>, width: "9%" },
-                              { label: "Due Date", width: "9%" },
-                              { label: "Amount", width: "11%", align: "right" },
-                              { label: "Aging", width: "8%" },
-                              { label: <>Installment<br />No.</>, width: "8%" },
-                              { label: "O.R. No.", width: "9%" },
-                              { label: "Balance", width: "12%", align: "right" },
-                              { label: "Remarks", width: "15%", align: "left" },
+                              { label: "LPA Number", width: "9.5%" },
+                              { label: <>Effectivity<br />Date</>, width: "10.5%" },
+                              { label: "Due Date", width: "10%" },
+                              { label: "Amount", width: "10.5%" },
+                              { label: "Aging", width: "9.5%" },
+                              { label: <>Installment<br />No.</>, width: "9%" },
+                              { label: "O.R. No.", width: "9.5%" },
+                              { label: "Balance", width: "10%" },
+                              { label: "Remarks", width: "11%" },
                             ]}
                           >
                             {sortedPayments.map((p, i) => {
@@ -439,7 +439,7 @@ export default function Plans() {
                                 ? fmtDateNumeric(contract.startDate)
                                 : "";
                               // Same rule as the statement and the staff page:
-                              // installment n falls due on the 1st of the month,
+                              // installment n falls due on the effectivity day,
                               // n months after the plan's start date.
                               const dueDate = installmentDueDate(
                                 contract.startDate,
@@ -447,34 +447,34 @@ export default function Plans() {
                               );
                               return (
                                 <tr key={p._id} className={i % 2 === 1 ? "bg-sage/20" : ""}>
-                                  <td className="border border-line px-2.5 py-2 text-center">
+                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
                                     {fmtDateNumeric(p.paymentDate)}
                                   </td>
-                                  <td className="border border-line px-2.5 py-2 text-center">
+                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
                                     {contract.contractNumber}
                                   </td>
-                                  <td className="border border-line px-2.5 py-2 text-center">
+                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
                                     {effectivity}
                                   </td>
-                                  <td className="border border-line px-2.5 py-2 text-center">
+                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
                                     {dueDate === null ? "" : fmtDateNumeric(dueDate)}
                                   </td>
-                                  <td className="border border-line px-2.5 py-2 text-right font-bold text-evergreen">
+                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px] font-bold text-evergreen">
                                     {fmtPesoExact(p.amount)}
                                   </td>
-                                  <td className="border border-line px-2.5 py-2 text-center">
+                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
                                     {agingCell(dueDate, p.paymentDate)}
                                   </td>
-                                  <td className="border border-line px-2.5 py-2 text-center">
+                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
                                     {installment}
                                   </td>
-                                  <td className="border border-line px-2.5 py-2 text-center">
+                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
                                     {p.orNumber || ""}
                                   </td>
-                                  <td className="border border-line px-2.5 py-2 text-right">
+                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
                                     {fmtPesoExact(runningBalance)}
                                   </td>
-                                  <td className="border border-line px-2.5 py-2">
+                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px] leading-snug">
                                     {p.remarks ||
                                       CHANNEL_LABEL[p.paymentChannel] ||
                                       p.paymentChannel}
@@ -517,9 +517,9 @@ export default function Plans() {
                               <p className="text-[9.5px] font-bold uppercase tracking-[0.08em] text-stone">
                                 {cell.l}
                               </p>
-                              <p className="mt-1.5 text-[15px] font-bold text-evergreen">
+                              <div className="mt-1.5 flex min-h-[26px] flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[15px] font-bold text-evergreen">
                                 {cell.v}
-                              </p>
+                              </div>
                             </div>
                           ))}
                         </div>
