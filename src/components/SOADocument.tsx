@@ -132,12 +132,13 @@ const SOA_STYLES = `
      directly on the header cells. Every bordered table then spans the full
      content width in both the on-screen preview and the PDF. */
   table.grid { width: 100% !important; table-layout: fixed; }
-  table.grid th.wc1 { width: 13%; }
-  table.grid th.wc2 { width: 15%; }
-  table.grid th.wc3 { width: 16%; }
-  table.grid th.wc4 { width: 16%; }
-  table.grid th.wc5 { width: 16%; }
-  table.grid th.wc6 { width: 24%; }
+  table.grid th.wc1 { width: 12%; }
+  table.grid th.wc1b { width: 12%; }
+  table.grid th.wc2 { width: 13%; }
+  table.grid th.wc3 { width: 15%; }
+  table.grid th.wc4 { width: 14%; }
+  table.grid th.wc5 { width: 15%; }
+  table.grid th.wc6 { width: 19%; }
   table.grid th.wb1 { width: 6%; }
   table.grid th.wb2 { width: 54%; }
   table.grid th.wb3 { width: 15%; }
@@ -340,6 +341,12 @@ export function generateSOAHTML(data: SOAData): string {
       let runningBalance = c.planAmount;
       let installmentCounter = 0;
 
+      // Effectivity date is a property of the plan, not of an individual
+      // installment, so it repeats down every row of this plan's ledger.
+      const effectivity = Number.isFinite(c.startDate)
+        ? fmtDateShort(c.startDate)
+        : "";
+
       const ledgerRows = contractPayments
         .map((p, i) => {
           runningBalance = Math.max(0, runningBalance - p.amount);
@@ -349,6 +356,7 @@ export function generateSOAHTML(data: SOAData): string {
           return `
         <tr class="${i % 2 === 1 ? "alt" : ""}">
           <td class="c">${fmtDateShort(p.paymentDate)}</td>
+          <td class="c">${esc(effectivity)}</td>
           <td class="c">${p.orNumber ? esc(p.orNumber) : ""}</td>
           <td class="r">${esc(peso(p.amount))}</td>
           <td class="num">${installmentCounter}</td>
@@ -386,6 +394,7 @@ export function generateSOAHTML(data: SOAData): string {
           <thead>
             <tr>
               <th class="wc1">Date<br />(MM/DD/YYYY)</th>
+              <th class="wc1b">Effectivity<br />Date</th>
               <th class="wc2">O.R. No.</th>
               <th class="wc3">Amount</th>
               <th class="wc4">Installment<br />Number</th>
@@ -396,7 +405,7 @@ export function generateSOAHTML(data: SOAData): string {
           <tbody>
             ${
               ledgerRows ||
-              `<tr><td colspan="6" class="empty">No payments recorded</td></tr>`
+              `<tr><td colspan="7" class="empty">No payments recorded</td></tr>`
             }
           </tbody>
         </table>
