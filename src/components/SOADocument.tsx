@@ -252,16 +252,16 @@ const SOA_STYLES = `
      table-layout: fixed requires to keep every column at its designed size
      (an over-100 total gets silently rescaled, and html2canvas rescales it
      again differently, which is what knocked the printed table out of line). */
-  table.grid th.wc0 { width: 9%; }
-  table.grid th.wc1 { width: 11%; }
-  table.grid th.wc1b { width: 10%; }
-  table.grid th.wc1c { width: 10%; }
-  table.grid th.wc2 { width: 11%; }
-  table.grid th.wc2b { width: 8%; }
-  table.grid th.wc3 { width: 7%; }
-  table.grid th.wc3b { width: 9%; }
-  table.grid th.wc4 { width: 12%; }
-  table.grid th.wc5 { width: 13%; }
+  table.grid th.wc0 { width: 8.5%; }
+  table.grid th.wc1 { width: 11.5%; }
+  table.grid th.wc1b { width: 11%; }
+  table.grid th.wc1c { width: 9%; }
+  table.grid th.wc2 { width: 8.5%; }
+  table.grid th.wc2b { width: 8.5%; }
+  table.grid th.wc3 { width: 11%; }
+  table.grid th.wc3b { width: 8%; }
+  table.grid th.wc4 { width: 10%; }
+  table.grid th.wc5 { width: 14%; }
   table.grid th.wb1 { width: 6%; }
   table.grid th.wb2 { width: 54%; }
   table.grid th.wb3 { width: 15%; }
@@ -361,15 +361,26 @@ const SOA_STYLES = `
 
   /* ── Bordered tables (beneficiaries, payments) ──────────────────────── */
   table.grid { width: 100%; border-collapse: collapse; table-layout: fixed; }
-  table.grid th, table.grid td { border: 1px solid #a9b4ab; padding: 5px 7px; font-size: 10.5px; }
+  table.grid th, table.grid td {
+    border: 1px solid #a9b4ab;
+    padding: 4px 5px;
+    font-size: 10.5px;
+    vertical-align: middle;
+  }
+  /* Header labels are the widest thing in their column ("INSTALLMENT",
+     "EFFECTIVITY"), so they are set compact and allowed to break inside a
+     word: a long label then wraps instead of spilling across its neighbours
+     in the narrow on-screen preview. */
   table.grid thead th {
     background: #eef1ea;
     color: #1b4332;
-    font-size: 9px;
+    font-size: 8.5px;
     font-weight: 700;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.03em;
+    line-height: 1.25;
     text-transform: uppercase;
     text-align: center;
+    overflow-wrap: break-word;
   }
   table.grid td.c { text-align: center; }
   table.grid td.num { text-align: center; font-variant-numeric: tabular-nums; }
@@ -558,7 +569,7 @@ export function generateSOAHTML(data: SOAData): string {
           <tbody>
             ${
               ledgerRows ||
-              `<tr><td colspan="9" class="empty">No payments recorded</td></tr>`
+              `<tr><td colspan="10" class="empty">No payments recorded</td></tr>`
             }
           </tbody>
         </table>
