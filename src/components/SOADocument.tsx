@@ -220,16 +220,20 @@ const SOA_STYLES = `
      directly on the header cells. Every bordered table then spans the full
      content width in both the on-screen preview and the PDF. */
   table.grid { width: 100% !important; table-layout: fixed; }
+  /* Payment-history columns — the ten widths sum to exactly 100%, which
+     table-layout: fixed requires to keep every column at its designed size
+     (an over-100 total gets silently rescaled, and html2canvas rescales it
+     again differently, which is what knocked the printed table out of line). */
   table.grid th.wc0 { width: 9%; }
-  table.grid th.wc1 { width: 10%; }
+  table.grid th.wc1 { width: 11%; }
   table.grid th.wc1b { width: 10%; }
   table.grid th.wc1c { width: 10%; }
-  table.grid th.wc2 { width: 12%; }
-  table.grid th.wc2b { width: 9%; }
-  table.grid th.wc3 { width: 9%; }
-  table.grid th.wc3b { width: 10%; }
+  table.grid th.wc2 { width: 11%; }
+  table.grid th.wc2b { width: 8%; }
+  table.grid th.wc3 { width: 7%; }
+  table.grid th.wc3b { width: 9%; }
   table.grid th.wc4 { width: 12%; }
-  table.grid th.wc5 { width: 17%; }
+  table.grid th.wc5 { width: 13%; }
   table.grid th.wb1 { width: 6%; }
   table.grid th.wb2 { width: 54%; }
   table.grid th.wb3 { width: 15%; }
@@ -344,6 +348,11 @@ const SOA_STYLES = `
   table.grid td.r { text-align: right; font-variant-numeric: tabular-nums; }
   table.grid td.empty { text-align: center; font-style: italic; color: #6b7269; padding: 10px 7px; }
   table.grid tr.alt td { background: #fafbf9; }
+  /* Header text follows its column's data alignment — figures sit over the
+     right edge they sum from, text columns over their left edge. Declared
+     after the thead rule so it wins on equal specificity. */
+  table.grid th.th-r { text-align: right; }
+  table.grid th.th-l { text-align: left; }
 
   /* ── Account summary strip ──────────────────────────────────────────── */
   .summary { display: flex; border: 1px solid #a9b4ab; background: #f1f4ef; }
@@ -510,12 +519,12 @@ export function generateSOAHTML(data: SOAData): string {
               <th class="wc0">LPA<br />Number</th>
               <th class="wc1b">Effectivity<br />Date</th>
               <th class="wc1c">Due Date</th>
-              <th class="wc2">Amount</th>
+              <th class="wc2 th-r">Amount</th>
               <th class="wc2b">Aging</th>
               <th class="wc3">Installment<br />No.</th>
               <th class="wc3b">O.R. No.</th>
-              <th class="wc4">Balance</th>
-              <th class="wc5">Remarks</th>
+              <th class="wc4 th-r">Balance</th>
+              <th class="wc5 th-l">Remarks</th>
             </tr>
           </thead>
           <tbody>
