@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { InlineLoading } from "@/components/PageLoading";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,7 @@ export default function SuperAdminSetup() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="h-8 w-8 text-muted-foreground animate-spin" />
-        <p className="text-sm text-muted-foreground">Loading...</p>
+        <InlineLoading label="Loading" className="py-0" />
       </div>
     );
   }

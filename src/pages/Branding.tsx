@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { PageLoading } from "@/components/PageLoading";
 import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -114,7 +115,7 @@ export default function Branding() {
   };
 
   if (!roleData) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading...</div>;
+    return <PageLoading label="Loading branding" className="min-h-[320px]" />;
   }
 
   if (!canManage) {

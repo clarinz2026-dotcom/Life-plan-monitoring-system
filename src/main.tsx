@@ -3,6 +3,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
 import AppLayout from "@/components/AppLayout";
 import { BranchScopeProvider } from "@/hooks/use-branch";
+import { RouteProgress } from "@/components/RouteProgress";
+import { PageLoading } from "@/components/PageLoading";
 import { VlyToolbar } from "../vly-toolbar-readonly.tsx";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient } from "convex/react";
@@ -103,16 +105,13 @@ const PortalLinkAccount = lazyRoute("PortalLinkAccount", () => import("./pages/p
 const SystemDeck = lazyRoute("SystemDeck", () => import("./pages/SystemDeck.tsx"));
 const NotFound = lazyRoute("NotFound", () => import("./pages/NotFound.tsx"));
 
-// Lightweight, on-brand fallback for route transitions
+/**
+ * Fallback while a lazily-loaded route chunk is in flight. The Suspense boundary
+ * sits inside `ConvexAuthProvider`, so the shared loading state (and the brand
+ * mark it reads the configured logo for) can mount here.
+ */
 function RouteLoading() {
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center gap-3 bg-background">
-      <div className="h-10 w-10 animate-pulse rounded-lg bg-primary/15" />
-      <span className="animate-pulse text-[13px] tracking-[0.18em] uppercase text-muted-foreground">
-        Loading
-      </span>
-    </div>
-  );
+  return <PageLoading label="Loading" className="min-h-screen" />;
 }
 
 /** Silent error boundary — if VlyToolbar crashes it renders nothing instead of
@@ -249,6 +248,7 @@ createRoot(document.getElementById("root")!).render(
       <ConvexAuthProvider client={convex}>
         <BrowserRouter>
           <RouteSyncer />
+          <RouteProgress />
           <Suspense fallback={<RouteLoading />}>
             <Routes>
               <Route path="/" element={<Landing />} />

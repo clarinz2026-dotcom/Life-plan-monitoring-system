@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { InlineLoading } from "@/components/PageLoading";
 import { useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -741,7 +742,7 @@ export default function Clients() {
               {!filteredClients ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-10 text-muted-foreground text-base">
-                    Loading clients...
+                    <InlineLoading label="Loading clients" className="py-0" />
                   </TableCell>
                 </TableRow>
               ) : filteredClients.length === 0 ? (

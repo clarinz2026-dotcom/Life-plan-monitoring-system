@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { PageLoading } from "@/components/PageLoading";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,7 +93,7 @@ export default function Plans() {
     finally { setIsDeleting(false); }
   };
 
-  if (!roleData) return <div className="p-6 text-base text-muted-foreground">Loading...</div>;
+  if (!roleData) return <PageLoading label="Loading plans" className="min-h-[320px]" />;
   if (!canManage) return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
       <Shield className="h-12 w-12 text-muted-foreground" />

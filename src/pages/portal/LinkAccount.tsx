@@ -1,4 +1,5 @@
 import { api } from "@/convex/_generated/api";
+import { PageLoading } from "@/components/PageLoading";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQuery } from "convex/react";
@@ -103,11 +104,7 @@ export default function LinkAccount() {
   };
 
   if (overview === undefined) {
-    return (
-      <div className="grid min-h-[50vh] place-items-center">
-        <Loader2 className="h-7 w-7 animate-spin text-evergreen" />
-      </div>
-    );
+    return <PageLoading label="Loading your plan" className="min-h-[50vh]" />;
   }
   if (overview === null) return null;
 

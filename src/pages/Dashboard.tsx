@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { PageLoading } from "@/components/PageLoading";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -112,11 +113,7 @@ export default function Dashboard() {
   };
 
   if (!summary) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-base text-muted-foreground">Loading dashboard...</p>
-      </div>
-    );
+    return <PageLoading label="Loading dashboard" className="min-h-[420px]" />;
   }
 
 

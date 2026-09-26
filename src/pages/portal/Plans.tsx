@@ -1,8 +1,9 @@
 import { api } from "@/convex/_generated/api";
+import { PageLoading } from "@/components/PageLoading";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "convex/react";
 import type { ReactNode } from "react";
-import { ArrowRight, FileHeart, Loader2, ReceiptText, Wallet } from "lucide-react";
+import { ArrowRight, FileHeart, ReceiptText, Wallet } from "lucide-react";
 import { Link } from "react-router";
 import {
   CONTRACT_PILL,
@@ -143,11 +144,7 @@ export default function Plans() {
   const overview = useQuery(api.portal.myOverview);
 
   if (overview === undefined) {
-    return (
-      <div className="grid min-h-[50vh] place-items-center">
-        <Loader2 className="h-7 w-7 animate-spin text-evergreen" />
-      </div>
-    );
+    return <PageLoading label="Loading your plan" className="min-h-[50vh]" />;
   }
   if (overview === null) return null;
 
