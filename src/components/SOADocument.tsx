@@ -117,18 +117,25 @@ export function installmentDueDate(
 }
 
 /**
- * Aging shown in the Payment History table:
+ * Aging shown in the Payment History table.
  *
- *  - paid after the due date   → the exact number of days late
- *  - paid ON the due date      → "30" (the office's figure for a current plan)
- *  - paid BEFORE the due date  → "Advanced"
+ * Late payments are reported in the office's 30-day delinquency brackets
+ * rather than as a raw day count:
  *
- * A planholder paying ahead of schedule is common: several installments are
- * settled in one sitting, so those rows read "Advanced" instead of late.
- * Change the constants below if those figures should ever differ.
+ *  - paid BEFORE the due date → "Advanced"
+ *  - 0–30 days late           → "30"
+ *  - 31–60 days late          → "60"
+ *  - 61–90 days late          → "90"
+ *  - past 90 days late        → "Lapsed"
+ *
+ * A planholder paying ahead of schedule is common — several installments are
+ * settled in one sitting — so those rows read "Advanced" instead of late.
+ * Change the constants below if those brackets should ever differ.
  */
-const CURRENT_AGING_LABEL = "30";
 const ADVANCE_AGING_LABEL = "Advanced";
+const LAPSED_AGING_LABEL = "Lapsed";
+/** Upper bound of each delinquency bracket, in days late. */
+const AGING_BRACKETS = [30, 60, 90];
 
 export function agingCell(
   dueDate: number | null,
@@ -138,9 +145,11 @@ export function agingCell(
   // rather than inventing a figure.
   if (dueDate === null) return "—";
   const daysLate = Math.floor((paymentDate - dueDate) / MS_PER_DAY);
-  if (daysLate > 0) return String(daysLate);
-  if (daysLate === 0) return CURRENT_AGING_LABEL;
-  return ADVANCE_AGING_LABEL;
+  if (daysLate < 0) return ADVANCE_AGING_LABEL;
+  for (const bound of AGING_BRACKETS) {
+    if (daysLate <= bound) return String(bound);
+  }
+  return LAPSED_AGING_LABEL;
 }
 
 /** Escape user-entered text before it lands in the generated HTML. */
