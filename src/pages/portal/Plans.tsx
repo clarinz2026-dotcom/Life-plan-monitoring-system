@@ -109,8 +109,16 @@ function StatementTable({
   children: ReactNode;
 }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full table-fixed border-collapse">
+    <div
+      className="-mx-1 min-w-0 max-w-full touch-pan-x overflow-x-auto overscroll-x-contain px-1 pb-1"
+      role="region"
+      aria-label="Payment history table"
+      tabIndex={0}
+    >
+      <p className="mb-2 px-1 text-[11px] text-stone sm:hidden">
+        Swipe sideways to view all payment columns
+      </p>
+      <table className="w-full min-w-[920px] table-fixed border-collapse">
         <colgroup>
           {columns.map((c, i) => (
             <col key={i} style={{ width: c.width }} />
