@@ -199,6 +199,7 @@ export default function ClientDetail() {
   });
 
   const createContract = useMutation(api.contracts.create);
+  const updateContract = useMutation(api.contracts.update);
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
   const [contractForm, setContractForm] = useState({
     contractNumber: "",
@@ -207,6 +208,24 @@ export default function ClientDetail() {
     monthlyAmortization: "",
     startDate: "",
   });
+
+  /*
+   * Contract editing. Only Head Office and Finance staff can save changes on
+   * the server; everyone else still sees the dialog so the fields they may not
+   * change are visible, but the save is refused with the server's explanation.
+   */
+  const [editContractId, setEditContractId] = useState<string | null>(null);
+  const [editContractOpen, setEditContractOpen] = useState(false);
+  const [editContractForm, setEditContractForm] = useState({
+    contractNumber: "",
+    planType: "",
+    planAmount: "",
+    monthlyAmortization: "",
+    startDate: "",
+    maturityDate: "",
+    contractStatus: "current",
+  });
+  const [savingContract, setSavingContract] = useState(false);
 
   const fullName = client?.middleName
     ? `${client.lastName}, ${client.firstName} ${client.middleName}`
@@ -385,6 +404,50 @@ export default function ClientDetail() {
       setUploadError(err?.message || "Upload failed");
     } finally {
       setUploadWorking(false);
+    }
+  };
+
+  const openContractEdit = (contract: (typeof clientContracts)[number]) => {
+    setEditContractId(String(contract._id));
+    setEditContractForm({
+      contractNumber: contract.contractNumber,
+      planType: contract.planType,
+      planAmount: String(contract.planAmount),
+      monthlyAmortization: String(contract.monthlyAmortization),
+      startDate: tsToDateInput(contract.startDate),
+      maturityDate: contract.maturityDate
+        ? tsToDateInput(contract.maturityDate)
+        : "",
+      contractStatus: contract.contractStatus,
+    });
+    setEditContractOpen(true);
+  };
+
+  const handleContractEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editContractId) return;
+    setSavingContract(true);
+    try {
+      await updateContract({
+        contractId: editContractId as any,
+        contractNumber: editContractForm.contractNumber.trim(),
+        planType: editContractForm.planType.trim(),
+        planAmount: Number(editContractForm.planAmount),
+        monthlyAmortization: Number(editContractForm.monthlyAmortization),
+        startDate: editContractForm.startDate
+          ? new Date(editContractForm.startDate).getTime()
+          : Date.now(),
+        maturityDate: editContractForm.maturityDate
+          ? new Date(editContractForm.maturityDate).getTime()
+          : undefined,
+        contractStatus: editContractForm.contractStatus as any,
+      });
+      toast.success("Contract updated");
+      setEditContractOpen(false);
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update contract");
+    } finally {
+      setSavingContract(false);
     }
   };
 
@@ -1111,6 +1174,147 @@ export default function ClientDetail() {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Edit contract dialog */}
+        <Dialog open={editContractOpen} onOpenChange={setEditContractOpen}>
+          <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto mx-2 sm:mx-0">
+            <DialogHeader>
+              <DialogTitle className="">Edit contract</DialogTitle>
+              <DialogDescription>
+                Plan number, values, effectivity date and status. Changes are
+                written to the audit log. Effectivity drives every due date on
+                the statement, so move it carefully.
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleContractEditSubmit} className="space-y-3 mt-2">
+              <div>
+                <Label className="text-xs">Plan Number (LPA / Control No.) *</Label>
+                <Input
+                  value={editContractForm.contractNumber}
+                  onChange={(e) =>
+                    setEditContractForm({
+                      ...editContractForm,
+                      contractNumber: e.target.value,
+                    })
+                  }
+                  className="text-sm"
+                  required
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Plan Type *</Label>
+                <Input
+                  value={editContractForm.planType}
+                  onChange={(e) =>
+                    setEditContractForm({
+                      ...editContractForm,
+                      planType: e.target.value,
+                    })
+                  }
+                  placeholder="e.g. Memorial Plan A"
+                  className="text-sm"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Total Plan Value (₱) *</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editContractForm.planAmount}
+                    onChange={(e) =>
+                      setEditContractForm({
+                        ...editContractForm,
+                        planAmount: e.target.value,
+                      })
+                    }
+                    className="text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Monthly (₱) *</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={editContractForm.monthlyAmortization}
+                    onChange={(e) =>
+                      setEditContractForm({
+                        ...editContractForm,
+                        monthlyAmortization: e.target.value,
+                      })
+                    }
+                    className="text-sm"
+                    required
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Effectivity Date *</Label>
+                  <Input
+                    type="date"
+                    value={editContractForm.startDate}
+                    onChange={(e) =>
+                      setEditContractForm({
+                        ...editContractForm,
+                        startDate: e.target.value,
+                      })
+                    }
+                    className="text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Maturity Date</Label>
+                  <Input
+                    type="date"
+                    value={editContractForm.maturityDate}
+                    onChange={(e) =>
+                      setEditContractForm({
+                        ...editContractForm,
+                        maturityDate: e.target.value,
+                      })
+                    }
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Status</Label>
+                <select
+                  value={editContractForm.contractStatus}
+                  onChange={(e) =>
+                    setEditContractForm({
+                      ...editContractForm,
+                      contractStatus: e.target.value,
+                    })
+                  }
+                  className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+                >
+                  {[
+                    ["current", "Current"],
+                    ["delinquent_30", "30 Days Late"],
+                    ["delinquent_60", "60 Days Late"],
+                    ["delinquent_90", "90 Days Late"],
+                    ["lapsed", "Lapsed"],
+                    ["fully_paid", "Fully Paid"],
+                  ].map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <Button type="submit" className="w-full" disabled={savingContract}>
+                {savingContract ? "Saving…" : "Save changes"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {clientContracts.length === 0 ? (
@@ -1135,15 +1339,26 @@ export default function ClientDetail() {
                     <CardTitle className="text-sm">
                       {contract.contractNumber}
                     </CardTitle>
-                    <Badge
-                      variant="outline"
-                      className={`text-[10px] ${
-                        STATUS_COLORS[contract.contractStatus] || ""
-                      }`}
-                    >
-                      {STATUS_LABELS[contract.contractStatus] ||
-                        contract.contractStatus.replace(/_/g, " ")}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] ${
+                          STATUS_COLORS[contract.contractStatus] || ""
+                        }`}
+                      >
+                        {STATUS_LABELS[contract.contractStatus] ||
+                          contract.contractStatus.replace(/_/g, " ")}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 px-2 text-[12px] text-muted-foreground hover:text-foreground"
+                        onClick={() => openContractEdit(contract)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
