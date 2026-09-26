@@ -85,6 +85,27 @@ function fmtDateShort(ts: number) {
   return format(new Date(ts), "MM/dd/yyyy");
 }
 
+const MS_PER_DAY = 86_400_000;
+
+/**
+ * Aging shown in the Payment History table: the exact number of days the
+ * payment sits past its due date.
+ *
+ * Per the office's rule, a payment that is NOT late (paid on or before the due
+ * date) is reported as "30" rather than zero. Change the returned constant
+ * below if that figure should ever differ.
+ */
+const CURRENT_AGING_LABEL = "30";
+
+function agingCell(dueDate: number | null, paymentDate: number): string {
+  // No due date means the contract has no usable start date; show a dash
+  // rather than inventing a figure.
+  if (dueDate === null) return "—";
+  const daysLate = Math.floor((paymentDate - dueDate) / MS_PER_DAY);
+  if (daysLate <= 0) return CURRENT_AGING_LABEL;
+  return String(daysLate);
+}
+
 /** Escape user-entered text before it lands in the generated HTML. */
 function esc(value: string | number | undefined | null) {
   if (value === undefined || value === null) return "";
@@ -132,13 +153,15 @@ const SOA_STYLES = `
      directly on the header cells. Every bordered table then spans the full
      content width in both the on-screen preview and the PDF. */
   table.grid { width: 100% !important; table-layout: fixed; }
-  table.grid th.wc1 { width: 12%; }
-  table.grid th.wc1b { width: 12%; }
-  table.grid th.wc2 { width: 13%; }
-  table.grid th.wc3 { width: 15%; }
-  table.grid th.wc4 { width: 14%; }
-  table.grid th.wc5 { width: 15%; }
-  table.grid th.wc6 { width: 19%; }
+  table.grid th.wc1 { width: 11%; }
+  table.grid th.wc1b { width: 10%; }
+  table.grid th.wc1c { width: 10%; }
+  table.grid th.wc2 { width: 12%; }
+  table.grid th.wc2b { width: 9%; }
+  table.grid th.wc3 { width: 9%; }
+  table.grid th.wc4 { width: 12%; }
+  table.grid th.wc5 { width: 17%; }
+  table.grid th.wc6 { width: 10%; }
   table.grid th.wb1 { width: 6%; }
   table.grid th.wb2 { width: 54%; }
   table.grid th.wb3 { width: 15%; }
@@ -347,21 +370,39 @@ export function generateSOAHTML(data: SOAData): string {
         ? fmtDateShort(c.startDate)
         : "";
 
+      // There is no `payment_schedules` data in the database (the table is
+      // empty), so due dates are derived here. This mirrors the rule in
+      // `paymentSchedules.generate`: the nth installment falls due on the
+      // 1st of the month, n months after the plan's start date.
+      const dueDateFor = (installment: number): number | null => {
+        if (!Number.isFinite(c.startDate)) return null;
+        const due = new Date(c.startDate);
+        due.setMonth(due.getMonth() + (installment - 1));
+        due.setDate(1);
+        return due.getTime();
+      };
+
       const ledgerRows = contractPayments
         .map((p, i) => {
           runningBalance = Math.max(0, runningBalance - p.amount);
           installmentCounter += 1;
           const remark =
             p.remarks || CHANNEL_LABELS[p.paymentChannel] || p.paymentChannel;
+
+          const due = dueDateFor(installmentCounter);
+          const dueLabel = due === null ? "" : fmtDateShort(due);
+          const agingLabel = agingCell(due, p.paymentDate);
           return `
         <tr class="${i % 2 === 1 ? "alt" : ""}">
           <td class="c">${fmtDateShort(p.paymentDate)}</td>
           <td class="c">${esc(effectivity)}</td>
-          <td class="c">${p.orNumber ? esc(p.orNumber) : ""}</td>
+          <td class="c">${esc(dueLabel)}</td>
           <td class="r">${esc(peso(p.amount))}</td>
+          <td class="num">${esc(agingLabel)}</td>
           <td class="num">${installmentCounter}</td>
           <td class="r">${esc(peso(runningBalance))}</td>
           <td>${esc(remark)}</td>
+          <td class="c">${p.orNumber ? esc(p.orNumber) : ""}</td>
         </tr>`;
         })
         .join("");
@@ -393,19 +434,21 @@ export function generateSOAHTML(data: SOAData): string {
         <table class="grid">
           <thead>
             <tr>
-              <th class="wc1">Date<br />(MM/DD/YYYY)</th>
+              <th class="wc1">Payment Date<br />(MM/DD/YYYY)</th>
               <th class="wc1b">Effectivity<br />Date</th>
-              <th class="wc2">O.R. No.</th>
-              <th class="wc3">Amount</th>
-              <th class="wc4">Installment<br />Number</th>
-              <th class="wc5">Balance</th>
-              <th class="wc6">Remarks</th>
+              <th class="wc1c">Due Date</th>
+              <th class="wc2">Amount</th>
+              <th class="wc2b">Aging</th>
+              <th class="wc3">Installment<br />No.</th>
+              <th class="wc4">Balance</th>
+              <th class="wc5">Remarks</th>
+              <th class="wc6">O.R. No.</th>
             </tr>
           </thead>
           <tbody>
             ${
               ledgerRows ||
-              `<tr><td colspan="7" class="empty">No payments recorded</td></tr>`
+              `<tr><td colspan="9" class="empty">No payments recorded</td></tr>`
             }
           </tbody>
         </table>
