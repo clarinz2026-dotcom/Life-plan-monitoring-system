@@ -402,7 +402,7 @@ export default function Plans() {
 
                         {/*
                           Mirrors the printed Statement of Account exactly: the
-                          same nine columns, in the same order, computed from the
+                          same ten columns, in the same order, computed from the
                           same helpers, so the family never sees a figure here
                           that disagrees with the paper statement.
                         */}
@@ -415,16 +415,17 @@ export default function Plans() {
                             columns={[
                               {
                                 label: <>Payment Date<br />(MM/DD/YYYY)</>,
-                                width: "11%",
+                                width: "10%",
                               },
-                              { label: <>Effectivity<br />Date</>, width: "10%" },
-                              { label: "Due Date", width: "10%" },
-                              { label: "Amount", width: "12%", align: "right" },
-                              { label: "Aging", width: "9%" },
-                              { label: <>Installment<br />No.</>, width: "9%" },
-                              { label: "O.R. No.", width: "10%" },
+                              { label: "LPA Number", width: "9%" },
+                              { label: <>Effectivity<br />Date</>, width: "9%" },
+                              { label: "Due Date", width: "9%" },
+                              { label: "Amount", width: "11%", align: "right" },
+                              { label: "Aging", width: "8%" },
+                              { label: <>Installment<br />No.</>, width: "8%" },
+                              { label: "O.R. No.", width: "9%" },
                               { label: "Balance", width: "12%", align: "right" },
-                              { label: "Remarks", width: "17%", align: "left" },
+                              { label: "Remarks", width: "15%", align: "left" },
                             ]}
                           >
                             {sortedPayments.map((p, i) => {
@@ -446,6 +447,9 @@ export default function Plans() {
                                 <tr key={p._id} className={i % 2 === 1 ? "bg-sage/20" : ""}>
                                   <td className="border border-line px-2.5 py-2 text-center">
                                     {fmtDateNumeric(p.paymentDate)}
+                                  </td>
+                                  <td className="border border-line px-2.5 py-2 text-center">
+                                    {contract.contractNumber}
                                   </td>
                                   <td className="border border-line px-2.5 py-2 text-center">
                                     {effectivity}

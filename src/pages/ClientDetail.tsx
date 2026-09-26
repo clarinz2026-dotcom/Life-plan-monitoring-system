@@ -1360,6 +1360,7 @@ export default function ClientDetail() {
                 <tr className="border-b border-border">
                   {[
                     { label: "Payment Date", align: "text-left" },
+                    { label: "LPA Number", align: "text-left" },
                     { label: "Effectivity Date", align: "text-left" },
                     { label: "Due Date", align: "text-left" },
                     { label: "Amount", align: "text-right" },
@@ -1389,6 +1390,9 @@ export default function ClientDetail() {
                     >
                       <td className="whitespace-nowrap py-2.5 px-4 text-xs">
                         {format(new Date(p.paymentDate), "MMM d, yyyy")}
+                      </td>
+                      <td className="whitespace-nowrap py-2.5 px-4 text-xs text-muted-foreground">
+                        {p.contract?.contractNumber ?? "—"}
                       </td>
                       <td className="whitespace-nowrap py-2.5 px-4 text-xs">
                         {p.contract?.startDate

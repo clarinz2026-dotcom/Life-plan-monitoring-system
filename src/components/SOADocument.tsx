@@ -199,7 +199,8 @@ const SOA_STYLES = `
      directly on the header cells. Every bordered table then spans the full
      content width in both the on-screen preview and the PDF. */
   table.grid { width: 100% !important; table-layout: fixed; }
-  table.grid th.wc1 { width: 11%; }
+  table.grid th.wc0 { width: 9%; }
+  table.grid th.wc1 { width: 10%; }
   table.grid th.wc1b { width: 10%; }
   table.grid th.wc1c { width: 10%; }
   table.grid th.wc2 { width: 12%; }
@@ -432,6 +433,7 @@ export function generateSOAHTML(data: SOAData): string {
           return `
         <tr class="${i % 2 === 1 ? "alt" : ""}">
           <td class="c">${fmtDateShort(p.paymentDate)}</td>
+          <td class="c">${esc(c.contractNumber)}</td>
           <td class="c">${esc(effectivity)}</td>
           <td class="c">${esc(dueLabel)}</td>
           <td class="r">${esc(peso(p.amount))}</td>
@@ -472,6 +474,7 @@ export function generateSOAHTML(data: SOAData): string {
           <thead>
             <tr>
               <th class="wc1">Payment Date<br />(MM/DD/YYYY)</th>
+              <th class="wc0">LPA<br />Number</th>
               <th class="wc1b">Effectivity<br />Date</th>
               <th class="wc1c">Due Date</th>
               <th class="wc2">Amount</th>
