@@ -15,6 +15,7 @@ import {
   initials,
 } from "./shared";
 import { SOAButton } from "./SOAButton";
+import { agingCell, installmentDueDate } from "@/components/SOADocument";
 import type { Doc } from "@/convex/_generated/dataModel";
 
 /**
@@ -360,6 +361,12 @@ export default function Plans() {
                           />
                         </div>
 
+                        {/*
+                          Mirrors the printed Statement of Account exactly: the
+                          same nine columns, in the same order, computed from the
+                          same helpers, so the family never sees a figure here
+                          that disagrees with the paper statement.
+                        */}
                         {sortedPayments.length === 0 ? (
                           <p className="text-[12.5px] text-stone">
                             No payments recorded yet.
@@ -367,32 +374,54 @@ export default function Plans() {
                         ) : (
                           <StatementTable
                             columns={[
-                              { label: <>Date<br />(MM/DD/YYYY)</>, width: "15%" },
-                              { label: "O.R. No.", width: "15%" },
-                              { label: "Amount", width: "16%", align: "right" },
                               {
-                                label: <>Installment<br />Number</>,
-                                width: "15%",
+                                label: <>Payment Date<br />(MM/DD/YYYY)</>,
+                                width: "11%",
                               },
-                              { label: "Balance", width: "17%", align: "right" },
-                              { label: "Remarks", width: "22%", align: "left" },
+                              { label: <>Effectivity<br />Date</>, width: "10%" },
+                              { label: "Due Date", width: "10%" },
+                              { label: "Amount", width: "12%", align: "right" },
+                              { label: "Aging", width: "9%" },
+                              { label: <>Installment<br />No.</>, width: "9%" },
+                              { label: "Balance", width: "12%", align: "right" },
+                              { label: "Remarks", width: "17%", align: "left" },
+                              { label: "O.R. No.", width: "10%" },
                             ]}
                           >
                             {sortedPayments.map((p, i) => {
                               runningBalance = Math.max(0, runningBalance - p.amount);
+                              const installment = i + 1;
+                              // Effectivity is a property of the plan, so it
+                              // repeats down every row of this plan's ledger.
+                              const effectivity = Number.isFinite(contract.startDate)
+                                ? fmtDateNumeric(contract.startDate)
+                                : "";
+                              // Same rule as the statement and the staff page:
+                              // installment n falls due on the 1st of the month,
+                              // n months after the plan's start date.
+                              const dueDate = installmentDueDate(
+                                contract.startDate,
+                                installment
+                              );
                               return (
                                 <tr key={p._id} className={i % 2 === 1 ? "bg-sage/20" : ""}>
                                   <td className="border border-line px-2.5 py-2 text-center">
                                     {fmtDateNumeric(p.paymentDate)}
                                   </td>
                                   <td className="border border-line px-2.5 py-2 text-center">
-                                    {p.orNumber || ""}
+                                    {effectivity}
+                                  </td>
+                                  <td className="border border-line px-2.5 py-2 text-center">
+                                    {dueDate === null ? "" : fmtDateNumeric(dueDate)}
                                   </td>
                                   <td className="border border-line px-2.5 py-2 text-right font-bold text-evergreen">
                                     {fmtPesoExact(p.amount)}
                                   </td>
                                   <td className="border border-line px-2.5 py-2 text-center">
-                                    {i + 1}
+                                    {agingCell(dueDate, p.paymentDate)}
+                                  </td>
+                                  <td className="border border-line px-2.5 py-2 text-center">
+                                    {installment}
                                   </td>
                                   <td className="border border-line px-2.5 py-2 text-right">
                                     {fmtPesoExact(runningBalance)}
@@ -401,6 +430,9 @@ export default function Plans() {
                                     {p.remarks ||
                                       CHANNEL_LABEL[p.paymentChannel] ||
                                       p.paymentChannel}
+                                  </td>
+                                  <td className="border border-line px-2.5 py-2 text-center">
+                                    {p.orNumber || ""}
                                   </td>
                                 </tr>
                               );
