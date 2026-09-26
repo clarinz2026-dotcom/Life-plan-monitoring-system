@@ -317,6 +317,27 @@ export default function Plans() {
                       ? fmtDate(nextDueSchedule.dueDate)
                       : "—";
 
+                /*
+                 * Payment status. A plan whose installments have been settled
+                 * ahead of the calendar — more payments on record than due
+                 * dates have passed — reads "Advanced" rather than the plain
+                 * "Good Payer", so the family can see at a glance that they
+                 * are paying in advance. Fully paid keeps its own pill, and
+                 * everything else falls back to the stored contract status.
+                 */
+                const dueSoFar = Array.from(
+                  { length: cd.payments.length + 1 },
+                  (_, i) => installmentDueDate(contract.startDate, i + 1)
+                ).filter(
+                  (d): d is number => d !== null && d <= now
+                ).length;
+                const statusKey =
+                  isFullyPaid
+                    ? "fully_paid"
+                    : cd.payments.length > dueSoFar
+                      ? "advanced"
+                      : contract.contractStatus;
+
                 return (
                   <article
                     key={contract._id}
@@ -334,7 +355,7 @@ export default function Plans() {
                           Plan No. {contract.contractNumber} · Effectivity Date: <strong className="font-bold text-ink">{fmtDate(contract.startDate)}</strong>
                         </p>
                       </div>
-                      <StatusPill map={CONTRACT_PILL} status={contract.contractStatus} />
+                      <StatusPill map={CONTRACT_PILL} status={statusKey} />
                     </header>
 
                     <div className="space-y-7 px-5 py-6 lg:px-7" style={STATEMENT_FONT}>
@@ -478,7 +499,7 @@ export default function Plans() {
                               v: (
                                 <StatusPill
                                   map={CONTRACT_PILL}
-                                  status={contract.contractStatus}
+                                  status={statusKey}
                                 />
                               ),
                             },

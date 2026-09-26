@@ -88,6 +88,15 @@ export const CONTRACT_PILL: Record<string, { label: string; cls: string }> = {
     label: "Good Payer",
     cls: "border-emerald-300 bg-emerald-50 text-emerald-800",
   },
+  /**
+   * Not a stored contractStatus — the plans page swaps this in when the
+   * planholder has settled more installments than have actually fallen due
+   * (paying ahead of schedule). Gold keeps it apart from Good Payer's green.
+   */
+  advanced: {
+    label: "Advanced",
+    cls: "border-gold/50 bg-gold/10 text-gold",
+  },
   delinquent_30: {
     label: "Lapsed",
     cls: "border-amber-300 bg-amber-50 text-amber-800",
