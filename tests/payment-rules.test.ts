@@ -3,6 +3,7 @@ import {
   agingCell,
   installmentDueDate,
   isAdvancedStatus,
+  splitAddressEmail,
 } from "../src/components/SOADocument";
 
 const MS_PER_DAY = 86_400_000;
@@ -110,5 +111,42 @@ describe("isAdvancedStatus", () => {
     // paying ahead by definition, even though nothing has fallen due yet.
     const now = ts(2026, 9, 1);
     expect(isAdvancedStatus(start, 1, now)).toBe(true);
+  });
+});
+
+describe("splitAddressEmail", () => {
+  it("separates an email typed into the address line", () => {
+    expect(
+      splitAddressEmail("dclarinz2026@gmail.com, Malaybalay City, Bukidnon")
+    ).toEqual({
+      address: "Malaybalay City, Bukidnon",
+      email: "dclarinz2026@gmail.com",
+    });
+  });
+
+  it("keeps a normal address intact and takes the email from the record", () => {
+    expect(
+      splitAddressEmail("Purok 1, Malaybalay City", "juan@email.com")
+    ).toEqual({
+      address: "Purok 1, Malaybalay City",
+      email: "juan@email.com",
+    });
+  });
+
+  it("prefers the record's own email over one found in the address", () => {
+    expect(
+      splitAddressEmail("old@mail.com, Malaybalay City", "new@mail.com").email
+    ).toBe("new@mail.com");
+  });
+
+  it("falls back to a dash when the address holds only an email", () => {
+    expect(splitAddressEmail("solo@mail.com")).toEqual({
+      address: "—",
+      email: "solo@mail.com",
+    });
+  });
+
+  it("returns a dash and no email for an empty address", () => {
+    expect(splitAddressEmail("")).toEqual({ address: "—", email: "" });
   });
 });

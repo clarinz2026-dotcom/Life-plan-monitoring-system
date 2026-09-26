@@ -86,6 +86,7 @@ import {
 import {
   agingCell,
   installmentDueDate,
+  splitAddressEmail,
   type SOAData,
 } from "@/components/SOADocument";
 
@@ -519,12 +520,18 @@ export default function ClientDetail() {
         }
       }
 
+      // Address and email print on their own lines; the email is sometimes
+      // typed into the address field.
+      const contact = splitAddressEmail(
+        [client.address, client.city, client.province].filter(Boolean).join(", "),
+        client.email
+      );
+
       return {
         clientName,
-        clientAddress:
-          [client.address, client.city, client.province].filter(Boolean).join(", ") || "—",
+        clientAddress: contact.address,
         clientContact: client.contactNumber || "—",
-        clientEmail: client.email || undefined,
+        clientEmail: contact.email || undefined,
         clientAge,
         beneficiaries:
           client.beneficiaries && client.beneficiaries.length > 0

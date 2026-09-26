@@ -19,6 +19,7 @@ import {
   agingCell,
   installmentDueDate,
   isAdvancedStatus,
+  splitAddressEmail,
 } from "@/components/SOADocument";
 import type { Doc } from "@/convex/_generated/dataModel";
 
@@ -184,6 +185,12 @@ export default function Plans() {
 
       {records.map((group) => {
         const c = group.client;
+        // Address and email get their own lines; staff sometimes type the
+        // email into the address field.
+        const contact = splitAddressEmail(
+          [c.address, c.city, c.province].filter(Boolean).join(", "),
+          c.email
+        );
         const beneficiaries = beneficiariesOf(c);
         const beneficiaryRows = Array.from({ length: 4 }, (_, i) => beneficiaries[i]);
 
@@ -224,11 +231,10 @@ export default function Plans() {
                       value={`${c.lastName}, ${c.firstName}${c.middleName ? ` ${c.middleName}` : ""}`}
                     />
                     <Field label="Contact Number" value={c.contactNumber || "—"} />
+                    <Field label="Address" value={contact.address} />
                     <Field
-                      label="Address"
-                      value={
-                        [c.address, c.city, c.province].filter(Boolean).join(", ") || "—"
-                      }
+                      label="Email Address"
+                      value={contact.email || "—"}
                     />
                     <div className="grid grid-cols-2 gap-x-10">
                       <Field

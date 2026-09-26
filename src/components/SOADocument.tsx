@@ -173,6 +173,34 @@ export function isAdvancedStatus(
   return paymentCount > fallenDue;
 }
 
+/** Matches an email address anywhere in a free-text string. */
+const EMAIL_TOKEN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
+
+/**
+ * Splits a stored address into the street address and the email address.
+ *
+ * Clients are often entered with the email typed into the address line (e.g.
+ * "dclarinz2026@gmail.com, Malaybalay City, Bukidnon"). Pulling the email out
+ * here lets every view — the portal, the staff page and the printed statement —
+ * show the address and the email on their own lines instead of one run-on
+ * line. The record's own email field wins when it is filled in.
+ */
+export function splitAddressEmail(
+  address: string,
+  email?: string | null
+): { address: string; email: string } {
+  const parts = (address || "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const found = parts.find((p) => EMAIL_TOKEN.test(p));
+  const rest = parts.filter((p) => p !== found);
+  return {
+    address: rest.join(", ") || "—",
+    email: (email || found || "").trim(),
+  };
+}
+
 /** Escape user-entered text before it lands in the generated HTML. */
 function esc(value: string | number | undefined | null) {
   if (value === undefined || value === null) return "";
@@ -613,8 +641,7 @@ export function generateSOAHTML(data: SOAData): string {
         ${fld("Age:", data.clientAge !== undefined ? String(data.clientAge) : "\u2014", "narrow")}
       </tr>
       <tr>
-        <td class="fld-label">&nbsp;</td>
-        <td class="fld-value wide">${esc(data.clientEmail || "")}</td>
+        ${fld("Email Address:", data.clientEmail || "\u2014", "wide")}
         ${fld("Birthday:", data.clientBirthDate || "\u2014", "narrow")}
       </tr>
     </table>

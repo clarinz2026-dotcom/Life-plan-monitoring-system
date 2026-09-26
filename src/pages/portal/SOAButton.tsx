@@ -16,7 +16,12 @@ import {
   toDataURL,
   type PreparedSOAPDF,
 } from "@/lib/generateSOA";
-import { generateSOAHTML, type SOAData, type SOABeneficiary } from "@/components/SOADocument";
+import {
+  generateSOAHTML,
+  splitAddressEmail,
+  type SOAData,
+  type SOABeneficiary,
+} from "@/components/SOADocument";
 import type { Doc } from "@/convex/_generated/dataModel";
 
 export type PortalContractDetail = {
@@ -56,6 +61,21 @@ function getBeneficiaries(client: Doc<"clients">): SOABeneficiary[] {
 }
 
 /**
+ * Address and email, on their own lines. Staff sometimes type the email into
+ * the address field, so the two are split apart before printing.
+ */
+function addressFields(client: Doc<"clients">): Pick<SOAData, "clientAddress" | "clientEmail"> {
+  const contact = splitAddressEmail(
+    [client.address, client.city, client.province].filter(Boolean).join(", "),
+    client.email
+  );
+  return {
+    clientAddress: contact.address,
+    clientEmail: contact.email || undefined,
+  };
+}
+
+/**
  * Build SOA data for a SINGLE contract (per-plan SOA).
  */
 export function buildSingleContractSOA(
@@ -79,10 +99,8 @@ export function buildSingleContractSOA(
 
   return {
     clientName: fullName,
-    clientAddress:
-      [client.address, client.city, client.province].filter(Boolean).join(", ") || "\u2014",
+    ...addressFields(client),
     clientContact: client.contactNumber || "\u2014",
-    clientEmail: client.email || undefined,
     clientAge: client.dateOfBirth ? computeAge(client.dateOfBirth) : undefined,
     clientBirthDate: client.dateOfBirth
       ? new Date(client.dateOfBirth).toLocaleDateString("en-PH", {
@@ -156,10 +174,8 @@ export function buildSOAData(
 
   return {
     clientName: fullName,
-    clientAddress:
-      [client.address, client.city, client.province].filter(Boolean).join(", ") || "\u2014",
+    ...addressFields(client),
     clientContact: client.contactNumber || "\u2014",
-    clientEmail: client.email || undefined,
     clientAge: client.dateOfBirth ? computeAge(client.dateOfBirth) : undefined,
     clientBirthDate: client.dateOfBirth
       ? new Date(client.dateOfBirth).toLocaleDateString("en-PH", {
