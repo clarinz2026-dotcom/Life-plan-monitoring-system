@@ -421,10 +421,7 @@ export default function Plans() {
                         ) : (
                           <StatementTable
                             columns={[
-                              {
-                                label: <>Payment Date<br />(MM/DD/YYYY)</>,
-                                width: "11%",
-                              },
+                              { label: "Payment Date", width: "11%" },
                               { label: "LPA Number", width: "9.5%" },
                               { label: <>Effectivity<br />Date</>, width: "10.5%" },
                               { label: "Due Date", width: "10%" },

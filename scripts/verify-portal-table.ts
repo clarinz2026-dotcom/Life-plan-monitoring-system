@@ -11,7 +11,7 @@ const CELL = "border:1px solid #e6dfd1;padding:4px 8px;text-align:center;vertica
 const TH = "border:1px solid #e6dfd1;background:#eef2ee;padding:4px 8px;vertical-align:middle;text-align:center;font:700 9px/1.2 Arial,Helvetica,sans-serif;letter-spacing:.03em;text-transform:uppercase;color:#1b4332;";
 
 const WIDTHS = [
-  ["PAYMENT DATE (MM/DD/YYYY)", "11%"],
+  ["PAYMENT DATE", "11%"],
   ["LPA NUMBER", "9.5%"],
   ["EFFECTIVITY DATE", "10.5%"],
   ["DUE DATE", "10%"],

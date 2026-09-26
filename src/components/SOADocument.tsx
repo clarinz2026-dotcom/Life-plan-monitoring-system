@@ -545,7 +545,7 @@ export function generateSOAHTML(data: SOAData): string {
         <table class="soa-grid">
           <thead>
             <tr>
-              <th class="wc1">Payment Date<br />(MM/DD/YYYY)</th>
+              <th class="wc1">Payment Date</th>
               <th class="wc0">LPA<br />Number</th>
               <th class="wc1b">Effectivity<br />Date</th>
               <th class="wc1c">Due Date</th>
