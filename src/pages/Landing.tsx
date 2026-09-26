@@ -111,7 +111,7 @@ function BrandBlock({ light = false }: { light?: boolean }) {
           Evangelist
         </p>
         <p
-          className={`font-brand mt-1 text-[15px] italic leading-none ${
+          className={`mt-1 text-[10.5px] font-medium uppercase tracking-[0.2em] ${
             light ? "text-white/55" : "text-stone"
           }`}
         >

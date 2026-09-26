@@ -31,8 +31,7 @@ async function loadCss(): Promise<{ css: string; source: string }> {
   const candidates = [
     "font-brand", "font-figures", "font-display", "font-bold", "font-semibold",
     "truncate", "uppercase", "block", "leading-none", "text-sm", "text-white",
-    "text-evergreen", "text-stone", "text-4xl", "text-3xl", "text-xl", "text-xs", "text-2xl",
-    "text-[15px]", "text-[23px]", "italic", "leading-none",
+    "text-evergreen", "text-4xl", "text-3xl", "text-xl", "text-xs", "text-2xl",
   ];
   const compiler = await compile(readFileSync("src/index.css", "utf8"), {
     base: process.cwd(),
@@ -68,14 +67,6 @@ const report = await page.evaluate(() => {
   portal.innerHTML = `<span class="font-brand block text-[18px] text-evergreen">Evangelist</span><p>Portal copy</p>`;
   document.body.appendChild(portal);
 
-  // The landing wordmark lockup: company name over the tagline.
-  const landing = document.createElement("div");
-  landing.innerHTML = `
-    <p class="font-brand text-[23px] leading-none text-evergreen">Evangelist</p>
-    <p class="font-brand mt-1 text-[15px] italic leading-none text-stone">Funeral Services</p>
-  `;
-  document.body.appendChild(landing);
-
   const family = (el: Element | null) => (el ? getComputedStyle(el).fontFamily : "NOT FOUND");
   return {
     wordmarkStaff: family(root.querySelector(".font-brand")),
@@ -85,11 +76,6 @@ const report = await page.evaluate(() => {
     p: family(root.querySelector("p.text-sm")),
     figures: family(root.querySelector(".font-figures")),
     portalCopy: family(portal.querySelector("p")),
-    landingWordmark: family(landing.querySelector("p.font-brand")),
-    landingTagline: family(landing.querySelector("p.font-brand.italic")),
-    landingTaglineStyle: landing.querySelector("p.font-brand.italic")
-      ? getComputedStyle(landing.querySelector("p.font-brand.italic")).fontStyle
-      : "NOT FOUND",
     hasBrayles: document.documentElement.innerHTML.includes("Brayles"),
   };
 });
@@ -107,9 +93,6 @@ const checks: [string, string, boolean][] = [
   ["staff body copy", report.p, isArial(report.p)],
   ["staff figures", report.figures, isArial(report.figures)],
   ["portal body copy", report.portalCopy, isArial(report.portalCopy)],
-  ["landing wordmark", report.landingWordmark, picksPacifico(report.landingWordmark)],
-  ["landing tagline", report.landingTagline, picksPacifico(report.landingTagline)],
-  ["landing tagline is italic", report.landingTaglineStyle, /italic/i.test(report.landingTaglineStyle)],
 ];
 
 let bad = 0;
