@@ -1,7 +1,7 @@
 /**
  * Wordmark font probe — loads the app's real stylesheet in Chromium and
  * reports the computed font family for the company name and for surrounding
- * staff/portal text, so "the wordmark is Pacifico and nothing else moved" is
+ * staff/portal text, so "the wordmark is Arial like everything around it" is
  * checked against the cascade. Read-only; renders no app data.
  */
 import { readFileSync } from "node:fs";
@@ -25,11 +25,11 @@ async function loadCss(): Promise<{ css: string; source: string }> {
   }
 
   // Only the utility classes this probe renders are needed: every rule that
-  // decides font-family lives in index.css itself (.font-brand, .font-figures,
+  // decides font-family lives in index.css itself (--font-sans, --font-figures,
   // the .staff-shell / .portal-shell blocks), so there is no value in scanning
   // the whole tree here.
   const candidates = [
-    "font-brand", "font-figures", "font-display", "font-bold", "font-semibold",
+    "font-sans", "font-figures", "font-display", "font-bold", "font-semibold",
     "truncate", "uppercase", "block", "leading-none", "text-sm", "text-white",
     "text-evergreen", "text-4xl", "text-3xl", "text-xl", "text-xs", "text-2xl",
   ];
@@ -53,7 +53,7 @@ const report = await page.evaluate(() => {
   root.className = "staff-shell";
   root.innerHTML = `
     <aside>
-      <span class="font-brand truncate text-[17px] leading-none text-white">Evangelist</span>
+      <span class="font-sans truncate text-[17px] leading-none text-white">Evangelist</span>
       <span class="truncate text-[10px] uppercase">Staff Portal</span>
     </aside>
     <h1>Dashboard</h1>
@@ -64,30 +64,28 @@ const report = await page.evaluate(() => {
 
   const portal = document.createElement("div");
   portal.className = "portal-shell";
-  portal.innerHTML = `<span class="font-brand block text-[18px] text-evergreen">Evangelist</span><p>Portal copy</p>`;
+  portal.innerHTML = `<span class="font-sans block text-[18px] text-evergreen">Evangelist</span><p>Portal copy</p>`;
   document.body.appendChild(portal);
 
   const family = (el: Element | null) => (el ? getComputedStyle(el).fontFamily : "NOT FOUND");
   return {
-    wordmarkStaff: family(root.querySelector(".font-brand")),
-    wordmarkPortal: family(portal.querySelector(".font-brand")),
+    wordmarkStaff: family(root.querySelector(".font-sans")),
+    wordmarkPortal: family(portal.querySelector(".font-sans")),
     sidebarCaption: family(root.querySelector("aside span:last-child")),
     h1: family(root.querySelector("h1")),
     p: family(root.querySelector("p.text-sm")),
     figures: family(root.querySelector(".font-figures")),
     portalCopy: family(portal.querySelector("p")),
     hasBrayles: document.documentElement.innerHTML.includes("Brayles"),
+    hasPacifico: document.documentElement.innerHTML.includes("Pacifico"),
   };
 });
 
-// Chromium normalizes the stack to unquoted `Pacifico, Arial, ...`, so accept
-// Pacifico with any quoting as the leading family.
-const picksPacifico = (v: string) => /(^|["\s])Pacifico\b/i.test(v.trim());
 const isArial = (v: string) => /Arial/i.test(v) && !/Georgia|Times|Pacifico/i.test(v);
 
 const checks: [string, string, boolean][] = [
-  ["staff wordmark", report.wordmarkStaff, picksPacifico(report.wordmarkStaff)],
-  ["portal wordmark", report.wordmarkPortal, picksPacifico(report.wordmarkPortal)],
+  ["staff wordmark", report.wordmarkStaff, isArial(report.wordmarkStaff)],
+  ["portal wordmark", report.wordmarkPortal, isArial(report.wordmarkPortal)],
   ["sidebar caption", report.sidebarCaption, isArial(report.sidebarCaption)],
   ["staff h1", report.h1, isArial(report.h1)],
   ["staff body copy", report.p, isArial(report.p)],
@@ -101,7 +99,8 @@ for (const [label, value, ok] of checks) {
   console.log(`  ${ok ? "ok  " : "FAIL"} ${label.padEnd(17)} ${value}`);
 }
 console.log("  Brayles still referenced anywhere in the DOM:", report.hasBrayles);
-console.log(bad === 0 ? "\nWordmark resolves to Pacifico; everything else is still Arial." : `\n${bad} check(s) failed.`);
+console.log("  Pacifico still referenced anywhere in the DOM:", report.hasPacifico);
+console.log(bad === 0 ? "\nWordmark is Arial, like the rest of the UI." : `\n${bad} check(s) failed.`);
 
 await browser.close();
 process.exit(bad === 0 ? 0 : 1);

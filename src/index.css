@@ -125,6 +125,12 @@
 @theme {
   --font-display: Georgia, "Times New Roman", ui-serif, serif;
   /*
+   * The house face is Arial, as requested by the office. The wordmarks state it
+   * through `font-sans` so they match the surrounding UI explicitly instead of
+   * relying on whichever shell they happen to sit in.
+   */
+  --font-sans: Arial, "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
+  /*
    * Arial for figures and ledger-style records (dashboard totals, payment
    * logs) — clean, highly legible digits at both display and table sizes.
    */
@@ -393,17 +399,6 @@
    */
   .font-figures {
     font-family: Arial, "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
-  }
-
-  /*
-   * The company name only, set in Pacifico (Google Fonts, SIL Open Font
-   * License — free for commercial use). Unlayered, so it outranks the Arial
-   * shell rules above and the `font-display` utility on the landing page; the
-   * fallback keeps the wordmark readable if the webfont is blocked.
-   */
-  .font-brand {
-    font-family:
-      "Pacifico", Arial, "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
   }
 
 /*
