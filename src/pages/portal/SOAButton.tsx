@@ -78,6 +78,9 @@ function addressFields(client: Doc<"clients">): Pick<SOAData, "clientAddress" | 
 /**
  * Build SOA data for a SINGLE contract (per-plan SOA).
  */
+/** The statement is a fixed-width document; this is its printed width. */
+const SOA_DOC_WIDTH = 774;
+
 export function buildSingleContractSOA(
   group: PortalRecordGroup,
   contractDetail: PortalContractDetail,
@@ -224,6 +227,8 @@ export function SOAButton({
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [logoDataUrl, setLogoDataUrl] = useState<string | null>(null);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
+  const previewRef = useRef<HTMLDivElement | null>(null);
+  const [preview, setPreview] = useState({ scale: 1, height: 0 });
 
   // Public branch directory — this component runs for planholder accounts,
   // which cannot call the staff-only `branches.list`.
@@ -253,6 +258,33 @@ export function SOAButton({
       cancelled = true;
     };
   }, [logoUrl]);
+
+  /**
+   * Scale the preview to fit, instead of letting it reflow.
+   *
+   * The statement is a fixed 774px-wide document — the same one that prints
+   * and downloads. Letting the frame size itself meant a narrow dialog
+   * squeezed all ten payment columns into a few hundred pixels, breaking every
+   * header mid-word. Instead the frame stays at the document's real width and
+   * is scaled down to the dialog, so the preview is always a true, if smaller,
+   * picture of the PDF. Never scaled above 1:1.
+   */
+  useEffect(() => {
+    if (!open) return;
+    const el = previewRef.current;
+    if (!el) return;
+    const measure = () => {
+      const width = el.clientWidth;
+      const height = el.clientHeight;
+      if (width > 0 && height > 0) {
+        setPreview({ scale: Math.min(1, width / SOA_DOC_WIDTH), height });
+      }
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open]);
 
   const group = records[0];
   const branchName =
@@ -382,12 +414,27 @@ export function SOAButton({
           </DialogHeader>
           {data && (
             <>
-              <iframe
-                ref={frameRef}
-                title="Statement of Account"
-                srcDoc={generateSOAHTML(data)}
-                className="h-[62vh] w-full rounded-xl border border-line bg-white"
-              />
+              <div
+                ref={previewRef}
+                className="h-[62vh] w-full overflow-hidden rounded-xl border border-line bg-white"
+              >
+                <iframe
+                  ref={frameRef}
+                  title="Statement of Account"
+                  srcDoc={generateSOAHTML(data)}
+                  className="h-full w-[774px] max-w-none border-0"
+                  style={{
+                    // The frame is taller than the box by 1/scale, so the whole
+                    // document width fits once scaled while the visible area
+                    // still shows a full screenful of the statement.
+                    height: preview.height
+                      ? preview.height / preview.scale
+                      : undefined,
+                    transform: `scale(${preview.scale})`,
+                    transformOrigin: "top left",
+                  }}
+                />
+              </div>
               {pdfError && (
                 <p className="text-xs text-muted-foreground">
                   {pdfError} Use <strong>Print / Save as PDF</strong> instead.
