@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ComponentProps } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
@@ -269,7 +269,7 @@ export function SOAButton({
    * is scaled down to the dialog, so the preview is always a true, if smaller,
    * picture of the PDF. Never scaled above 1:1.
    */
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!open) return;
     const el = previewRef.current;
     if (!el) return;
@@ -280,6 +280,9 @@ export function SOAButton({
         setPreview({ scale: Math.min(1, width / SOA_DOC_WIDTH), height });
       }
     };
+    // Measure before first paint: a plain effect runs after the browser has
+    // already shown the frame at scale 1, so on slow frames the user would
+    // see a cropped pass before the shrink lands.
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -408,7 +411,13 @@ export function SOAButton({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-fit min-w-0 max-w-[calc(100vw-2rem)] sm:max-w-[min(94vw,55rem)]">
+        <DialogContent
+          className="sm:max-w-none [grid-template-columns:minmax(0,1fr)]"
+          // 774px statement + 2×24px dialog padding = 822px: the dialog hugs
+          // the document at 1:1 on desktop, and 94vw keeps it on-screen below
+          // that, where the box's scale-to-fit shrinks the frame instead.
+          style={{ width: "min(94vw, 822px)" }}
+        >
           <DialogHeader>
             <DialogTitle>Statement of Account</DialogTitle>
           </DialogHeader>
@@ -416,7 +425,7 @@ export function SOAButton({
             <>
               <div
                 ref={previewRef}
-                className="h-[62vh] max-w-full overflow-hidden rounded-xl border border-line bg-white"
+                className="h-[62vh] w-full min-w-0 overflow-hidden rounded-xl border border-line bg-white"
               >
                 <iframe
                   ref={frameRef}
