@@ -141,23 +141,8 @@ async function waitForAssets(container: HTMLElement): Promise<void> {
     2500
   );
 
-  // 2. The letterhead faces must be fetched before they can be painted — the
-  //    brand block and the tagline/sign-off use different cuts of the same face.
-  const fonts = document.fonts;
-  if (fonts) {
-    try {
-      await withTimeout(fonts.load('700 29px "Playfair Display"'), 2500);
-      await withTimeout(fonts.load('italic 600 14px "Playfair Display"'), 2500);
-      await withTimeout(fonts.load('italic 600 12.5px "Playfair Display"'), 2500);
-      await withTimeout(fonts.load('400 29px "Brayles"'), 2500);
-      await withTimeout(fonts.load('400 17px "Brayles"'), 2500);
-      await withTimeout(fonts.ready, 2500);
-    } catch {
-      // Fall through — Georgia is a perfectly good serif fallback.
-    }
-  }
-
-  // 3. Images (the company logo).
+  // 2. Images (the company logo). No webfonts are used by the statement — it
+  //    is set entirely in Arial — so nothing else needs to settle first.
   await withTimeout(
     Promise.all(
       Array.from(container.querySelectorAll("img")).map(

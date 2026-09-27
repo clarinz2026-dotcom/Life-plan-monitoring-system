@@ -23,7 +23,7 @@ const data: SOAData = {
       monthlyAmortization: 500,
       totalPaid: 2500,
       contractStatus: "current",
-      startDate: new Date("2026-04-22").getTime(),
+      startDate: new Date("2026-08-22").getTime(),
     },
   ],
   payments: [
