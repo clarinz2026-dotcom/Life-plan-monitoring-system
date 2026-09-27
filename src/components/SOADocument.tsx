@@ -75,9 +75,9 @@ function fmtMoney(amount: number) {
   }).format(amount);
 }
 
-/** `₱ #,##0.00` */
-function peso(amount: number) {
-  return `\u20B1 ${fmtMoney(amount)}`;
+/** `PHP #,##0.00` — the money format the office's template prints. */
+function php(amount: number) {
+  return `PHP ${fmtMoney(amount)}`;
 }
 
 /** `MM/DD/YYYY` — the date format on the statement. */
@@ -117,7 +117,7 @@ export function installmentDueDate(
 }
 
 /**
- * Aging shown in the Payment History table.
+ * Pay Class shown in the Payment History table.
  *
  * Late payments are reported in the office's 30-day delinquency brackets
  * rather than as a raw day count:
@@ -211,33 +211,31 @@ function esc(value: string | number | undefined | null) {
     .replace(/"/g, "&quot;");
 }
 
+/** Company line printed under the letterhead, per the office's template. */
+const COMPANY_ADDRESS =
+  "Evangelist Life Insurance Services | 2nd Floor, Gabinez Bldg., Fortich St., Malaybalay City, Bukidnon, 8700";
+
 /**
  * One document stylesheet, shared by the PDF render and the on-screen preview
  * (`SOAButton` renders the same HTML into an iframe), so what a family sees in
  * the viewer is exactly what they download.
  *
- * The layout follows the printed statement template: circular seal + brand
- * block on the left, "A Life of Dignity / A Legacy of Love" on the right, a
- * centred serif title, then brand-green section bars over ruled fields and
- * bordered tables, and the four-cell account summary strip at the foot.
+ * The layout follows the office's statement template: a centered letterhead
+ * with the company name and address, a centered STATEMENT OF ACCOUNT title,
+ * then full-width brand-green section bars over a two-column ruled-field
+ * Account Information grid, the seven-column Payment History table, and the
+ * four-cell Account Summary strip with large figures at the foot.
  */
 const SOA_STYLES = `
-  @font-face {
-    font-family: "Brayles";
-    src: url("/fonts/Brayles.ttf") format("truetype");
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-  }
-  @page { size: A4; margin: 10mm; }
+  @page { size: A4; margin: 6mm; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
-    font-family: 'Times New Roman', Times, Georgia, serif;
+    font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
     color: #211f1a;
     background: #ffffff;
-    font-size: 11.5px;
-    line-height: 1.4;
+    font-size: 11px;
+    line-height: 1.45;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -247,175 +245,136 @@ const SOA_STYLES = `
     width: 100%;
     max-width: 774px;
     margin: 0 auto;
-    padding: 2px 0 6px;
+    padding: 4px 0 4px;
     overflow: hidden;
   }
 
   /* html2canvas ignores <colgroup> entirely, so column widths are declared
      directly on the header cells. Every bordered table then spans the full
      content width in both the on-screen preview and the PDF. */
-  table.soa-grid { display: table; width: 100% !important; table-layout: fixed; }
-  /* Payment-history columns — the ten widths sum to exactly 100%, which
+  /* Payment-history columns — the seven widths sum to exactly 100%, which
      table-layout: fixed requires to keep every column at its designed size
      (an over-100 total gets silently rescaled, and html2canvas rescales it
      again differently, which is what knocked the printed table out of line). */
-  table.soa-grid th.wc0 { width: 8.5%; }
-  table.soa-grid th.wc1 { width: 11.5%; }
-  table.soa-grid th.wc1b { width: 11%; }
-  table.soa-grid th.wc1c { width: 9%; }
-  table.soa-grid th.wc2 { width: 8.5%; }
-  table.soa-grid th.wc2b { width: 8.5%; }
-  table.soa-grid th.wc3 { width: 11%; }
-  table.soa-grid th.wc3b { width: 8%; }
-  table.soa-grid th.wc4 { width: 10%; }
-  table.soa-grid th.wc5 { width: 14%; }
-  table.soa-grid th.wb1 { width: 6%; }
-  table.soa-grid th.wb2 { width: 54%; }
-  table.soa-grid th.wb3 { width: 15%; }
-  table.soa-grid th.wb4 { width: 25%; }
+  table.soa-grid th.wp1 { width: 12%; }
+  table.soa-grid th.wp2 { width: 13%; }
+  table.soa-grid th.wp3 { width: 12%; }
+  table.soa-grid th.wp4 { width: 15%; }
+  table.soa-grid th.wp5 { width: 14%; }
+  table.soa-grid th.wp6 { width: 17%; }
+  table.soa-grid th.wp7 { width: 17%; }
 
   /* ── Letterhead ─────────────────────────────────────────────────────── */
-  .lh { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-  .lh-left { display: flex; align-items: center; gap: 12px; }
-  .lh-logo { width: 64px; height: 64px; object-fit: contain; }
+  .lh { text-align: center; }
+  .lh-logo {
+    display: block;
+    margin: 0 auto 4px;
+    width: 46px;
+    height: 46px;
+    object-fit: contain;
+  }
   .lh-brand {
-    font-family: 'Brayles', Georgia, 'Times New Roman', serif;
-    font-size: 29px;
-    font-weight: 400;
-    line-height: 1;
+    font-size: 25px;
+    font-weight: 700;
+    line-height: 1.15;
     letter-spacing: 0.01em;
-    color: #1d4ed8;
-  }
-  .lh-sub {
-    margin-top: 4px;
-    font-family: 'Brayles', Georgia, 'Times New Roman', serif;
-    font-size: 17px;
-    line-height: 1.1;
-    letter-spacing: 0.01em;
-    color: #1d4ed8;
-  }
-  .lh-right { text-align: right; padding-top: 4px; }
-  .lh-tag {
-    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
-    font-style: italic;
-    font-size: 14px;
-    line-height: 1.4;
     color: #1b4332;
   }
-  .lh-tag-rule { margin: 7px 0 0 auto; width: 158px; height: 2px; background: #a9874f; }
-  .lh-issued {
-    margin-top: 7px;
-    font-size: 8px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+  .lh-sub {
+    margin-top: 3px;
+    font-size: 9px;
+    letter-spacing: 0.02em;
     color: #5c6b60;
   }
 
   /* ── Title ──────────────────────────────────────────────────────────── */
   .doc-title {
-    margin: 16px 0 14px;
+    margin: 14px 0 12px;
     text-align: center;
-    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
-    font-size: 26px;
+    font-size: 17px;
     font-weight: 700;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     color: #1b4332;
   }
 
   /* ── Section bars ───────────────────────────────────────────────────── */
   .sec-bar {
-    display: inline-block;
-    margin: 12px 0 8px;
-    padding: 4px 30px 4px 10px;
+    display: block;
+    margin: 14px 0 8px;
+    padding: 5px 12px 4px;
     background: #1b4332;
     color: #ffffff;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.14em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    /* The template's bar tapers to a point on the right. Browsers that can't
-       clip degrade to a plain rectangle, which still reads correctly. */
-    clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
   }
 
-  /* ── Ruled fields ───────────────────────────────────────────────────── */
+  /* ── Ruled fields (Account Information) ─────────────────────────────── */
   table.fields { width: 100%; border-collapse: collapse; }
-  table.fields td { vertical-align: bottom; padding: 2px 0 5px; }
+  table.fields td { vertical-align: bottom; padding: 5px 0 6px; }
   .fld-label {
     width: 1%;
     white-space: nowrap;
-    padding-right: 5px !important;
+    padding-right: 6px !important;
     font-size: 9.5px;
     font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: #33413a;
+    color: #211f1a;
   }
   .fld-value {
-    border-bottom: 1px solid #94a096;
-    padding: 0 16px 2px 3px !important;
+    border-bottom: 1px solid #8a958c;
+    padding: 0 14px 2px 4px !important;
     font-size: 11.5px;
+    font-weight: 700;
   }
   .fld-value.wide { padding-right: 26px !important; }
   .fld-value.narrow { padding-right: 6px !important; }
 
-  /* ── Bordered tables (beneficiaries, payments) ──────────────────────── */
+  /* ── Bordered tables (payment history) ──────────────────────────────── */
   /* The display is stated outright and the class is "soa-grid" on purpose. The
      PDF is produced by injecting this document into the live app page, where
      the app's Tailwind stylesheet is also in force: a generic class name like
      "grid" picks up the .grid { display: grid } utility there, which turns
      these tables into grid containers and collapses every column to its
      content — correct in the standalone preview, broken in the download. */
-  table.soa-grid { display: table; width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.soa-grid { display: table; width: 100% !important; border-collapse: collapse; table-layout: fixed; }
   table.soa-grid th, table.soa-grid td {
     border: 1px solid #a9b4ab;
-    padding: 4px 5px;
-    font-size: 10.5px;
+    padding: 6px 5px;
+    font-size: 11px;
     vertical-align: middle;
   }
-  /* Header labels are the widest thing in their column ("INSTALLMENT",
-     "EFFECTIVITY"), so they are set compact and allowed to break inside a
-     word: a long label then wraps instead of spilling across its neighbours
-     in the narrow on-screen preview. */
   table.soa-grid thead th {
     background: #eef1ea;
     color: #1b4332;
-    font-size: 8.5px;
+    font-size: 10px;
     font-weight: 700;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.02em;
     line-height: 1.25;
     text-transform: uppercase;
     text-align: center;
     overflow-wrap: break-word;
   }
   table.soa-grid td.c { text-align: center; }
-  table.soa-grid td.num { text-align: center; font-variant-numeric: tabular-nums; }
-  table.soa-grid td.r { text-align: right; font-variant-numeric: tabular-nums; }
   table.soa-grid td.empty { text-align: center; font-style: italic; color: #6b7269; padding: 10px 7px; }
-  table.soa-grid tr.alt td { background: #fafbf9; }
-  /* Header text follows its column's data alignment — figures sit over the
-     right edge they sum from, text columns over their left edge. Declared
-     after the thead rule so it wins on equal specificity. */
-  table.soa-grid th.th-r { text-align: right; }
-  table.soa-grid th.th-l { text-align: left; }
 
   /* ── Account summary strip ──────────────────────────────────────────── */
   .summary { display: flex; border: 1px solid #a9b4ab; background: #f1f4ef; }
-  .summary .cell { flex: 1 1 0; padding: 8px 10px; border-left: 1px solid #c6cfc6; }
+  .summary .cell { flex: 1 1 0; padding: 10px 8px 12px; border-left: 1px solid #c6cfc6; }
   .summary .cell:first-child { border-left: none; }
   .summary .lbl {
     text-align: center;
-    font-size: 9px;
+    font-size: 9.5px;
     font-weight: 700;
-    letter-spacing: 0.07em;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
     color: #33413a;
   }
   .summary .val {
-    margin-top: 5px;
+    margin-top: 8px;
     text-align: center;
-    font-size: 13px;
+    font-size: 19px;
     font-weight: 700;
     color: #1b4332;
     font-variant-numeric: tabular-nums;
@@ -424,7 +383,7 @@ const SOA_STYLES = `
 
   /* ── Multi-plan statements ──────────────────────────────────────────── */
   .plan-block { page-break-inside: avoid; }
-  .plan-block + .plan-block { margin-top: 8px; padding-top: 4px; border-top: 1px solid #d5dcd6; }
+  .plan-block + .plan-block { margin-top: 10px; padding-top: 4px; border-top: 1px solid #d5dcd6; }
   .plan-heading {
     margin-top: 12px;
     font-size: 10px;
@@ -435,25 +394,16 @@ const SOA_STYLES = `
   }
 
   /* ── Footer ─────────────────────────────────────────────────────────── */
-  .foot { margin-top: 18px; page-break-inside: avoid; }
+  .foot { margin-top: 20px; page-break-inside: avoid; }
   .foot-row { display: flex; align-items: center; gap: 14px; }
   .foot-rule { flex: 1 1 auto; height: 1px; background: #a9b4ab; }
   .foot-sign {
-    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    font-family: Georgia, 'Times New Roman', serif;
     font-style: italic;
     font-size: 12.5px;
     color: #211f1a;
     white-space: nowrap;
   }
-  .foot-brand {
-    font-family: 'Brayles', Georgia, 'Times New Roman', serif;
-    font-size: 15px;
-    font-style: normal;
-    color: #1d4ed8;
-  }
-
-  /* ── Seal watermark ─────────────────────────────────────────────────── */
-  .mark { position: absolute; right: -14px; bottom: -16px; width: 130px; height: 130px; opacity: 0.06; }
 `;
 
 export function generateSOAHTML(data: SOAData): string {
@@ -461,18 +411,6 @@ export function generateSOAHTML(data: SOAData): string {
   /** A label sitting on the same ruled line as its value. */
   const fld = (label: string, value: string, valueClass = "") =>
     `<td class="fld-label">${esc(label)}</td><td class="fld-value ${valueClass}">${esc(value)}</td>`;
-
-  // ── Beneficiaries: the template always shows four numbered rows ────────
-  const beneficiaryRows = Array.from({ length: 4 }, (_, i) => {
-    const b = data.beneficiaries[i];
-    return `
-      <tr>
-        <td class="c">${i + 1}</td>
-        <td>${b ? esc(b.name) : ""}</td>
-        <td class="c">${b?.age !== undefined ? esc(b.age) : ""}</td>
-        <td class="c">${b ? esc(b.relationship) : ""}</td>
-      </tr>`;
-  }).join("");
 
   // ── Plan blocks ────────────────────────────────────────────────────────
   const multiPlan = data.contracts.length > 1;
@@ -486,37 +424,45 @@ export function generateSOAHTML(data: SOAData): string {
       let runningBalance = c.planAmount;
       let installmentCounter = 0;
 
-      // Effectivity date is a property of the plan, not of an individual
-      // installment, so it repeats down every row of this plan's ledger.
-      const effectivity = Number.isFinite(c.startDate)
-        ? fmtDateShort(c.startDate)
-        : "";
+      // The most recent payment's channel describes how the plan is being
+      // settled; an unlabeled blank keeps the ruled line for the office to
+      // fill in by hand.
+      const latestPayment = contractPayments[contractPayments.length - 1];
+      const latestChannel = latestPayment?.paymentChannel ?? "";
+      const modeOfPayment =
+        CHANNEL_LABELS[latestChannel] ?? latestChannel ?? "";
 
-      const dueDateFor = (installment: number): number | null =>
-        installmentDueDate(c.startDate, installment);
+      // Plan value ÷ installment, expressed in whole years (2.5 when the
+      // term lands on half a year).
+      const termYears =
+        c.monthlyAmortization > 0
+          ? c.planAmount / c.monthlyAmortization / 12
+          : NaN;
+      const termLabel =
+        Number.isFinite(termYears) && termYears > 0
+          ? Number.isInteger(termYears)
+            ? String(termYears)
+            : termYears.toFixed(1)
+          : "";
 
       const ledgerRows = contractPayments
-        .map((p, i) => {
+        .map((p) => {
           runningBalance = Math.max(0, runningBalance - p.amount);
           installmentCounter += 1;
           const remark =
             p.remarks || CHANNEL_LABELS[p.paymentChannel] || p.paymentChannel;
 
-          const due = dueDateFor(installmentCounter);
-          const dueLabel = due === null ? "" : fmtDateShort(due);
-          const agingLabel = agingCell(due, p.paymentDate);
+          const due = installmentDueDate(c.startDate, installmentCounter);
+          const payClass = agingCell(due, p.paymentDate);
           return `
-        <tr class="${i % 2 === 1 ? "alt" : ""}">
-          <td class="c">${fmtDateShort(p.paymentDate)}</td>
-          <td class="c">${esc(c.contractNumber)}</td>
-          <td class="c">${esc(effectivity)}</td>
-          <td class="c">${esc(dueLabel)}</td>
-          <td class="r">${esc(peso(p.amount))}</td>
-          <td class="num">${esc(agingLabel)}</td>
-          <td class="num">${installmentCounter}</td>
+        <tr>
+          <td class="c">${esc(payClass)}</td>
+          <td class="c">${esc(fmtDateShort(p.paymentDate))}</td>
           <td class="c">${p.orNumber ? esc(p.orNumber) : ""}</td>
-          <td class="r">${esc(peso(runningBalance))}</td>
-          <td>${esc(remark)}</td>
+          <td class="c">${esc(php(p.amount))}</td>
+          <td class="c">${installmentCounter}</td>
+          <td class="c">${esc(php(runningBalance))}</td>
+          <td class="c">${esc(remark)}</td>
         </tr>`;
         })
         .join("");
@@ -543,15 +489,31 @@ export function generateSOAHTML(data: SOAData): string {
             : ""
         }
 
-        <span class="sec-bar">Plan Information</span>
+        <span class="sec-bar">Account Information</span>
         <table class="fields">
           <tr>
-            ${fld("Plan Value:", peso(c.planAmount))}
-            ${fld("Sales Agent:", data.salesAgent || "\u2014")}
+            ${fld("Branch:", data.branchName ?? "")}
+            ${fld("Contract No.:", c.contractNumber, "narrow")}
           </tr>
           <tr>
-            ${fld("Plan Type:", c.planType)}
-            ${fld("EFS OPC Control No.:", c.contractNumber)}
+            ${fld("Name:", data.clientName, "wide")}
+            ${fld("Plan Type:", c.planType, "narrow")}
+          </tr>
+          <tr>
+            ${fld("Address:", data.clientAddress, "wide")}
+            ${fld("Plan Value:", php(c.planAmount), "narrow")}
+          </tr>
+          <tr>
+            ${fld("Contact No.:", data.clientContact, "wide")}
+            ${fld("Mode of Payment:", modeOfPayment, "narrow")}
+          </tr>
+          <tr>
+            ${fld("Birth Date:", data.clientBirthDate ?? "", "wide")}
+            ${fld("Term (Years):", termLabel, "narrow")}
+          </tr>
+          <tr>
+            ${fld("Sales Agent:", data.salesAgent ?? "", "wide")}
+            ${fld("Installment Amount:", php(c.monthlyAmortization), "narrow")}
           </tr>
         </table>
 
@@ -559,22 +521,19 @@ export function generateSOAHTML(data: SOAData): string {
         <table class="soa-grid">
           <thead>
             <tr>
-              <th class="wc1">Payment Date</th>
-              <th class="wc0">LPA<br />Number</th>
-              <th class="wc1b">Effectivity<br />Date</th>
-              <th class="wc1c">Due Date</th>
-              <th class="wc2 th-r">Amount</th>
-              <th class="wc2b">Aging</th>
-              <th class="wc3">Installment<br />No.</th>
-              <th class="wc3b">O.R. No.</th>
-              <th class="wc4 th-r">Balance</th>
-              <th class="wc5 th-l">Remarks</th>
+              <th class="wp1">Pay Class</th>
+              <th class="wp2">O.R. Date</th>
+              <th class="wp3">O.R. No.</th>
+              <th class="wp4">Amount</th>
+              <th class="wp5">Installment No.</th>
+              <th class="wp6">Balance</th>
+              <th class="wp7">Remarks</th>
             </tr>
           </thead>
           <tbody>
             ${
               ledgerRows ||
-              `<tr><td colspan="10" class="empty">No payments recorded</td></tr>`
+              `<tr><td colspan="7" class="empty">No payments recorded</td></tr>`
             }
           </tbody>
         </table>
@@ -583,15 +542,15 @@ export function generateSOAHTML(data: SOAData): string {
         <div class="summary">
           <div class="cell">
             <p class="lbl">Plan Value</p>
-            <p class="val">${esc(peso(c.planAmount))}</p>
+            <p class="val">${esc(php(c.planAmount))}</p>
           </div>
           <div class="cell">
             <p class="lbl">Total Paid</p>
-            <p class="val">${esc(peso(c.totalPaid))}</p>
+            <p class="val">${esc(php(c.totalPaid))}</p>
           </div>
           <div class="cell">
             <p class="lbl">Outstanding Balance</p>
-            <p class="val">${esc(peso(outstanding))}</p>
+            <p class="val">${esc(php(outstanding))}</p>
           </div>
           <div class="cell">
             <p class="lbl">Payment Status</p>
@@ -602,25 +561,10 @@ export function generateSOAHTML(data: SOAData): string {
     })
     .join("");
 
-  const issuedLine = [
-    `Issued ${data.generatedDate}`,
-    data.branchName ? data.branchName : null,
-  ]
-    .filter(Boolean)
-    .join(" \u00b7 ");
-
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8" />
-  <!-- Letterhead face. Georgia is the app's own display font, so it is the
-       fallback if the webfont can't be fetched (offline / blocked network). -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,600;1,700&display=swap"
-    rel="stylesheet"
-  />
   <style>${SOA_STYLES}</style>
 </head>
 <body>
@@ -628,57 +572,17 @@ export function generateSOAHTML(data: SOAData): string {
 
     <!-- ── Letterhead ── -->
     <div class="lh">
-      <div class="lh-left">
-        ${data.logoUrl ? `<img class="lh-logo" src="${esc(data.logoUrl)}" alt="" />` : ""}
-        <div>
-          <p class="lh-brand">Evangelist</p>
-          <p class="lh-sub">Funeral Services</p>
-        </div>
-      </div>
-      <div class="lh-right">
-        <p class="lh-tag">To Care and To Serve</p>
-        <div class="lh-tag-rule"></div>
-        <p class="lh-issued">${esc(issuedLine)}</p>
-      </div>
+      ${data.logoUrl ? `<img class="lh-logo" src="${esc(data.logoUrl)}" alt="" />` : ""}
+      <p class="lh-brand">Evangelist Funeral Services</p>
+      <p class="lh-sub">${esc(COMPANY_ADDRESS)}</p>
     </div>
 
     <h1 class="doc-title">Statement of Account</h1>
 
-    <!-- ── Planholder information ── -->
-    <span class="sec-bar">Planholder Information</span>
-    <table class="fields">
-      <tr>
-        ${fld("Planholder's Name:", data.clientName, "wide")}
-        ${fld("Contact Number:", data.clientContact, "narrow")}
-      </tr>
-      <tr>
-        ${fld("Address:", data.clientAddress, "wide")}
-        ${fld("Age:", data.clientAge !== undefined ? String(data.clientAge) : "\u2014", "narrow")}
-      </tr>
-      <tr>
-        ${fld("Email Address:", data.clientEmail || "\u2014", "wide")}
-        ${fld("Birthday:", data.clientBirthDate || "\u2014", "narrow")}
-      </tr>
-    </table>
-
-    <!-- ── Beneficiaries ── -->
-    <span class="sec-bar">Beneficiaries</span>
-    <table class="soa-grid">
-      <thead>
-        <tr>
-          <th class="wb1">#</th>
-          <th class="wb2">Name</th>
-          <th class="wb3">Age</th>
-          <th class="wb4">Relationship</th>
-        </tr>
-      </thead>
-      <tbody>${beneficiaryRows}</tbody>
-    </table>
-
     <!-- ── Plans ── -->
     ${
       plansHTML ||
-      `<span class="sec-bar">Plan Information</span>
+      `<span class="sec-bar">Account Information</span>
        <table class="soa-grid">
          <tbody>
            <tr><td class="empty">No plan records on file for this planholder.</td></tr>
@@ -690,16 +594,10 @@ export function generateSOAHTML(data: SOAData): string {
     <div class="foot">
       <div class="foot-row">
         <div class="foot-rule"></div>
-        <p class="foot-sign">Prepared by: <span class="foot-brand">Evangelist Funeral Services</span></p>
+        <p class="foot-sign">Prepared by: Evangelist Funeral Services</p>
         <div class="foot-rule"></div>
       </div>
     </div>
-
-    ${
-      data.logoUrl
-        ? `<img class="mark" src="${esc(data.logoUrl)}" alt="" />`
-        : ""
-    }
   </div>
 </body>
 </html>`;
