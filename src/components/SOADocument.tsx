@@ -284,7 +284,7 @@ const SOA_STYLES = `
     font-weight: 400;
     line-height: 1;
     letter-spacing: 0.01em;
-    color: #1b4332;
+    color: #1d4ed8;
   }
   .lh-sub {
     margin-top: 4px;
@@ -292,7 +292,7 @@ const SOA_STYLES = `
     font-size: 17px;
     line-height: 1.1;
     letter-spacing: 0.01em;
-    color: #1b4332;
+    color: #1d4ed8;
   }
   .lh-right { text-align: right; padding-top: 4px; }
   .lh-tag {
@@ -449,6 +449,7 @@ const SOA_STYLES = `
     font-family: 'Brayles', Georgia, 'Times New Roman', serif;
     font-size: 15px;
     font-style: normal;
+    color: #1d4ed8;
   }
 
   /* ── Seal watermark ─────────────────────────────────────────────────── */

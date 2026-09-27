@@ -105,14 +105,14 @@ function BrandBlock({ light = false }: { light?: boolean }) {
       <div className="leading-none">
         <p
           className={`font-brayles text-[23px] leading-none ${
-            light ? "text-white" : "text-evergreen"
+            light ? "text-blue-200" : "text-blue-800"
           }`}
         >
           Evangelist
         </p>
         <p
           className={`font-brayles mt-1 text-[14px] leading-tight ${
-            light ? "text-white/55" : "text-stone"
+            light ? "text-blue-200" : "text-blue-800"
           }`}
         >
           Funeral Services
