@@ -71,7 +71,7 @@ export function initials(name?: string | null) {
 /* ── Status pills ───────────────────────────────────────────────────────── */
 
 const PILL_BASE =
-  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide";
+  "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[12px] font-bold uppercase tracking-wide";
 
 /**
  * Payment status pills.
@@ -173,15 +173,15 @@ export function PortalShell({
 }) {
   return (
     <div>
-      <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.28em] text-gold">
+      <p className="flex items-center gap-3 text-[12.5px] font-bold uppercase tracking-[0.28em] text-gold">
         <span className="h-px w-8 bg-current" />
         {eyebrow}
       </p>
-      <h1 className="mt-3 text-3xl font-semibold tracking-tight text-evergreen sm:text-4xl">
+      <h1 className="mt-3 text-4xl font-semibold tracking-tight text-evergreen sm:text-5xl">
         {title}
       </h1>
       {subtitle && (
-        <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-stone">
+        <p className="mt-2 max-w-2xl text-[16px] leading-relaxed text-stone">
           {subtitle}
         </p>
       )}
@@ -220,9 +220,9 @@ export function EmptyState({
       <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-evergreen/8 text-evergreen">
         <Icon className="h-7 w-7" />
       </div>
-      <p className="mt-4 text-[16px] font-bold text-ink">{title}</p>
+      <p className="mt-4 text-[17.5px] font-bold text-ink">{title}</p>
       {subtitle && (
-        <p className="mx-auto mt-1.5 max-w-md text-[13.5px] leading-relaxed text-stone">
+        <p className="mx-auto mt-1.5 max-w-md text-[15px] leading-relaxed text-stone">
           {subtitle}
         </p>
       )}

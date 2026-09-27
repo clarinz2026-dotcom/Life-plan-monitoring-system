@@ -226,9 +226,11 @@ export async function generateSOAPDFBlob(data: SOAData): Promise<PreparedSOAPDF>
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = pdf.internal.pageSize.getHeight();
 
-    const margin = 10; // mm on every side
-    const contentWidth = pdfWidth - margin * 2; // 190mm
-    const contentHeight = pdfHeight - margin * 2; // 277mm
+    // Narrow page margins keep the statement airy but fit the ten-column
+    // payment ledger with room to breathe — requested by the office.
+    const margin = 6; // mm on every side
+    const contentWidth = pdfWidth - margin * 2; // 198mm
+    const contentHeight = pdfHeight - margin * 2; // 285mm
 
     // Slice the tall canvas into page-sized bands. Handing jsPDF the whole
     // image once per page (the previous approach) embeds the full-resolution

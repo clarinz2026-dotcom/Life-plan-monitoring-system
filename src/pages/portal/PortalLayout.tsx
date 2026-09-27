@@ -10,7 +10,7 @@ const NAV = [
 ];
 
 function navClass({ isActive }: { isActive: boolean }) {
-  return `flex items-center gap-2 rounded-full px-4 py-2 text-[13.5px] font-semibold transition-colors ${
+  return `flex items-center gap-2 rounded-full px-4 py-2 text-[15px] font-semibold transition-colors ${
     isActive
       ? "bg-evergreen text-white shadow-sm"
       : "text-ink/70 hover:bg-evergreen/8 hover:text-evergreen"
@@ -18,7 +18,7 @@ function navClass({ isActive }: { isActive: boolean }) {
 }
 
 function mobileClass({ isActive }: { isActive: boolean }) {
-  return `flex flex-col items-center gap-1 px-2 pt-2 pb-1.5 text-[10.5px] font-semibold transition-colors rounded-lg ${
+  return `flex flex-col items-center gap-1 px-2 pt-2 pb-1.5 text-[11.5px] font-semibold transition-colors rounded-lg ${
     isActive ? "text-evergreen" : "text-stone hover:text-evergreen"
   }`;
 }
@@ -43,7 +43,7 @@ export default function PortalLayout() {
               <span className="font-brayles block text-[18px] leading-tight text-blue-800">
                 Evangelist
               </span>
-              <span className="block text-[10px] font-medium tracking-[0.16em] text-stone uppercase">
+              <span className="block text-[10.5px] font-medium tracking-[0.16em] text-stone uppercase">
                 Client Portal
               </span>
             </span>
@@ -62,19 +62,19 @@ export default function PortalLayout() {
             {user?.role && (
               <a
                 href="/dashboard"
-                className="hidden items-center gap-1.5 rounded-full border border-evergreen/25 px-3.5 py-2 text-[12px] font-bold text-evergreen transition-colors hover:bg-evergreen hover:text-white sm:inline-flex"
+                className="hidden items-center gap-1.5 rounded-full border border-evergreen/25 px-3.5 py-2 text-[13px] font-bold text-evergreen transition-colors hover:bg-evergreen hover:text-white sm:inline-flex"
               >
                 Staff dashboard
               </a>
             )}
             <a
               href="tel:+63287000000"
-              className="hidden items-center gap-1.5 text-[12px] font-semibold text-evergreen md:flex"
+              className="hidden items-center gap-1.5 text-[13px] font-semibold text-evergreen md:flex"
             >
               <Phone className="h-3.5 w-3.5 text-gold" />
               24/7 0955 399 1034
             </a>
-            <span className="hidden max-w-[150px] truncate text-[12px] text-stone xl:block">
+            <span className="hidden max-w-[150px] truncate text-[13px] text-stone xl:block">
               {user?.name || user?.email || ""}
             </span>
             <Button
@@ -82,7 +82,7 @@ export default function PortalLayout() {
               size="sm"
               onClick={handleSignOut}
               disabled={isLoading}
-              className="gap-2 rounded-full text-[13px] text-ink/70 hover:text-red-700"
+              className="gap-2 rounded-full text-[14px] text-ink/70 hover:text-red-700"
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

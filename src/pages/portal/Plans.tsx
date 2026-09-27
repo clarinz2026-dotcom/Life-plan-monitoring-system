@@ -72,7 +72,7 @@ function beneficiariesOf(client: Doc<"clients">): Beneficiary[] {
 /** The brand-green section bar from the printed statement. */
 function SectionBar({ children }: { children: ReactNode }) {
   return (
-    <p className="mb-3 inline-block bg-evergreen px-3.5 py-1.5 text-[10.5px] font-bold uppercase tracking-[0.16em] text-white">
+    <p className="mb-3 inline-block bg-evergreen px-3.5 py-1.5 text-[12px] font-bold uppercase tracking-[0.16em] text-white">
       {children}
     </p>
   );
@@ -90,10 +90,10 @@ function Field({
 }) {
   return (
     <div className={`min-w-0 ${className}`}>
-      <p className="text-[9.5px] font-bold uppercase tracking-[0.08em] text-stone">
+      <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-stone">
         {label}
       </p>
-      <p className="mt-1.5 border-b border-line pb-1.5 text-[13px] leading-snug text-ink">
+      <p className="mt-1.5 border-b border-line pb-1.5 text-[15px] leading-snug text-ink">
         {value ?? "—"}
       </p>
     </div>
@@ -115,7 +115,7 @@ function StatementTable({
       aria-label="Payment history table"
       tabIndex={0}
     >
-      <p className="mb-2 px-1 text-[11px] text-stone sm:hidden">
+      <p className="mb-2 px-1 text-[12.5px] font-semibold text-stone sm:hidden">
         Swipe sideways to view all payment columns
       </p>
       <table className="w-full min-w-[920px] table-fixed border-collapse">
@@ -129,7 +129,7 @@ function StatementTable({
             {columns.map((c, i) => (
               <th
                 key={i}
-                className={`border border-line bg-sage/50 px-2 py-1.5 align-middle text-[9px] font-bold uppercase leading-tight tracking-[0.03em] text-evergreen ${
+                className={`border border-line bg-sage/50 px-2 py-2 align-middle text-[10.5px] font-bold uppercase leading-tight tracking-[0.03em] text-evergreen ${
                   c.align === "left"
                     ? "text-left"
                     : c.align === "right"
@@ -205,15 +205,15 @@ export default function Plans() {
             <div className="border border-line bg-paper shadow-sm">
               <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-evergreen px-5 py-3.5 lg:px-7">
                 <div className="flex items-center gap-3">
-                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/15 text-[12px] font-bold text-white">
+                  <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/15 text-[14px] font-bold text-white">
                     {initials(`${c.firstName} ${c.lastName}`)}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-[18px] font-semibold text-white">
+                    <p className="truncate text-[20px] font-semibold text-white">
                       {c.firstName} {c.middleName ? `${c.middleName} ` : ""}
                       {c.lastName}
                     </p>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/70">
+                    <p className="text-[11.5px] font-bold uppercase tracking-[0.18em] text-white/70">
                       Planholder
                     </p>
                   </div>
@@ -284,7 +284,7 @@ export default function Plans() {
 
             {/* ── One statement block per plan ── */}
             {group.contracts.length === 0 ? (
-              <div className="border border-line bg-paper px-5 py-8 text-center text-[13px] text-stone">
+              <div className="border border-line bg-paper px-5 py-8 text-center text-[15px] text-stone">
                 No contracts recorded for this planholder yet.
               </div>
             ) : (
@@ -357,11 +357,11 @@ export default function Plans() {
                   >
                     <header className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-cream px-5 py-3.5 lg:px-7">
                       <div className="min-w-0">
-                        <p className="truncate text-[19px] font-semibold text-evergreen">
+                        <p className="truncate text-[21px] font-semibold text-evergreen">
                           {contract.planType || "Memorial Plan"}
                         </p>
                         <p
-                          className="mt-0.5 text-[14px] text-ink/70"
+                          className="mt-0.5 text-[15px] text-ink/70"
                           style={STATEMENT_FONT}
                         >
                           Plan No. {contract.contractNumber}
@@ -398,11 +398,10 @@ export default function Plans() {
 
                       {/* ── Payment history (same records as the SOA) ── */}
                       <div>
-                        <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                          <p className="inline-flex h-8 items-center gap-2 whitespace-nowrap bg-evergreen px-3.5 text-[10.5px] font-bold uppercase leading-none tracking-[0.16em] text-white">
-                            <Wallet className="h-3.5 w-3.5" />
-                            Payment History
-                          </p>
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">                              <p className="inline-flex h-9 items-center gap-2 whitespace-nowrap bg-evergreen px-3.5 text-[11.5px] font-bold uppercase leading-none tracking-[0.16em] text-white">
+                                <Wallet className="h-4 w-4" />
+                                Payment History
+                              </p>
                           <SOAButton
                             records={[group]}
                             contractId={contract._id}
@@ -420,7 +419,7 @@ export default function Plans() {
                           that disagrees with the paper statement.
                         */}
                         {sortedPayments.length === 0 ? (
-                          <p className="text-[12.5px] text-stone">
+                          <p className="text-[14px] text-stone">
                             No payments recorded yet.
                           </p>
                         ) : (
@@ -455,34 +454,34 @@ export default function Plans() {
                               );
                               return (
                                 <tr key={p._id} className={i % 2 === 1 ? "bg-sage/20" : ""}>
-                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
+                                  <td className="border border-line px-2 py-2 text-center align-middle text-[12.5px]">
                                     {fmtDateNumeric(p.paymentDate)}
                                   </td>
-                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
+                                  <td className="border border-line px-2 py-2 text-center align-middle text-[12.5px]">
                                     {contract.contractNumber}
                                   </td>
-                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
+                                  <td className="border border-line px-2 py-2 text-center align-middle text-[12.5px]">
                                     {effectivity}
                                   </td>
-                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
+                                  <td className="border border-line px-2 py-2 text-center align-middle text-[12.5px]">
                                     {dueDate === null ? "" : fmtDateNumeric(dueDate)}
                                   </td>
-                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px] font-bold text-evergreen">
+                                  <td className="border border-line px-2 py-2 text-center align-middle text-[12.5px] font-bold text-evergreen">
                                     {fmtPesoExact(p.amount)}
                                   </td>
-                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
+                                  <td className="border border-line px-2 py-2 text-center align-middle text-[12.5px]">
                                     {agingCell(dueDate, p.paymentDate)}
                                   </td>
-                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
+                                  <td className="border border-line px-2 py-2 text-center align-middle text-[12.5px]">
                                     {installment}
                                   </td>
-                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
+                                  <td className="border border-line px-2 py-2 text-center align-middle text-[12.5px]">
                                     {p.orNumber || ""}
                                   </td>
-                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px]">
+                                  <td className="border border-line px-2 py-2 text-center align-middle text-[12.5px]">
                                     {fmtPesoExact(runningBalance)}
                                   </td>
-                                  <td className="border border-line px-2 py-1.5 text-center align-middle text-[11px] leading-snug">
+                                  <td className="border border-line px-2 py-2 text-center align-middle text-[12.5px] leading-snug">
                                     {p.remarks ||
                                       CHANNEL_LABEL[p.paymentChannel] ||
                                       p.paymentChannel}
@@ -493,7 +492,7 @@ export default function Plans() {
                           </StatementTable>
                         )}
 
-                        <p className="mt-2.5 text-[12px] text-stone">
+                        <p className="mt-2.5 text-[13.5px] text-stone">
                           {cd.payments.length} payment
                           {cd.payments.length === 1 ? "" : "s"} recorded ·{" "}
                           {fmtPesoExact(paidSum)} total
@@ -522,10 +521,10 @@ export default function Plans() {
                               key={cell.l}
                               className="flex-1 border-t border-line px-4 py-3 text-center first:border-t-0 sm:border-t-0 sm:border-l sm:first:border-l-0"
                             >
-                              <p className="text-[9.5px] font-bold uppercase tracking-[0.08em] text-stone">
+                              <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-stone">
                                 {cell.l}
                               </p>
-                              <div className="mt-1.5 flex min-h-[26px] flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[15px] font-bold text-evergreen">
+                              <div className="mt-1.5 flex min-h-[26px] flex-wrap items-center justify-center gap-x-2 gap-y-1 text-[17px] font-bold text-evergreen">
                                 {cell.v}
                               </div>
                             </div>
@@ -536,7 +535,7 @@ export default function Plans() {
                       {/* ── Progress + next due ── */}
                       <div className="grid gap-5 sm:grid-cols-2">
                         <div>
-                          <div className="flex items-center justify-between text-[11.5px] font-semibold text-stone">
+                          <div className="flex items-center justify-between text-[13px] font-semibold text-stone">
                             <span>Payment Progress</span>
                             <span>
                               {pct.toFixed(0)}% paid ·{" "}
@@ -550,7 +549,7 @@ export default function Plans() {
                             />
                           </div>
                         </div>
-                        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 text-[12.5px]">
+                        <div className="flex flex-wrap items-center gap-x-8 gap-y-3 text-[14.5px]">
                           <span className="text-stone">
                             Next Due Date:{" "}
                             <strong className="font-bold text-ink">
@@ -569,15 +568,15 @@ export default function Plans() {
                     {/* ── Official receipts ── */}
                     {cd.receipts.length > 0 && (
                       <div className="border-t border-line px-5 py-5 lg:px-7">
-                        <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-evergreen">
-                          <ReceiptText className="h-4 w-4 text-gold" />
+                        <p className="flex items-center gap-2 text-[12.5px] font-bold uppercase tracking-[0.16em] text-evergreen">
+                          <ReceiptText className="h-4.5 w-4.5 text-gold" />
                           Official Receipts
                         </p>
                         <div className="mt-3 grid grid-cols-1 gap-1.5 sm:grid-cols-2">
                           {cd.receipts.slice(0, 8).map((r) => (
                             <div
                               key={r._id}
-                              className="flex items-center justify-between gap-3 rounded-xl border border-line bg-white px-3.5 py-2.5 text-[12px]"
+                              className="flex items-center justify-between gap-3 rounded-xl border border-line bg-white px-3.5 py-3 text-[14px]"
                               style={STATEMENT_FONT}
                             >
                               <span className="font-bold text-ink">
@@ -592,7 +591,7 @@ export default function Plans() {
                             </div>
                           ))}
                         </div>
-                        <p className="mt-3 text-[11.5px] text-stone">
+                        <p className="mt-3 text-[13px] text-stone">
                           Need a certified copy of a receipt? Call our 24/7
                           hotline at{" "}
                           <a

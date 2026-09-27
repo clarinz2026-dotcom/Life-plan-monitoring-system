@@ -122,10 +122,10 @@ export default function LinkAccount() {
             <Check className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-bold text-ink">
+            <p className="text-[16.5px] font-bold text-ink">
               Your account is already linked
             </p>
-            <p className="mt-0.5 text-[12.5px] text-stone">
+            <p className="mt-0.5 text-[14px] text-stone">
               We matched your email to {overview.records.length} planholder
               record{overview.records.length > 1 ? "s" : ""}. Everything is on
               your plans page.
@@ -145,10 +145,10 @@ export default function LinkAccount() {
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-evergreen/8 text-evergreen">
             <ShieldCheck className="h-6 w-6" />
           </div>
-          <p className="mt-4 text-[15.5px] font-bold text-ink">
+          <p className="mt-4 text-[17px] font-bold text-ink">
             Sign in with your email first
           </p>
-          <p className="mx-auto mt-1.5 max-w-md text-[13px] leading-relaxed text-stone">
+          <p className="mx-auto mt-1.5 max-w-md text-[14.5px] leading-relaxed text-stone">
             Records are matched using the email registered with our office, so
             account linking needs a signed-in email account — not a guest
             session.
@@ -168,10 +168,10 @@ export default function LinkAccount() {
                 <Loader2 className="h-5 w-5 animate-spin" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[15px] font-bold text-amber-900">
+                <p className="text-[16.5px] font-bold text-amber-900">
                   Your linking request is being reviewed
                 </p>
-                <p className="mt-0.5 text-[12.5px] text-amber-800">
+                <p className="mt-0.5 text-[14px] text-amber-800">
                   Submitted {fmtDate(openRequest.createdAt)} · we'll notify you
                   the moment it's processed.
                 </p>
@@ -196,10 +196,10 @@ export default function LinkAccount() {
           {/* Request form */}
           {!openRequest && (
             <Card className="px-6 py-6">
-              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-evergreen">
+              <p className="text-[13.5px] font-bold uppercase tracking-[0.16em] text-evergreen">
                 Linking request
               </p>
-              <p className="mt-1.5 max-w-2xl text-[12.5px] leading-relaxed text-stone">
+              <p className="mt-1.5 max-w-2xl text-[14.5px] leading-relaxed text-stone">
                 Tell us who the plan is registered to. We'll verify it against
                 our records and connect the plan to{" "}
                 <strong className="text-ink">{overview.email}</strong>.
@@ -215,7 +215,7 @@ export default function LinkAccount() {
                       value={contactName}
                       onChange={(e) => setContactName(e.target.value)}
                       placeholder="Exactly as written on the plan"
-                      className="mt-1.5 h-10 w-full rounded-xl border border-line bg-white px-3.5 text-[13.5px] text-ink outline-none transition-colors placeholder:text-stone/60 focus:border-evergreen/50"
+                      className="mt-1.5 h-10 w-full rounded-xl border border-line bg-white px-3.5 text-[15.5px] text-ink outline-none transition-colors placeholder:text-stone/60 focus:border-evergreen/50"
                     />
                   </label>
                   <label className="block">
@@ -226,7 +226,7 @@ export default function LinkAccount() {
                       value={contactNumber}
                       onChange={(e) => setContactNumber(e.target.value)}
                       placeholder="09XX XXX XXXX"
-                      className="mt-1.5 h-10 w-full rounded-xl border border-line bg-white px-3.5 text-[13.5px] text-ink outline-none transition-colors placeholder:text-stone/60 focus:border-evergreen/50"
+                      className="mt-1.5 h-10 w-full rounded-xl border border-line bg-white px-3.5 text-[15.5px] text-ink outline-none transition-colors placeholder:text-stone/60 focus:border-evergreen/50"
                     />
                   </label>
                   <label className="block">
@@ -236,7 +236,7 @@ export default function LinkAccount() {
                     <input
                       value={contactEmail}
                       readOnly
-                      className="mt-1.5 h-10 w-full cursor-not-allowed rounded-xl border border-line bg-cream px-3.5 text-[13.5px] text-stone outline-none"
+                      className="mt-1.5 h-10 w-full cursor-not-allowed rounded-xl border border-line bg-cream px-3.5 text-[15.5px] text-stone outline-none"
                     />
                   </label>
                   <label className="block">
@@ -249,7 +249,7 @@ export default function LinkAccount() {
                     <select
                       value={branchId}
                       onChange={(e) => setBranchId(e.target.value)}
-                      className="mt-1.5 h-10 w-full rounded-xl border border-line bg-white px-3 text-[13.5px] text-ink outline-none transition-colors focus:border-evergreen/50"
+                      className="mt-1.5 h-10 w-full rounded-xl border border-line bg-white px-3 text-[15.5px] text-ink outline-none transition-colors focus:border-evergreen/50"
                     >
                       <option value="">No preference</option>
                       {activeBranches.map((b) => (
@@ -273,12 +273,12 @@ export default function LinkAccount() {
                     onChange={(e) => setMessage(e.target.value)}
                     rows={3}
                     placeholder="e.g. plan number, the name it was registered under, or the branch you signed up at"
-                    className="mt-1.5 w-full resize-y rounded-xl border border-line bg-white px-3.5 py-2.5 text-[13.5px] text-ink outline-none transition-colors placeholder:text-stone/60 focus:border-evergreen/50"
+                    className="mt-1.5 w-full resize-y rounded-xl border border-line bg-white px-3.5 py-2.5 text-[15.5px] text-ink outline-none transition-colors placeholder:text-stone/60 focus:border-evergreen/50"
                   />
                 </label>
 
                 {error && (
-                  <p className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12.5px] font-semibold text-red-700">
+                  <p className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[14px] font-semibold text-red-700">
                     {error}
                   </p>
                 )}
@@ -296,7 +296,7 @@ export default function LinkAccount() {
                     )}
                     {submitting ? "Sending…" : "Send linking request"}
                   </Button>
-                  <span className="text-[11.5px] text-stone">
+                  <span className="text-[13px] text-stone">
                     Reviewed during office hours. Bring a valid ID if we ask you
                     to visit a branch.
                   </span>
@@ -310,7 +310,7 @@ export default function LinkAccount() {
       {/* History */}
       {requests.length > 0 && (
         <section>
-          <h2 className="mb-3 text-xl font-semibold text-evergreen">
+          <h2 className="mb-3 text-2xl font-semibold text-evergreen">
             Request history
           </h2>
           <div className="space-y-2.5">
@@ -318,10 +318,10 @@ export default function LinkAccount() {
               <Card key={r._id} className="px-4 py-3.5">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[13px] font-bold text-ink">
+                    <p className="text-[14.5px] font-bold text-ink">
                       Account linking request
                     </p>
-                    <p className="mt-0.5 text-[11.5px] text-stone">
+                    <p className="mt-0.5 text-[13px] text-stone">
                       {fmtDate(r.createdAt)}
                       {r.preferredDate ? ` · preferred ${fmtDay(r.preferredDate)}` : ""}
                     </p>
@@ -329,7 +329,7 @@ export default function LinkAccount() {
                   <StatusPill map={REQUEST_PILL} status={r.status} />
                 </div>
                 {r.staffNotes && (
-                  <p className="mt-2 rounded-lg bg-cream px-2.5 py-1.5 text-[11.5px] text-evergreen">
+                  <p className="mt-2 rounded-lg bg-cream px-2.5 py-1.5 text-[13px] text-evergreen">
                     <strong>Office note:</strong> {r.staffNotes}
                   </p>
                 )}
@@ -345,7 +345,7 @@ export default function LinkAccount() {
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-evergreen/8 text-evergreen">
             <FileHeart className="h-5 w-5" />
           </span>
-          <p className="min-w-0 flex-1 text-[12.5px] leading-relaxed text-stone">
+          <p className="min-w-0 flex-1 text-[14px] leading-relaxed text-stone">
             Prefer to sort this in person? Visit any branch with a valid ID and
             your plan details and our team will link the records on the spot.
           </p>
