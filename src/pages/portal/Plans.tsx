@@ -364,7 +364,7 @@ export default function Plans() {
                           className="mt-0.5 text-[14px] text-ink/70"
                           style={STATEMENT_FONT}
                         >
-                          Plan No. {contract.contractNumber} · Effectivity Date: <strong className="font-bold text-ink">{fmtDate(contract.startDate)}</strong>
+                          Plan No. {contract.contractNumber}
                         </p>
                       </div>
                       <StatusPill map={CONTRACT_PILL} status={statusKey} />
