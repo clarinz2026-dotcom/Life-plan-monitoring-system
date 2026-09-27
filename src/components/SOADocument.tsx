@@ -228,6 +228,13 @@ const COMPANY_ADDRESS =
  */
 const SOA_STYLES = `
   @page { size: A4; margin: 6mm; }
+  @font-face {
+    font-family: "Brayles";
+    src: url("/fonts/Brayles.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
   body {
@@ -274,6 +281,7 @@ const SOA_STYLES = `
     object-fit: contain;
   }
   .lh-brand {
+    font-family: "Brayles", Georgia, serif;
     font-size: 25px;
     font-weight: 700;
     line-height: 1.15;

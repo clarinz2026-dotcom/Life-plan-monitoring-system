@@ -141,8 +141,13 @@ async function waitForAssets(container: HTMLElement): Promise<void> {
     2500
   );
 
-  // 2. Images (the company logo). No webfonts are used by the statement — it
-  //    is set entirely in Arial — so nothing else needs to settle first.
+  // 2. Wait for the letterhead font before capturing the statement, then wait
+  //    for the company logo image.
+  await withTimeout(
+    document.fonts.load('700 25px "Brayles"').then(() => undefined),
+    2500
+  );
+
   await withTimeout(
     Promise.all(
       Array.from(container.querySelectorAll("img")).map(
