@@ -408,7 +408,7 @@ export function SOAButton({
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className="w-fit min-w-0 max-w-[calc(100vw-2rem)] sm:max-w-[min(94vw,55rem)]">
           <DialogHeader>
             <DialogTitle>Statement of Account</DialogTitle>
           </DialogHeader>
@@ -416,7 +416,7 @@ export function SOAButton({
             <>
               <div
                 ref={previewRef}
-                className="h-[62vh] w-full overflow-hidden rounded-xl border border-line bg-white"
+                className="h-[62vh] max-w-full overflow-hidden rounded-xl border border-line bg-white"
               >
                 <iframe
                   ref={frameRef}
