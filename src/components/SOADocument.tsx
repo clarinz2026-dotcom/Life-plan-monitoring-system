@@ -222,6 +222,13 @@ function esc(value: string | number | undefined | null) {
  * bordered tables, and the four-cell account summary strip at the foot.
  */
 const SOA_STYLES = `
+  @font-face {
+    font-family: "Brayles";
+    src: url("/fonts/Brayles.ttf") format("truetype");
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+  }
   @page { size: A4; margin: 10mm; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -272,18 +279,19 @@ const SOA_STYLES = `
   .lh-left { display: flex; align-items: center; gap: 12px; }
   .lh-logo { width: 64px; height: 64px; object-fit: contain; }
   .lh-brand {
-    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    font-family: 'Brayles', Georgia, 'Times New Roman', serif;
     font-size: 29px;
-    font-weight: 700;
+    font-weight: 400;
     line-height: 1;
     letter-spacing: 0.01em;
     color: #1b4332;
   }
   .lh-sub {
     margin-top: 4px;
-    font-size: 12px;
-    letter-spacing: 0.30em;
-    text-transform: uppercase;
+    font-family: 'Brayles', Georgia, 'Times New Roman', serif;
+    font-size: 17px;
+    line-height: 1.1;
+    letter-spacing: 0.01em;
     color: #1b4332;
   }
   .lh-right { text-align: right; padding-top: 4px; }
@@ -436,6 +444,11 @@ const SOA_STYLES = `
     font-size: 12.5px;
     color: #211f1a;
     white-space: nowrap;
+  }
+  .foot-brand {
+    font-family: 'Brayles', Georgia, 'Times New Roman', serif;
+    font-size: 15px;
+    font-style: normal;
   }
 
   /* ── Seal watermark ─────────────────────────────────────────────────── */
@@ -676,7 +689,7 @@ export function generateSOAHTML(data: SOAData): string {
     <div class="foot">
       <div class="foot-row">
         <div class="foot-rule"></div>
-        <p class="foot-sign">Prepared by: Evangelist Funeral Services</p>
+        <p class="foot-sign">Prepared by: <span class="foot-brand">Evangelist Funeral Services</span></p>
         <div class="foot-rule"></div>
       </div>
     </div>

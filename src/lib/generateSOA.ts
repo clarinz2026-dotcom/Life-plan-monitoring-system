@@ -149,6 +149,8 @@ async function waitForAssets(container: HTMLElement): Promise<void> {
       await withTimeout(fonts.load('700 29px "Playfair Display"'), 2500);
       await withTimeout(fonts.load('italic 600 14px "Playfair Display"'), 2500);
       await withTimeout(fonts.load('italic 600 12.5px "Playfair Display"'), 2500);
+      await withTimeout(fonts.load('400 29px "Brayles"'), 2500);
+      await withTimeout(fonts.load('400 17px "Brayles"'), 2500);
       await withTimeout(fonts.ready, 2500);
     } catch {
       // Fall through — Georgia is a perfectly good serif fallback.
