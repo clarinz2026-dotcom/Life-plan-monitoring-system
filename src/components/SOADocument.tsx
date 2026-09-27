@@ -282,11 +282,11 @@ const SOA_STYLES = `
   }
   .lh-brand {
     font-family: "Brayles", Georgia, serif;
-    font-size: 25px;
+    font-size: 30px;
     font-weight: 700;
     line-height: 1.15;
     letter-spacing: 0.01em;
-    color: #1b4332;
+    color: #1d4ed8;
   }
   .lh-sub {
     margin-top: 3px;
