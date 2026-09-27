@@ -205,7 +205,7 @@ function Auth() {
                     title="Evangelist Funeral Services"
                   />
                 </div>
-                <p className="font-brayles text-[17px] leading-none text-evergreen">
+                <p className="font-brayles text-[17px] leading-none text-blue-800">
                   Evangelist
                 </p>
                 <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-stone">
@@ -272,7 +272,7 @@ function Auth() {
                       title="Evangelist Funeral Services"
                     />
                   </div>
-                  <p className="font-brayles text-[17px] leading-none text-evergreen">
+                  <p className="font-brayles text-[17px] leading-none text-blue-800">
                     Evangelist
                   </p>
                   <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-stone">
