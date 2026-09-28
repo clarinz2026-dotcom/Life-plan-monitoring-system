@@ -153,6 +153,9 @@ function StatementTable({
 
 export default function Plans() {
   const overview = useQuery(api.portal.myOverview);
+  // Portal-safe branch list (same query the SOA button uses) so the
+  // Planholder Information block can name the assigned branch.
+  const branches = useQuery(api.branches.publicList);
 
   if (overview === undefined) {
     return <PageLoading label="Loading your plan" className="min-h-[50vh]" />;
@@ -216,6 +219,12 @@ export default function Plans() {
           ? fmtDate(primaryContract.startDate)
           : "—";
         const isForfeited = primaryContract?.contractStatus === "lapsed";
+
+        /* The branch the planholder is assigned to; falls back to a dash
+         * while the branch list loads or when no branch is on record. */
+        const assignedBranch = c.branchId
+          ? branches?.find((b) => b._id === c.branchId)?.name
+          : undefined;
 
         return (
           <section key={c._id} className="space-y-5">
@@ -289,6 +298,7 @@ export default function Plans() {
                       />
                       <Field label="Birthday" value={fmtDate(c.dateOfBirth)} />
                     </div>
+                    <Field label="Assigned Branch" value={assignedBranch ?? "—"} />
                   </div>
                 </div>
 
