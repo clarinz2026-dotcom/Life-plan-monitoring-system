@@ -245,23 +245,23 @@ export default function Plans() {
               <div className="space-y-7 px-5 py-6 lg:px-7" style={STATEMENT_FONT}>
                 <div>
                   <SectionBar>Planholder Information</SectionBar>
-                  <div className="grid gap-x-10 gap-y-5 sm:grid-cols-2">
+                  {/*
+                   * Desktop is a 3-column ruled grid: name | contact |
+                   * effectivity, then address | email | plan status, so the
+                   * plan status sits directly beneath the effectivity date.
+                   * Dense flow lets the mobile stack keep plan status right
+                   * after effectivity while the desktop columns stay filled.
+                   */}
+                  <div className="grid grid-flow-row-dense gap-x-10 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
                     <Field
                       label="Planholder’s Name"
                       value={`${c.lastName}, ${c.firstName}${c.middleName ? ` ${c.middleName}` : ""}`}
                     />
                     <Field label="Contact Number" value={c.contactNumber || "—"} />
-                    <Field label="Address" value={contact.address} />
                     <Field label="Effectivity Date" value={effectivityDate} />
-                    <div className="grid grid-cols-2 gap-x-10">
-                      <Field
-                        label="Age"
-                        value={computeAge(c.dateOfBirth) ?? "—"}
-                      />
-                      <Field label="Birthday" value={fmtDate(c.dateOfBirth)} />
-                    </div>
                     <Field
                       label="Plan Status"
+                      className="lg:col-start-3"
                       value={
                         <span
                           className={
@@ -274,10 +274,18 @@ export default function Plans() {
                         </span>
                       }
                     />
+                    <Field label="Address" value={contact.address} />
                     <Field
                       label="Email Address"
                       value={contact.email || "—"}
                     />
+                    <div className="grid grid-cols-2 gap-x-10 sm:col-span-2">
+                      <Field
+                        label="Age"
+                        value={computeAge(c.dateOfBirth) ?? "—"}
+                      />
+                      <Field label="Birthday" value={fmtDate(c.dateOfBirth)} />
+                    </div>
                   </div>
                 </div>
 
