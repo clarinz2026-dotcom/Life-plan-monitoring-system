@@ -199,6 +199,21 @@ export default function Plans() {
         const beneficiaries = beneficiariesOf(c);
         const beneficiaryRows = Array.from({ length: 4 }, (_, i) => beneficiaries[i]);
 
+        /*
+         * Effectivity and plan status belong to a plan rather than to the
+         * planholder, so they are read from the planholder's oldest contract —
+         * the plan the statement treats as the main one. Only a lapsed
+         * contract reads as forfeited; delinquent accounts are behind but
+         * still active and curable.
+         */
+        const primaryContract = group.contracts
+          .map((cd) => cd.contract)
+          .sort((a, b) => a.startDate - b.startDate)[0];
+        const effectivityDate = primaryContract
+          ? fmtDate(primaryContract.startDate)
+          : "—";
+        const isForfeited = primaryContract?.contractStatus === "lapsed";
+
         return (
           <section key={c._id} className="space-y-5">
             {/* ── Planholder information + beneficiaries ── */}
@@ -230,17 +245,14 @@ export default function Plans() {
               <div className="space-y-7 px-5 py-6 lg:px-7" style={STATEMENT_FONT}>
                 <div>
                   <SectionBar>Planholder Information</SectionBar>
-                  <div className="grid gap-x-10 gap-y-4 sm:grid-cols-2">
+                  <div className="grid gap-x-10 gap-y-5 sm:grid-cols-2">
                     <Field
                       label="Planholder’s Name"
                       value={`${c.lastName}, ${c.firstName}${c.middleName ? ` ${c.middleName}` : ""}`}
                     />
                     <Field label="Contact Number" value={c.contactNumber || "—"} />
                     <Field label="Address" value={contact.address} />
-                    <Field
-                      label="Email Address"
-                      value={contact.email || "—"}
-                    />
+                    <Field label="Effectivity Date" value={effectivityDate} />
                     <div className="grid grid-cols-2 gap-x-10">
                       <Field
                         label="Age"
@@ -248,6 +260,24 @@ export default function Plans() {
                       />
                       <Field label="Birthday" value={fmtDate(c.dateOfBirth)} />
                     </div>
+                    <Field
+                      label="Plan Status"
+                      value={
+                        <span
+                          className={
+                            isForfeited
+                              ? "font-semibold text-red-700"
+                              : "font-semibold text-emerald-700"
+                          }
+                        >
+                          {isForfeited ? "Forfeited" : "Active"}
+                        </span>
+                      }
+                    />
+                    <Field
+                      label="Email Address"
+                      value={contact.email || "—"}
+                    />
                   </div>
                 </div>
 
