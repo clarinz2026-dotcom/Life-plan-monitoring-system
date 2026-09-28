@@ -25,6 +25,7 @@ import {
   UserCog,
   Package,
   Building2,
+  Palette,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
@@ -57,6 +58,7 @@ const NAV_ITEMS = [
   { to: "/notifications", icon: Bell, label: "Notifications", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
   { to: "/branches", icon: Building2, label: "Branches", roles: ["super_admin", "ceo"] },
   { to: "/role-management", icon: UserCog, label: "Roles", roles: ["super_admin", "ceo"] },
+  { to: "/branding", icon: Palette, label: "Branding", roles: ["super_admin", "ceo"] },
 
 ];
 

@@ -96,6 +96,7 @@ const ORSeries = lazyRoute("ORSeries", () => import("./pages/ORSeries.tsx"));
 const AgingReport = lazyRoute("AgingReport", () => import("./pages/AgingReport.tsx"));
 const Notifications = lazyRoute("Notifications", () => import("./pages/Notifications.tsx"));
 const RoleManagement = lazyRoute("RoleManagement", () => import("./pages/RoleManagement.tsx"));
+const Branding = lazyRoute("Branding", () => import("./pages/Branding.tsx"));
 const SuperAdminSetup = lazyRoute("SuperAdminSetup", () => import("./pages/SuperAdminSetup.tsx"));
 const AccountLinks = lazyRoute("AccountLinks", () => import("./pages/AccountLinks.tsx"));
 const Branches = lazyRoute("Branches", () => import("./pages/Branches.tsx"));
@@ -410,10 +411,17 @@ createRoot(document.getElementById("root")!).render(
                   </ProtectedRoute>
                 }
               />
-              {/* Removed from the product: branding editor and the generic
-                  export dump. The URLs still resolve to NotFound rather than a
-                  blank page, and the backend settings they used are untouched. */}
-              <Route path="/branding" element={<NotFound />} />
+              {/* Branding editor is back (app logo management); the generic
+                  export dump stays retired. Its URL still resolves to NotFound
+                  rather than a blank page. */}
+              <Route
+                path="/branding"
+                element={
+                  <ProtectedRoute>
+                    <Branding />
+                  </ProtectedRoute>
+                }
+              />
               <Route path="/export" element={<NotFound />} />
 
               {/* Client portal (families & planholders) */}
