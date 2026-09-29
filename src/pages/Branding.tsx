@@ -19,6 +19,37 @@ import { toast } from "sonner";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml", "image/gif"];
 const MAX_SIZE_MB = 2;
+/** Longest edge kept when an oversized image has to be downscaled. */
+const MAX_DIMENSION = 1024;
+
+/**
+ * Read a picked file into something storable. Files that already fit the
+ * upload limit pass through untouched; anything bigger (a phone photo or a
+ * scan of the printed logo) is redrawn onto a canvas at logo size so it never
+ * bounces off the size check — rejection used to be the number-one reason the
+ * Save button appeared to do nothing.
+ */
+async function prepareLogoFile(file: File): Promise<Blob> {
+  if (file.size <= MAX_SIZE_MB * 1024 * 1024) return file;
+  const bitmap = await createImageBitmap(file);
+  const scale = Math.min(
+    1,
+    MAX_DIMENSION / Math.max(bitmap.width, bitmap.height)
+  );
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+  canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Could not read that image.");
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  return await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("Could not read that image."))),
+      "image/png"
+    )
+  );
+}
 
 export default function Branding() {
   const roleData = useQuery(api.users.hasRole);
@@ -32,26 +63,49 @@ export default function Branding() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [urlInput, setUrlInput] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isPreparing, setIsPreparing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const canManage = roleData?.role === "super_admin" || roleData?.role === "ceo";
   const isViewerSuperAdmin = roleData?.role === "super_admin";
 
-  const handleFilePick = useCallback((file: File | undefined) => {
-    if (!file) return;
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      toast.error("Please choose a PNG, JPG, WebP, GIF, or SVG image.");
-      return;
-    }
-    if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-      toast.error(`Image is too large — keep it under ${MAX_SIZE_MB}MB.`);
-      return;
-    }
-    setSelectedFile(file);
-    setUrlInput("");
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
-    setPreviewUrl(URL.createObjectURL(file));
-  }, [previewUrl]);
+  const handleFilePick = useCallback(
+    async (file: File | undefined) => {
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        toast.error("Please choose an image file (PNG, JPG, WebP, GIF, or SVG).");
+        return;
+      }
+      setIsPreparing(true);
+      try {
+        // Oversized images are downscaled to logo size instead of rejected —
+        // rejection used to be why the Save button appeared to do nothing.
+        const prepared = await prepareLogoFile(file);
+        const asFile =
+          prepared instanceof File
+            ? prepared
+            : new File([prepared], file.name.replace(/\.[^.]*$/, "") + ".png", {
+                type: "image/png",
+              });
+        setSelectedFile(asFile);
+        setUrlInput("");
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        setPreviewUrl(URL.createObjectURL(asFile));
+        if (prepared !== file) {
+          toast.info(
+            `Large image was resized to fit logo slots (${(asFile.size / 1024).toFixed(0)} KB).`
+          );
+        }
+      } catch {
+        toast.error(
+          "Could not read that image — try a different file or a smaller size."
+        );
+      } finally {
+        setIsPreparing(false);
+      }
+    },
+    [previewUrl]
+  );
 
   const resetPicks = useCallback(() => {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -71,6 +125,12 @@ export default function Branding() {
         headers: { "Content-Type": selectedFile.type },
         body: selectedFile,
       });
+      if (!result.ok) {
+        const detail = await result.text().catch(() => "");
+        throw new Error(
+          `Upload failed${detail ? ` — ${detail.slice(0, 140)}` : " — please try again."}`
+        );
+      }
       if (!result.ok) throw new Error("Upload failed — please try again.");
       const { storageId } = (await result.json()) as { storageId: string };
       await setLogoFromUpload({ storageId: storageId as any });
@@ -194,7 +254,9 @@ export default function Branding() {
             />
           </div>
           <p className="text-[10px] text-muted-foreground mt-1.5">
-            PNG, JPG, WebP, GIF, or SVG · max {MAX_SIZE_MB}MB
+            {isPreparing
+              ? "Processing image…"
+              : `PNG, JPG, WebP, GIF, or SVG · large images are resized automatically (first ${MAX_DIMENSION}px)`}
           </p>
         </div>
 
@@ -225,10 +287,10 @@ export default function Branding() {
         <div className="flex flex-wrap gap-2">
           <Button
             onClick={handleSaveUploaded}
-            disabled={!selectedFile || isSaving}
+            disabled={!selectedFile || isSaving || isPreparing}
             className="gap-2"
           >
-            {isSaving && selectedFile ? (
+            {isPreparing || (isSaving && selectedFile) ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Upload className="h-4 w-4" />
