@@ -1,7 +1,6 @@
 import "@vly-ai/integrations";
 import { Toaster } from "@/components/ui/sonner";
 import { RequireAuth } from "@/components/RequireAuth";
-import AppLayout from "@/components/AppLayout";
 import { BranchScopeProvider } from "@/hooks/use-branch";
 import { RouteProgress } from "@/components/RouteProgress";
 import { PageLoading } from "@/components/PageLoading";
@@ -14,6 +13,13 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-route
 import "./index.css";
 
 import Landing from "./pages/Landing.tsx";
+
+/**
+ * The staff shell only renders inside protected routes, so it is code-split
+ * like every page: the landing page (the boot path for most visitors) no
+ * longer parses it before first paint.
+ */
+const AppLayout = lazy(() => import("@/components/AppLayout"));
 
 // Landing is imported eagerly: it is the entry point for almost every visitor,
 // and lazy-loading it meant the browser had to finish parsing the app bundle

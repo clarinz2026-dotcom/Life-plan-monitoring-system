@@ -340,7 +340,8 @@ function Hero() {
               <img
                 {...t.img}
                 alt={t.alt}
-                loading="lazy"
+                loading={i === 0 ? "eager" : "lazy"}
+                fetchPriority={i === 0 ? "high" : undefined}
                 className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-evergreen via-evergreen/75 to-transparent" />

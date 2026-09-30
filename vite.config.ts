@@ -85,6 +85,21 @@ export default defineConfig({
       'react-router',
       '@convex-dev/auth/react',
       'framer-motion',
+      // Pre-bundle everything the eager entry chain and the first-click
+      // routes depend on, so Vite never pauses boot mid-session with a
+      // "new dependencies discovered: re-optimizing…" full reload.
+      'lucide-react',
+      'sonner',
+      'next-themes',
+      'class-variance-authority',
+      'clsx',
+      'tailwind-merge',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-label',
+      '@radix-ui/react-slot',
+      'recharts',
+      'date-fns',
     ],
   },
   // Performance hints
