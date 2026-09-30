@@ -20,10 +20,15 @@ import {
   CheckCircle2,
   UserPlus,
   Building2,
+  BarChart3,
+  Calculator,
+  BookMarked,
+  ChevronRight,
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { format } from "date-fns";
 import { useState } from "react";
+import { Link } from "react-router";
 import { useBranch } from "@/hooks/use-branch";
 
 /**
@@ -40,9 +45,6 @@ const STATUS_LABELS: Record<string, string> = {
   lapsed: "Lapsed",
   fully_paid: "Fully Paid",
 };
-
-/** Stored statuses that roll up into each of the three payment statuses. */
-
 
 const STATUS_COLORS: Record<string, string> = {
   current: "terminal-status-current",
@@ -76,19 +78,20 @@ const CHANNEL_COLORS: Record<string, string> = {
  */
 const FIGURES_FONT = 'Arial, "Helvetica Neue", Helvetica, sans-serif';
 
+/** Existing reporting modules, grouped as compact dashboard shortcuts. */
+const REPORTING_LINKS = [
+  { to: "/reports", icon: BarChart3, label: "Reports", body: "Collections & performance" },
+  { to: "/reconciliation", icon: Calculator, label: "Close Register", body: "End-of-day cash tally" },
+  { to: "/aging-report", icon: AlertTriangle, label: "Aging Report", body: "30 / 60 / 90 · lapsed" },
+  { to: "/or-series", icon: BookMarked, label: "OR Series", body: "Receipt-book register" },
+];
+
 function formatPHP(amount: number) {
   return new Intl.NumberFormat("en-PH", {
     style: "currency",
     currency: "PHP",
     minimumFractionDigits: 0,
   }).format(amount);
-}
-
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 18) return "Good afternoon";
-  return "Good evening";
 }
 
 export default function Dashboard() {
@@ -115,8 +118,6 @@ export default function Dashboard() {
   if (!summary) {
     return <PageLoading label="Loading dashboard" className="min-h-[420px]" />;
   }
-
-
 
   const dayChange =
     summary.todayAmount - summary.yesterdayAmount;
@@ -152,59 +153,51 @@ export default function Dashboard() {
   const trendData = weeklyTrend ?? [];
 
   return (
-    <div className="p-5 md:p-8 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold">{greeting()}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {format(new Date(), "EEEE, MMMM d, yyyy")} — here's how the business is doing
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-9 gap-1.5 text-[13px] shrink-0"
-          onClick={handleUpdateDelinquency}
-          disabled={updatingDelinquency}
-        >
-          <RefreshCw className={`h-4 w-4 ${updatingDelinquency ? "animate-spin" : ""}`} />
-          {updatingDelinquency ? "Checking..." : "Check Late Accounts"}
-        </Button>
-      </div>
-
-      {/* Branch context banner (branch staff only) */}
+    <div className="space-y-5 p-5 md:p-8">
+      {/* Branch banner → dedicated My Branch card (same existing data) */}
       {isBranchStaff && branch && (
-        <div className="flex items-center gap-3 rounded-xl border border-terminal-green/20 bg-terminal-green/10 px-4 py-3">
-          <Building2 className="h-5 w-5 text-terminal-green shrink-0" />
-          <div className="min-w-0">
-            <p className="text-[14px] font-semibold text-terminal-green truncate">
+        <Link
+          to="/my-branch"
+          className="group flex items-center gap-4 rounded-2xl border border-line bg-white px-5 py-4 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md"
+        >
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-evergreen text-white">
+            <Building2 className="h-5 w-5" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-stone">
+              My Branch
+            </p>
+            <p className="truncate font-display text-[19px] font-semibold text-evergreen">
               {branch.name}
             </p>
-            <p className="text-[12px] text-muted-foreground">
+            <p className="text-[12px] text-stone">
               You are viewing this branch only — {branch.city}, {branch.province}
             </p>
           </div>
-        </div>
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-line px-3.5 py-1.5 text-[12px] font-bold text-evergreen transition-colors group-hover:bg-evergreen group-hover:text-white">
+            Open
+            <ChevronRight className="h-3.5 w-3.5" />
+          </span>
+        </Link>
       )}
 
-      {/* Hero: Today's collections + day comparison */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <Card className="lg:col-span-2 border-border/60 shadow-sm bg-gradient-to-br from-[#1b4332] to-[#2d6a4f] text-white border-0">
+      {/* ── Row 1: primary collections + collection progress ── */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <Card className="border-0 bg-gradient-to-br from-[#1b4332] to-[#2d6a4f] text-white shadow-sm lg:col-span-2">
           <CardContent className="p-6 md:p-7">
-            <div className="flex items-center gap-2.5 mb-3">
+            <div className="mb-3 flex items-center gap-2.5">
               <Banknote className="h-5 w-5 text-white/70" />
-              <span className="text-[13px] uppercase tracking-wider text-white/70 font-medium">
+              <span className="text-[13px] font-medium uppercase tracking-wider text-white/70">
                 Collected Today
               </span>
             </div>
             <div className="flex flex-wrap items-end gap-4">
-              <p className="font-figures text-4xl md:text-5xl font-bold tracking-tight">
+              <p className="font-figures text-4xl font-bold tracking-tight md:text-5xl">
                 {formatPHP(summary.todayAmount)}
               </p>
               {dayChangePct !== null && (
                 <span
-                  className={`font-figures flex items-center gap-1 text-[14px] font-semibold px-2.5 py-1 rounded-full ${
+                  className={`font-figures flex items-center gap-1 rounded-full px-2.5 py-1 text-[14px] font-semibold ${
                     isUp ? "bg-white/15 text-green-100" : "bg-white/15 text-red-100"
                   }`}
                 >
@@ -213,53 +206,51 @@ export default function Dashboard() {
                 </span>
               )}
             </div>
-            <p className="text-[14px] text-white/70 mt-2">
+            <p className="mt-2 text-[14px] text-white/70">
               {summary.todayPayments} payment{summary.todayPayments !== 1 ? "s" : ""} recorded today
               {summary.yesterdayAmount > 0 && ` · yesterday: ${formatPHP(summary.yesterdayAmount)}`}
             </p>
 
-            {/* Quick month context */}
-            <div className="grid grid-cols-2 gap-4 mt-6 pt-5 border-t border-white/15">
+            <div className="mt-6 grid grid-cols-2 gap-4 border-t border-white/15 pt-5">
               <div>
                 <p className="text-[12px] uppercase tracking-wider text-white/60">This Month</p>
-                <p className="font-figures text-xl font-bold mt-0.5">{formatPHP(summary.monthAmount)}</p>
+                <p className="font-figures mt-0.5 text-xl font-bold">{formatPHP(summary.monthAmount)}</p>
               </div>
               <div>
                 <p className="text-[12px] uppercase tracking-wider text-white/60">Month Payments</p>
-                <p className="font-figures text-xl font-bold mt-0.5">{summary.monthPayments}</p>
+                <p className="font-figures mt-0.5 text-xl font-bold">{summary.monthPayments}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Collection progress */}
-        <Card className="border-border/60 shadow-sm">
-          <CardContent className="p-6 flex flex-col">
-            <div className="flex items-center gap-2.5 mb-4">
-              <Target className="h-5 w-5 text-terminal-green" />
-              <span className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
+        <Card className="border-line shadow-sm">
+          <CardContent className="flex flex-col p-6">
+            <div className="mb-4 flex items-center gap-2.5">
+              <Target className="h-5 w-5 text-evergreen" />
+              <span className="text-[13px] font-medium uppercase tracking-wider text-stone">
                 Collection Progress
               </span>
             </div>
-            <p className="font-figures text-4xl font-bold text-terminal-green">
+            <p className="font-figures text-4xl font-bold text-evergreen">
               {summary.collectionRate}%
             </p>
-            <p className="text-[13px] text-muted-foreground mt-1">
+            <p className="mt-1 text-[13px] text-stone">
               of all contract value collected
             </p>
-            <Progress value={summary.collectionRate} className="h-2.5 mt-4" />
-            <div className="mt-4 pt-4 border-t border-border space-y-2">
+            <Progress value={summary.collectionRate} className="mt-4 h-2.5" />
+            <div className="mt-4 space-y-2 border-t border-line pt-4">
               <div className="flex justify-between text-[14px]">
-                <span className="text-muted-foreground">Collected</span>
-                <span className="font-figures font-semibold text-terminal-green">{formatPHP(summary.totalCollected)}</span>
+                <span className="text-stone">Collected</span>
+                <span className="font-figures font-semibold text-evergreen">{formatPHP(summary.totalCollected)}</span>
               </div>
               <div className="flex justify-between text-[14px]">
-                <span className="text-muted-foreground">Total Contract Value</span>
+                <span className="text-stone">Total Contract Value</span>
                 <span className="font-figures font-semibold">{formatPHP(summary.totalContractValue)}</span>
               </div>
               <div className="flex justify-between text-[14px]">
-                <span className="text-muted-foreground">Remaining</span>
-                <span className="font-figures font-semibold text-terminal-amber">
+                <span className="text-stone">Remaining</span>
+                <span className="font-figures font-semibold text-gold">
                   {formatPHP(Math.max(summary.totalContractValue - summary.totalCollected, 0))}
                 </span>
               </div>
@@ -268,95 +259,95 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Stats row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-border/60 shadow-sm">
+      {/* ── Row 2: stat tiles ── */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Card className="border-line shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
+                <p className="text-[12.5px] font-bold uppercase tracking-[0.1em] text-stone">
                   Total Clients
                 </p>
-                <p className="font-figures text-2xl font-bold mt-1">{summary.totalClients}</p>
+                <p className="font-figures mt-1 text-2xl font-bold">{summary.totalClients}</p>
               </div>
-              <div className="h-11 w-11 rounded-lg bg-terminal-green/10 flex items-center justify-center">
-                <Users className="h-5 w-5 text-terminal-green" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-evergreen/10">
+                <Users className="h-5 w-5 text-evergreen" />
               </div>
             </div>
-            <p className="font-figures text-[12px] text-muted-foreground mt-2 flex items-center gap-1">
+            <p className="font-figures mt-2 flex items-center gap-1 text-[12px] text-stone">
               <UserPlus className="h-3.5 w-3.5" />
               +{summary.newClientsThisMonth} new this month
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-sm">
+        <Card className="border-line shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
+                <p className="text-[12.5px] font-bold uppercase tracking-[0.1em] text-stone">
                   Active Contracts
                 </p>
-                <p className="font-figures text-2xl font-bold mt-1">{summary.totalContracts}</p>
+                <p className="font-figures mt-1 text-2xl font-bold">{summary.totalContracts}</p>
               </div>
-              <div className="h-11 w-11 rounded-lg bg-blue-50 flex items-center justify-center">
-                <FileText className="h-5 w-5 text-blue-600" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sage/60">
+                <FileText className="h-5 w-5 text-evergreen" />
               </div>
             </div>
-            <p className="font-figures text-[12px] text-muted-foreground mt-2 flex items-center gap-1">
-              <CheckCircle2 className="h-3.5 w-3.5 text-terminal-green" />
+            <p className="font-figures mt-2 flex items-center gap-1 text-[12px] text-stone">
+              <CheckCircle2 className="h-3.5 w-3.5 text-evergreen" />
               {summary.fullyPaidCount} fully paid
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-sm">
+        <Card className="border-line shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
+                <p className="text-[12.5px] font-bold uppercase tracking-[0.1em] text-stone">
                   Late Accounts
                 </p>
-                <p className={`font-figures text-2xl font-bold mt-1 ${delinquentCount > 0 ? "text-terminal-amber" : ""}`}>
+                <p className={`font-figures mt-1 text-2xl font-bold ${delinquentCount > 0 ? "text-gold" : ""}`}>
                   {delinquentCount}
                 </p>
               </div>
-              <div className="h-11 w-11 rounded-lg bg-terminal-amber/15 flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-terminal-amber" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gold/15">
+                <AlertTriangle className="h-5 w-5 text-gold" />
               </div>
             </div>
-            <p className="text-[12px] text-muted-foreground mt-2">
+            <p className="mt-2 text-[12px] text-stone">
               need follow-up
             </p>
           </CardContent>
         </Card>
 
-        <Card className="border-border/60 shadow-sm">
+        <Card className="border-line shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
           <CardContent className="p-5">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[13px] uppercase tracking-wider text-muted-foreground font-medium">
+                <p className="text-[12.5px] font-bold uppercase tracking-[0.1em] text-stone">
                   Lifetime Collections
                 </p>
-                <p className="font-figures text-2xl font-bold mt-1">{formatPHP(summary.totalCollected)}</p>
+                <p className="font-figures mt-1 text-2xl font-bold">{formatPHP(summary.totalCollected)}</p>
               </div>
-              <div className="h-11 w-11 rounded-lg bg-terminal-green/10 flex items-center justify-center">
-                <Wallet className="h-5 w-5 text-terminal-green" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-evergreen/10">
+                <Wallet className="h-5 w-5 text-evergreen" />
               </div>
             </div>
-            <p className="font-figures text-[12px] text-muted-foreground mt-2">
+            <p className="font-figures mt-2 text-[12px] text-stone">
               {summary.totalPayments} total payments
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Trend chart + payment methods */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <Card className="lg:col-span-2 border-border/60 shadow-sm">
+      {/* ── Row 3: week chart + payment methods ── */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <Card className="border-line shadow-sm lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-[15px] font-semibold flex items-center gap-2.5">
-              <TrendingUp className="h-5 w-5 text-muted-foreground" />
+            <CardTitle className="flex items-center gap-2.5 text-[16px]">
+              <TrendingUp className="h-5 w-5 text-stone" />
               Collections This Week
             </CardTitle>
           </CardHeader>
@@ -392,40 +383,39 @@ export default function Dashboard() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <div className="h-[240px] flex flex-col items-center justify-center text-muted-foreground">
-                <TrendingUp className="h-10 w-10 mb-3 opacity-30" />
+              <div className="flex h-[240px] flex-col items-center justify-center text-stone">
+                <TrendingUp className="mb-3 h-10 w-10 opacity-30" />
                 <p className="text-base">No collections in the last 7 days</p>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Payment methods */}
-        <Card className="border-border/60 shadow-sm">
+        <Card className="border-line shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="text-[15px] font-semibold flex items-center gap-2.5">
-              <Wallet className="h-5 w-5 text-muted-foreground" />
+            <CardTitle className="flex items-center gap-2.5 text-[16px]">
+              <Wallet className="h-5 w-5 text-stone" />
               Payment Methods (This Month)
             </CardTitle>
           </CardHeader>
           <CardContent>
             {channels.length === 0 ? (
-              <p className="text-base text-muted-foreground py-8 text-center">
+              <p className="py-8 text-center text-base text-stone">
                 No payments this month
               </p>
             ) : (
               <div className="space-y-4">
                 {channels.map((ch) => (
                   <div key={ch.name}>
-                    <div className="flex items-center justify-between mb-1.5">
+                    <div className="mb-1.5 flex items-center justify-between">
                       <span className="text-[14px] font-medium">
                         {CHANNEL_LABELS[ch.name] || ch.name}
                       </span>
-                      <span className="font-figures text-[13px] text-muted-foreground">
+                      <span className="font-figures text-[13px] text-stone">
                         {formatPHP(ch.amount)} · {ch.count}
                       </span>
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-2 overflow-hidden rounded-full bg-muted">
                       <div
                         className="h-full rounded-full transition-all"
                         style={{
@@ -442,13 +432,12 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Recent payments + status breakdown + delinquents */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Recent payments */}
-        <Card className="lg:col-span-2 border-border/60 shadow-sm">
+      {/* ── Row 4: recent payments + status/attention stack ── */}
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <Card className="border-line shadow-sm lg:col-span-2">
           <CardHeader className="pb-3">
-            <CardTitle className="text-lg font-semibold flex items-center gap-2.5">
-              <Clock className="h-5 w-5 text-muted-foreground" />
+            <CardTitle className="flex items-center gap-2.5 text-[16px]">
+              <Clock className="h-5 w-5 text-stone" />
               Recent Payments
             </CardTitle>
           </CardHeader>
@@ -457,32 +446,32 @@ export default function Dashboard() {
                 padding and type scale; the other fifteen of the twenty the
                 query returns scroll inside the card. */}
             {!recentPayments || recentPayments.length === 0 ? (
-              <p className="text-base text-muted-foreground py-6 text-center">
+              <p className="py-6 text-center text-base text-stone">
                 No payments recorded yet
               </p>
             ) : (
-              <div className="font-figures space-y-3 max-h-96 overflow-y-auto pr-1">
+              <div className="font-figures max-h-96 space-y-3 overflow-y-auto pr-1">
                 {recentPayments.slice(0, 20).map((p) => (
                   <div
                     key={p._id}
-                    className="flex items-center justify-between py-3 border-b border-border/40 last:border-0"
+                    className="flex items-center justify-between border-b border-line/40 py-3 last:border-0"
                   >
                     <div className="min-w-0">
-                      <p className="text-[15px] font-medium truncate">
+                      <p className="truncate text-[15px] font-medium">
                         {p.client
                           ? `${p.client.lastName}, ${p.client.firstName}`
                           : "Unknown Client"}
                       </p>
-                      <p className="text-[13px] text-muted-foreground">
+                      <p className="text-[13px] text-stone">
                         {p.contract?.contractNumber || "—"} ·{" "}
                         {CHANNEL_LABELS[p.paymentChannel] || p.paymentChannel}
                       </p>
                     </div>
-                    <div className="text-right shrink-0 ml-4">
-                      <p className="text-[15px] font-bold text-terminal-green">
+                    <div className="ml-4 shrink-0 text-right">
+                      <p className="text-[15px] font-bold text-evergreen">
                         {formatPHP(p.amount)}
                       </p>
-                      <p className="text-[12px] text-muted-foreground">
+                      <p className="text-[12px] text-stone">
                         {format(new Date(p.paymentDate), "MMM d, yyyy")}
                       </p>
                     </div>
@@ -494,10 +483,9 @@ export default function Dashboard() {
         </Card>
 
         <div className="space-y-5">
-          {/* Contract status breakdown */}
-          <Card className="border-border/60 shadow-sm">
+          <Card className="border-line shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-[15px] font-semibold">
+              <CardTitle className="text-[16px]">
                 Contract Status
               </CardTitle>
             </CardHeader>
@@ -512,7 +500,7 @@ export default function Dashboard() {
                   </div>
                 ))}
                 {statusRows.length === 0 && (
-                  <p className="text-base text-muted-foreground text-center py-3">
+                  <p className="py-3 text-center text-base text-stone">
                     No contracts yet
                   </p>
                 )}
@@ -520,39 +508,38 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          {/* Delinquent alerts */}
-          <Card className="border-border/60 shadow-sm">
+          <Card className="border-line shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-[15px] font-semibold flex items-center gap-2.5">
-                <AlertTriangle className="h-5 w-5 text-terminal-amber" />
+              <CardTitle className="flex items-center gap-2.5 text-[16px]">
+                <AlertTriangle className="h-5 w-5 text-gold" />
                 Needs Attention
               </CardTitle>
             </CardHeader>
             <CardContent>
               {!delinquent || delinquent.length === 0 ? (
-                <p className="text-base text-muted-foreground text-center py-3">
+                <p className="py-3 text-center text-base text-stone">
                   All accounts current
                 </p>
               ) : (
-                <div className="space-y-3 max-h-56 overflow-y-auto">
+                <div className="max-h-56 space-y-3 overflow-y-auto">
                   {delinquent.slice(0, 10).map((c) => (
                     <div
                       key={c._id}
-                      className="flex items-center justify-between py-2 border-b border-border/30 last:border-0"
+                      className="flex items-center justify-between border-b border-line/30 py-2 last:border-0"
                     >
                       <div className="min-w-0">
-                        <p className="text-[14px] font-medium truncate">
+                        <p className="truncate text-[14px] font-medium">
                           {c.client
                             ? `${c.client.lastName}, ${c.client.firstName}`
                             : "Unknown"}
                         </p>
-                        <p className="font-figures text-[12px] text-muted-foreground">
+                        <p className="font-figures text-[12px] text-stone">
                           {c.contractNumber}
                         </p>
                       </div>
                       <Badge
                         variant="outline"
-                        className={`text-[11px] shrink-0 ml-2 ${STATUS_COLORS[c.contractStatus] || ""}`}
+                        className={`ml-2 shrink-0 text-[11px] ${STATUS_COLORS[c.contractStatus] || ""}`}
                       >
                         {STATUS_LABELS[c.contractStatus] || c.contractStatus}
                       </Badge>
@@ -563,6 +550,42 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      {/* ── Reporting band: existing modules as compact shortcuts ── */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        {REPORTING_LINKS.map((r) => (
+          <Link
+            key={r.to}
+            to={r.to}
+            className="group rounded-2xl border border-line bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-evergreen/30 hover:shadow-md"
+          >
+            <div className="flex items-center justify-between">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-evergreen/10 text-evergreen">
+                <r.icon className="h-[18px] w-[18px]" />
+              </span>
+              <ChevronRight className="h-4 w-4 text-line transition-colors group-hover:text-evergreen" />
+            </div>
+            <p className="mt-3.5 font-display text-[16px] font-semibold text-evergreen">
+              {r.label}
+            </p>
+            <p className="mt-0.5 text-[12px] text-stone">{r.body}</p>
+          </Link>
+        ))}
+      </div>
+
+      {/* Existing action kept — end of page, out of the way */}
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-9 shrink-0 gap-1.5 text-[13px]"
+          onClick={handleUpdateDelinquency}
+          disabled={updatingDelinquency}
+        >
+          <RefreshCw className={`h-4 w-4 ${updatingDelinquency ? "animate-spin" : ""}`} />
+          {updatingDelinquency ? "Checking..." : "Check Late Accounts"}
+        </Button>
       </div>
     </div>
   );

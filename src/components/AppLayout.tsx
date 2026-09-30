@@ -32,7 +32,9 @@ import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/BrandLogo";
 import { useBranch } from "@/hooks/use-branch";
 import { BranchScopeSelector } from "@/components/BranchScopeSelector";
+import { format } from "date-fns";
 
+/** Existing navigation, unchanged — now presented in visual groups. */
 const NAV_ITEMS = [
   { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
   // Every staff account gets its own branch workspace. A Branch Manager uses it
@@ -59,7 +61,49 @@ const NAV_ITEMS = [
   { to: "/branches", icon: Building2, label: "Branches", roles: ["super_admin", "ceo"] },
   { to: "/role-management", icon: UserCog, label: "Roles", roles: ["super_admin", "ceo"] },
   { to: "/branding", icon: Palette, label: "Branding", roles: ["super_admin", "ceo"] },
+];
 
+/** Visual-only grouping of the same nav items (routes/permissions untouched). */
+const NAV_GROUPS: { heading: string; items: typeof NAV_ITEMS }[] = [
+  {
+    heading: "Main",
+    items: NAV_ITEMS.filter((i) => ["/dashboard", "/my-branch"].includes(i.to)),
+  },
+  {
+    heading: "Operations",
+    items: NAV_ITEMS.filter((i) =>
+      ["/clients", "/contracts", "/payments", "/receipts", "/plans", "/bulk-upload", "/or-series"].includes(i.to)
+    ),
+  },
+  {
+    heading: "Reporting",
+    items: NAV_ITEMS.filter((i) =>
+      ["/reports", "/reconciliation", "/aging-report"].includes(i.to)
+    ),
+  },
+  {
+    heading: "Management",
+    items: NAV_ITEMS.filter((i) =>
+      ["/branches", "/role-management", "/branding"].includes(i.to)
+    ),
+  },
+  {
+    heading: "System",
+    items: NAV_ITEMS.filter((i) =>
+      ["/account-links", "/notifications", "/audit"].includes(i.to)
+    ),
+  },
+];
+
+/** Existing modules for the header's quick-access strip (display subset). */
+const QUICK_ACCESS = [
+  { to: "/clients", icon: Users, label: "Clients" },
+  { to: "/contracts", icon: FileText, label: "Contracts" },
+  { to: "/payments", icon: CreditCard, label: "Payments" },
+  { to: "/receipts", icon: Receipt, label: "Receipts" },
+  { to: "/plans", icon: Package, label: "Plans" },
+  { to: "/reports", icon: BarChart3, label: "Reports" },
+  { to: "/notifications", icon: Bell, label: "Notifications" },
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -72,6 +116,13 @@ const ROLE_LABELS: Record<string, string> = {
 
 /** Roles that may use the staff area. Anything else is a client-portal account. */
 const STAFF_ROLES = ["super_admin", "ceo", "manager", "finance_staff", "cashier"];
+
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 18) return "Good afternoon";
+  return "Good evening";
+}
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, signOut } = useAuth();
@@ -187,6 +238,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     });
   }, [userRole, hasSuperAdmin]);
 
+  // Groups filtered by the same role rules; empty groups are dropped so a
+  // cashier never sees an empty "Management" heading.
+  const navGroups = useMemo(() => {
+    if (!userRole) return [];
+    return NAV_GROUPS.map((g) => ({
+      ...g,
+      items: g.items.filter(
+        (item) =>
+          item.roles.includes(userRole) &&
+          !(item.to === "/super-admin-setup" && hasSuperAdmin)
+      ),
+    })).filter((g) => g.items.length > 0);
+  }, [userRole, hasSuperAdmin]);
+
   const bottomNavItems = visibleNav.slice(0, 5);
 
   // Early return placed after every hook so the hook order stays stable across
@@ -197,13 +262,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="staff-shell flex min-h-screen flex-col bg-background overflow-visible md:flex-row">
-      {/* Desktop sidebar */}
+      {/* Desktop sidebar — fixed 260px, grouped nav, brand at top, account at bottom */}
       <aside
-        className={`hidden shrink-0 flex-col border-r border-sidebar-border bg-gradient-to-b from-[#1b4332] to-[#0f2a1d] transition-all duration-200 md:flex ${
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-gradient-to-b from-[#1b4332] to-[#0f2a1d] transition-all duration-200 md:flex ${
           collapsed ? "w-[72px]" : "w-[260px]"
         }`}
       >
-        {/* Header — same lockup as the client portal header */}
+        {/* Brand lockup */}
         <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
           <div
             className={`flex items-center gap-3 min-w-0 ${
@@ -213,10 +278,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <BrandLogo className="h-9 w-9 shrink-0 rounded-[9px] ring-1 ring-white/15" />
             {!collapsed && (
               <div className="flex min-w-0 flex-col leading-tight">
-                <span className="font-brayles truncate text-[17px] leading-none text-blue-300">
-                  Evangelist
+                <span className="font-brayles truncate text-[18px] leading-none text-blue-300">
+                  Evangelist Funeral Services
                 </span>
-                <span className="truncate text-[10px] font-medium uppercase tracking-[0.16em] text-white/45">
+                <span className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.22em] text-gold-soft">
                   Staff Portal
                 </span>
               </div>
@@ -236,26 +301,40 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Button>
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 py-3 px-3 space-y-1 overflow-y-auto">
-          {visibleNav.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 rounded-full px-4 py-2.5 text-[14.5px] font-medium transition-colors ${
-                  isActive
-                    ? "bg-cream text-pine shadow-sm"
-                    : "text-white/65 hover:bg-white/10 hover:text-white"
-                } ${collapsed ? "justify-center px-0" : ""}`}
-            >
-              <item.icon className="h-5 w-5 shrink-0" />
-              {!collapsed && <span>{item.label}</span>}
-            </NavLink>
+        {/* Grouped nav — same items and routes, visually organized */}
+        <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Staff">
+          {navGroups.map((group) => (
+            <div key={group.heading} className="mb-4 last:mb-0">
+              {!collapsed && (
+                <p className="px-3 pb-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-white/35">
+                  {group.heading}
+                </p>
+              )}
+              {collapsed && <div className="mx-3 mb-2 border-t border-white/10" />}
+              <div className="space-y-0.5">
+                {group.items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    title={collapsed ? item.label : undefined}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors ${
+                        isActive
+                          ? "bg-cream text-pine shadow-sm"
+                          : "text-white/65 hover:bg-white/10 hover:text-white"
+                      } ${collapsed ? "justify-center px-0" : ""}`
+                    }
+                  >
+                    <item.icon className="h-[18px] w-[18px] shrink-0" />
+                    {!collapsed && <span className="truncate">{item.label}</span>}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 
-        {/* User section */}
+        {/* Account controls — same actions as before */}
         <div className="border-t border-sidebar-border px-4 py-4">
           {!collapsed && (
             <div className="mb-3 min-w-0">
@@ -325,7 +404,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
       </div>
 
-      {/* Mobile slide-out menu */}
+      {/* Mobile slide-out menu — same grouped structure */}
       {mobileMenuOpen && (
         <div className="md:hidden fixed inset-0 z-[99990]">
           <div
@@ -334,21 +413,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           />
           <div className="absolute top-[60px] left-0 right-0 overflow-y-auto border-b border-white/10 bg-gradient-to-b from-[#1b4332] to-[#0f2a1d] shadow-xl max-h-[calc(100vh-60px-64px)]">
             <nav className="py-3 px-3">
-              {visibleNav.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `flex items-center gap-3 rounded-full px-4 py-3 text-[14.5px] font-medium transition-colors ${
-                      isActive
-                        ? "bg-cream text-pine"
-                        : "text-white/65 hover:bg-white/10"
-                    }`}
-                >
-                  <item.icon className="h-5 w-5 shrink-0" />
-                  <span>{item.label}</span>
-                </NavLink>
+              {navGroups.map((group) => (
+                <div key={group.heading} className="mb-3">
+                  <p className="px-3 pb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/35">
+                    {group.heading}
+                  </p>
+                  {group.items.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14px] font-medium transition-colors ${
+                          isActive
+                            ? "bg-cream text-pine"
+                            : "text-white/65 hover:bg-white/10"
+                        }`
+                      }
+                    >
+                      <item.icon className="h-5 w-5 shrink-0" />
+                      <span>{item.label}</span>
+                    </NavLink>
+                  ))}
+                </div>
               ))}
               <div className="border-t border-white/10 mt-2 pt-2">
                 <div className="px-4 py-3">
@@ -387,46 +474,66 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex min-w-0 flex-1 flex-col">
         <div className="md:hidden h-[60px]" />
 
         {/*
-         * Scope bar. States plainly which branch the pages below are showing —
-         * "All Branches" with the selector for Head Office, or the branch a
-         * staff account is locked to. Branch staff get no selector because
-         * their scope is fixed by their account, not by a choice.
+         * Dashboard header — greeting with the signed-in staff name, the date,
+         * the branch scope, and the quick-access module strip. Scope states
+         * plainly which branch the pages below are showing; the selector stays
+         * for Head Office, and branch staff keep their locked-scope badge.
          */}
         {canRenderPage && (
-          <header className="sticky top-0 z-40 hidden items-center justify-between gap-4 border-b border-line bg-paper/95 px-5 py-3 backdrop-blur md:flex lg:px-8">
-            <div className="flex min-w-0 items-center gap-2.5">
-              <div
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                  isCeoOrAdmin && !branchId
-                    ? "bg-evergreen/10 text-evergreen"
-                    : "bg-gold/15 text-gold"
-                }`}
-              >
-                <Building2 className="h-4 w-4" />
+          <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur">
+            <div className="flex items-center justify-between gap-4 px-5 py-4 md:px-8">
+              <div className="min-w-0">
+                <h1 className="truncate font-display text-[26px] font-semibold leading-tight text-evergreen lg:text-[30px]">
+                  {greeting()},{" "}
+                  {(user?.name || user?.email || "Staff").split(" ")[0]}.
+                </h1>
+                <p className="mt-0.5 truncate text-[13px] text-stone">
+                  {format(new Date(), "EEEE, MMMM d, yyyy")} · Here's your branch
+                  overview and current operations —{" "}
+                  <span className="font-semibold text-evergreen">{scopeLabel}</span>
+                </p>
               </div>
-              <div className="flex min-w-0 flex-col leading-tight">
-                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone">
-                  {isCeoOrAdmin ? "Viewing" : "Your branch"}
-                </span>
-                <span className="truncate text-[14px] font-semibold text-evergreen">
-                  {scopeLabel}
-                </span>
+              <div className="hidden shrink-0 items-center gap-2.5 md:flex">
+                {!isCeoOrAdmin && (
+                  <span className="rounded-full bg-evergreen/8 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-evergreen ring-1 ring-evergreen/15">
+                    Locked scope
+                  </span>
+                )}
+                {isCeoOrAdmin && <BranchScopeSelector />}
               </div>
-              {!isCeoOrAdmin && (
-                <span className="ml-1 hidden shrink-0 rounded-full bg-evergreen/8 px-2.5 py-1 text-[10.5px] font-semibold uppercase tracking-[0.12em] text-evergreen ring-1 ring-evergreen/15 lg:inline">
-                  Locked scope
-                </span>
-              )}
             </div>
-            <BranchScopeSelector />
+
+            {/* Quick access strip — existing modules, horizontally scrollable on mobile */}
+            <div className="border-t border-line/70">
+              <div className="flex gap-2 overflow-x-auto px-5 py-2.5 md:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {QUICK_ACCESS.filter((q) =>
+                  visibleNav.some((n) => n.to === q.to)
+                ).map((q) => (
+                  <NavLink
+                    key={q.to}
+                    to={q.to}
+                    className={({ isActive }) =>
+                      `inline-flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors ${
+                        isActive
+                          ? "border-evergreen bg-evergreen text-white"
+                          : "border-line bg-white text-ink/70 hover:border-evergreen/30 hover:bg-evergreen/8 hover:text-evergreen"
+                      }`
+                    }
+                  >
+                    <q.icon className="h-3.5 w-3.5" />
+                    {q.label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           </header>
         )}
 
-        <main className="mx-auto w-full max-w-[1500px] flex-1 pb-20 md:pb-0">
+        <main className="mx-auto w-full max-w-[1500px] flex-1 pb-20 md:pb-10">
           {canRenderPage ? children : null}
         </main>
       </div>

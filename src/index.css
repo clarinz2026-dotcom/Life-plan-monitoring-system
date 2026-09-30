@@ -332,12 +332,13 @@
   }
 
   /*
-   * Staff headings keep the display weight and tight tracking, but no longer
-   * carry the serif family — Arial is the house face for the app now. The
-   * public landing page and the System Deck still use `font-display`, which is
-   * why the `--font-display` token stays.
+   * Staff headings carry the Times New Roman display face — the serif is the
+   * identity of the dashboard chrome (greetings, section titles, page titles),
+   * while all data, tables, and figures stay on the Arial house stack so
+   * numbers keep their tabular clarity.
    */
   :where(.staff-shell) :where(h1, h2, h3, [data-slot="card-title"]) {
+    font-family: "Times New Roman", Times, Georgia, serif;
     font-weight: 600;
     letter-spacing: -0.015em;
   }
