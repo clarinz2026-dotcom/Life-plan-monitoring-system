@@ -316,7 +316,7 @@ function Hero() {
           <Eyebrow>To God be The Glory</Eyebrow>
         </div>
         <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.08] tracking-tight text-evergreen sm:text-5xl lg:text-[58px]">
-          The office ledger and the family portal, finally the same numbers.
+          Payment Records with the reach of your hand
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-[15.5px] leading-relaxed text-stone">
           Evangelist runs its Life Plan records on one source of truth. Staff record
