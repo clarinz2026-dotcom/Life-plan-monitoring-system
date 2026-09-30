@@ -7,21 +7,27 @@ import {
   ArrowRight,
   ArrowUpRight,
   BarChart3,
+  BookMarked,
   Building2,
+  Calculator,
   Check,
   ChevronDown,
   Clock,
   CreditCard,
   Facebook,
   FileHeart,
+  FileSpreadsheet,
   FileText,
+  Glasses,
   Instagram,
+  KeyRound,
   LayoutDashboard,
   LineChart,
   Link2,
   Mail,
   MapPin,
   Menu,
+  Palette,
   Phone,
   Receipt,
   ShieldCheck,
@@ -125,9 +131,9 @@ function BrandBlock({ light = false }: { light?: boolean }) {
 /* ── Navigation ─────────────────────────────────────────────────────────── */
 
 const NAV_LINKS = [
-  { label: "Client portal", href: "#client-portal" },
-  { label: "Staff portal", href: "#staff-portal" },
-  { label: "Client management", href: "#clients" },
+  { label: "For families", href: "#client-portal" },
+  { label: "For the office", href: "#staff-portal" },
+  { label: "Senior-friendly", href: "#readability" },
   { label: "Payment monitoring", href: "#payments" },
 ];
 
@@ -213,47 +219,48 @@ const PILLARS = [
     icon: FileHeart,
     title: "Client portal",
     blurb:
-      "Planholders sign in with their email and immediately see the same numbers our office sees.",
+      "Planholders sign in with a code sent to their email and read the same figures our office sees — in large, comfortable type.",
     points: [
-      "Plan value, total paid, and outstanding balance",
-      "Payment history with installment number and running balance",
-      "Statement of Account they can print or download as PDF",
-      "Account linking request when their email isn't on file yet",
+      "Plan status, effectivity date, and assigned branch up top",
+      "Payment history with aging and running balance",
+      "Official receipts, exactly as issued by the cashier",
+      "Statement of Account to preview, print, or download",
     ],
   },
   {
     icon: LayoutDashboard,
     title: "Staff portal",
     blurb:
-      "One workspace for the whole records team — role-aware, and branch-aware out of the box.",
+      "One workspace for the records team — role-aware, branch-aware, and scoped on the server, not the screen.",
     points: [
-      "Dashboard of contracts needing attention",
+      "Dashboard of contracts and accounts needing attention",
       "Clients, contracts, payments, and receipts",
-      "Daily cashier reconciliation with variance tracking",
-      "Multi-branch: the CEO sees everything, staff see their branch",
-    ],
-  },
-  {
-    icon: Users,
-    title: "Client management",
-    blurb:
-      "Every planholder record with their beneficiaries, contact details, and plan history.",
-    points: [
-      "Up to four beneficiaries per planholder record",
-      "Search by name or contact number, filter by status",
-      "Full audit trail of who changed what, and when",
-      "Bulk import for the records you already have on paper",
+      "OR series hands and daily close-register reconciliation",
+      "Bulk upload planholders from the office spreadsheet",
     ],
   },
   {
     icon: BarChart3,
-    title: "Payment monitoring",
-    blurb: "Know exactly which accounts are behind, and prove where every peso went.",
+    title: "Delinquency & reports",
+    blurb:
+      "Accounts bucket themselves from real payment dates, and the office sees it before it becomes a problem.",
     points: [
-      "Delinquency ageing: 30 / 60 / 90 days and lapsed",
-      "Installment schedules and automatic overdue flagging",
-      "Official receipts with sequential numbering",
-      "Reconciliation and exportable reports per branch",
+      "30 / 60 / 90-day and lapsed aging on every contract",
+      "Installment schedules with automatic overdue flagging",
+      "Collections and per-branch performance reports",
+      "Audit log behind every create, edit, and delete",
+    ],
+  },
+  {
+    icon: ShieldCheck,
+    title: "Trust & control",
+    blurb:
+      "A family's records are private. The system treats them that way at every layer.",
+    points: [
+      "Email-code (OTP) sign-in for staff and planholders",
+      "Branch isolation enforced server-side",
+      "Role-based access for managers, collectors, cashiers",
+      "One branded identity across app and printed statements",
     ],
   },
 ];
@@ -268,13 +275,13 @@ const FLOW = [
   {
     step: "02",
     title: "The account updates",
-    body: "Total paid, outstanding balance, installment number, and running balance recalculate.",
+    body: "Total paid, aging, installment number, and running balance recalculate.",
     icon: Wallet,
   },
   {
     step: "03",
     title: "Client portal reflects it",
-    body: "The planholder's payments summary and history update the moment it's saved.",
+    body: "The planholder's summary, receipts, and history update the moment it's saved.",
     icon: FileHeart,
   },
   {
@@ -286,10 +293,16 @@ const FLOW = [
 ];
 
 const LEDGER_ROWS = [
-  ["09/16/2025", "001234", "₱500.00", "1", "₱38,500.00", "Paid"],
-  ["10/16/2025", "001278", "₱500.00", "2", "₱38,000.00", "Paid"],
-  ["11/16/2025", "001301", "₱500.00", "3", "₱37,500.00", "Paid"],
+  ["09/26/2026", "0012345", "₱650.00", "1", "₱38,350.00", "30"],
+  ["09/26/2026", "0012346", "₱650.00", "2", "₱37,700.00", "Advanced"],
+  ["09/26/2026", "0012347", "₱650.00", "3", "₱37,050.00", "Advanced"],
 ];
+
+/** The portal's statement face — Arial, sized the way planholders actually read it. */
+const STATEMENT_FONT = {
+  fontFamily: 'Arial, "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif',
+  fontSize: "16px",
+} as const;
 
 /* ── Hero ───────────────────────────────────────────────────────────────── */
 
@@ -303,12 +316,14 @@ function Hero() {
           <Eyebrow>Pre-need plan records &amp; payments</Eyebrow>
         </div>
         <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.08] tracking-tight text-evergreen sm:text-5xl lg:text-[58px]">
-          One system for every planholder, peso, and statement.
+          The office ledger and the family portal, finally the same numbers.
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-[15.5px] leading-relaxed text-stone">
-          Evangelist runs its Life Plan records on a single source of truth.
-          Families get a portal that shows the same figures our staff see, and our
-          team gets the tools to keep them accurate — {MOTTO}
+          Evangelist runs its Life Plan records on one source of truth. Staff record
+          a payment once — the client portal, the official receipts, and the
+          printed Statement of Account all agree. Sign-in is a code sent to your
+          email, and every screen is built to be read by the whole family —{" "}
+          {MOTTO}
         </p>
       </Reveal>
 
@@ -320,7 +335,7 @@ function Hero() {
             eyebrow: "For planholders & families",
             title: "Client portal",
             pitch:
-              "Sign in with the email on your plan and see your balance, payment history, and official statement.",
+              "Your plan status, effectivity, payment history, official receipts, and a statement you can print — in large, readable type.",
             href: "#client-portal",
             cta: "See what families get",
           },
@@ -330,7 +345,7 @@ function Hero() {
             eyebrow: "For records & branch staff",
             title: "Staff portal",
             pitch:
-              "Record payments, manage planholders, track delinquencies, and reconcile the day's collections.",
+              "Clients, contracts, payments, OR series, close register, aging, and reports — scoped to your role and your branch.",
             href: "#staff-portal",
             cta: "See the staff workspace",
           },
@@ -371,10 +386,10 @@ function Hero() {
       <Reveal delay={0.1}>
         <div className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4">
           {[
-            { k: "1 source of truth", v: "payments feed the portal and the SOA" },
-            { k: "30/60/90 day", v: "delinquency ageing on every contract" },
-            { k: "Multi-branch", v: "a unique local identity per branch" },
-            { k: "PDF & print", v: "statements on the official paper form" },
+            { k: "One record", v: "portal, receipts, and SOA read the same payments" },
+            { k: "30/60/90 + lapsed", v: "aging computed from real payment dates" },
+            { k: "Email-code sign-in", v: "no passwords to forget, on either portal" },
+            { k: "Built for lolo & lola", v: "large-type statement mode in the portal" },
           ].map((s) => (
             <div key={s.k} className="bg-white px-5 py-6">
               <p className="font-display text-[19px] font-semibold text-evergreen">{s.k}</p>
@@ -418,11 +433,11 @@ export default function Landing() {
           <Reveal>
             <Eyebrow>What the system does</Eyebrow>
             <h2 className="mt-5 max-w-2xl font-display text-3xl font-semibold leading-tight text-evergreen lg:text-[42px]">
-              Four things, done properly.
+              The whole ledger, end to end.
             </h2>
             <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-stone">
-              Just the money, the records, and the two portals that keep families
-              and staff looking at the same numbers.
+              From the cashier's window to the family's phone — records, money, and
+              the statements that keep everyone honest.
             </p>
           </Reveal>
 
@@ -464,10 +479,10 @@ export default function Landing() {
               Record a payment once. Everything else follows.
             </h2>
             <p className="mt-4 text-[15px] leading-relaxed text-stone">
-              There is one payments table behind the whole system. The client portal
-              and the Statement of Account don't keep their own copies — they
-              calculate from the same records, so a balance can never be right in one
-              place and wrong in the other.
+              There is one payments table behind the whole system. The client portal,
+              the official receipts, and the Statement of Account don't keep their own
+              copies — they calculate from the same records, so a balance can never be
+              right in one place and wrong in another.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Button
@@ -527,44 +542,45 @@ export default function Landing() {
         <div className="mx-auto max-w-[1440px] px-6 py-20 lg:px-10 lg:py-28">
           <div className="grid gap-14 lg:grid-cols-[1.05fr_1fr] lg:items-center">
             <Reveal>
-              <div className="rounded-3xl border border-line bg-white p-6 shadow-xl lg:p-7">
+              <div className="rounded-3xl border border-line bg-white p-6 shadow-xl lg:p-7" style={STATEMENT_FONT}>
                 <div className="flex items-center justify-between border-b border-line pb-4">
                   <div>
-                    <p className="text-[15px] font-bold text-ink">Account summary</p>
-                    <p className="mt-0.5 font-mono text-[11.5px] text-stone">
-                      St. Gabriel · 00000000
+                    <p className="text-[17px] font-bold text-ink">Abrasaldo, Clarinz</p>
+                    <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-stone">
+                      St. Isidore · Plan No. 0012345
                     </p>
                   </div>
-                  <span className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-[10.5px] font-bold uppercase tracking-wide text-emerald-800">
-                    Current
+                  <span className="rounded-full border border-emerald-300 bg-emerald-50 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-emerald-800">
+                    Active
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-6 gap-y-4 pt-5 sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-x-8 gap-y-4 pt-5 sm:grid-cols-4">
                   {[
+                    ["Effectivity", "Aug 22, 2026"],
+                    ["Assigned branch", "Malaybalay"],
                     ["Plan value", "₱39,000"],
-                    ["Total paid", "₱1,500"],
-                    ["Outstanding", "₱37,500"],
+                    ["Outstanding", "₱36,400"],
                   ].map(([l, v]) => (
                     <div key={l}>
-                      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-stone">
+                      <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-stone">
                         {l}
                       </p>
-                      <p className="mt-0.5 font-display text-[20px] font-semibold text-evergreen">
+                      <p className="mt-1 border-b border-line pb-1.5 text-[14.5px] text-ink">
                         {v}
                       </p>
                     </div>
                   ))}
                 </div>
 
-                <p className="mt-7 text-[12px] font-bold uppercase tracking-[0.16em] text-evergreen">
+                <p className="mt-7 text-[12.5px] font-bold uppercase tracking-[0.14em] text-evergreen">
                   Payment history
                 </p>
                 <div className="mt-3 overflow-x-auto">
-                  <table className="w-full text-[11.5px]">
+                  <table className="w-full min-w-[520px] text-[12.5px]">
                     <thead>
                       <tr className="border-b border-line text-left">
-                        {["Date", "O.R. No.", "Amount", "Inst.", "Balance", "Remarks"].map(
+                        {["Date", "O.R. No.", "Amount", "Inst.", "Balance", "Aging"].map(
                           (h) => (
                             <th
                               key={h}
@@ -579,13 +595,13 @@ export default function Landing() {
                     <tbody>
                       {LEDGER_ROWS.map((r) => (
                         <tr key={r[1]} className="border-b border-line/30">
-                          <td className="py-2 pr-2 font-mono">{r[0]}</td>
-                          <td className="py-2 pr-2 font-mono text-stone">{r[1]}</td>
-                          <td className="py-2 pr-2 font-mono font-bold text-evergreen">
+                          <td className="py-2 pr-2">{r[0]}</td>
+                          <td className="py-2 pr-2 text-stone">{r[1]}</td>
+                          <td className="py-2 pr-2 font-bold text-evergreen">
                             {r[2]}
                           </td>
-                          <td className="py-2 pr-2 text-center font-mono">{r[3]}</td>
-                          <td className="py-2 pr-2 text-right font-mono text-stone">
+                          <td className="py-2 pr-2 text-center">{r[3]}</td>
+                          <td className="py-2 pr-2 text-right text-stone">
                             {r[4]}
                           </td>
                           <td className="py-2 text-stone">{r[5]}</td>
@@ -598,10 +614,11 @@ export default function Landing() {
                 <div className="mt-5 flex flex-wrap items-center gap-2.5">
                   <span className="inline-flex items-center gap-2 rounded-full bg-evergreen px-4 py-2 text-[12px] font-bold text-white">
                     <FileText className="h-3.5 w-3.5" />
-                    View statement of account
+                    Statement of Account
                   </span>
                   <span className="inline-flex items-center gap-2 rounded-full border border-line px-4 py-2 text-[12px] font-bold text-evergreen">
-                    Download PDF
+                    <Receipt className="h-3.5 w-3.5" />
+                    Official receipts
                   </span>
                 </div>
               </div>
@@ -613,8 +630,8 @@ export default function Landing() {
                 Families stop calling to ask for their balance.
               </h2>
               <p className="mt-4 text-[15px] leading-relaxed text-stone">
-                Planholders sign in with the email we already have on their record.
-                No separate account to create, no app to install — just the numbers,
+                Planholders sign in with a six-digit code sent to the email on their
+                record. No password to forget, no app to install — just the numbers,
                 in the same words our office uses.
               </p>
 
@@ -622,23 +639,23 @@ export default function Landing() {
                 {[
                   {
                     icon: Wallet,
-                    title: "Payments summary",
-                    body: "Plan value, total paid, outstanding balance, monthly installment, next due date, and payment status — per plan.",
+                    title: "The full statement, per plan",
+                    body: "Plan value, monthly installment, next due date, effectivity date, plan status (Active or Forfeited), and the assigned branch.",
                   },
                   {
                     icon: Receipt,
-                    title: "Payment history",
-                    body: "Every recorded payment with its O.R. number, installment number, running balance, and remarks.",
+                    title: "Official receipts & history",
+                    body: "Every payment with its O.R. number, installment number, aging, running balance — plus the issued receipts themselves.",
                   },
                   {
                     icon: FileText,
                     title: "Statement of Account",
-                    body: "The official paper form — planholder details, up to four beneficiaries, plan information, the payment ledger, and signatures. Print it or export a PDF.",
+                    body: "The office's own paper form, on screen and as a PDF — preview it exactly as it prints, then print or download.",
                   },
                   {
                     icon: Link2,
                     title: "Account linking",
-                    body: "If their email isn't on file yet, they can send a linking request. Staff verify it, and the plans appear immediately.",
+                    body: "Email not on file yet? Send a linking request from the portal; staff verify it and the plans appear immediately.",
                   },
                 ].map((f) => (
                   <li key={f.title} className="flex gap-4">
@@ -667,101 +684,169 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* ── Staff portal ── */}
-      <section
-        id="staff-portal"
-        className="scroll-mt-24 mx-auto max-w-[1440px] px-6 py-20 lg:px-10 lg:py-28"
-      >
+      {/* ── Senior-friendly ── */}
+      <section id="readability" className="scroll-mt-24 mx-auto max-w-[1440px] px-6 py-20 lg:px-10 lg:py-28">
         <div className="grid gap-14 lg:grid-cols-[1fr_1.05fr] lg:items-center">
           <Reveal>
-            <Eyebrow>Staff portal</Eyebrow>
+            <Eyebrow>Designed for lolo &amp; lola</Eyebrow>
             <h2 className="mt-5 font-display text-3xl font-semibold leading-tight text-evergreen lg:text-[42px]">
-              The office workspace, scoped to who you are.
+              Most of our planholders are seniors. The portal reads like it.
             </h2>
             <p className="mt-4 text-[15px] leading-relaxed text-stone">
-              Roles decide what a person can see and do. Branch assignment decides
-              which records they see. A cashier, a branch manager, and the CEO each
-              open a different — and correct — workspace.
+              The statement pages use a larger base type, bigger table figures, and
+              wider margins — the same statement our office prints, set so an aging
+              eye can actually read it. Nothing is smaller than it needs to be, and
+              the important things — status, balance, next due date — stand out first.
             </p>
-
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+            <ul className="mt-8 space-y-3.5">
               {[
-                {
-                  icon: Users,
-                  title: "Client management",
-                  body: "Planholder records with beneficiaries, contact details, and status.",
-                },
-                {
-                  icon: FileText,
-                  title: "Contracts & plans",
-                  body: "Plan type, plan value, monthly amortization, and maturity.",
-                },
-                {
-                  icon: CreditCard,
-                  title: "Payments & receipts",
-                  body: "Record collections and issue sequentially numbered official receipts.",
-                },
-                {
-                  icon: LineChart,
-                  title: "Reports & ageing",
-                  body: "Delinquency buckets, collections, and per-branch performance.",
-                },
-                {
-                  icon: Building2,
-                  title: "Multi-branch",
-                  body: "Every branch keeps its own identity; the CEO sees across all of them.",
-                },
-                {
-                  icon: UserCog,
-                  title: "Roles & access",
-                  body: "Assign staff by position — Branch Manager, Collector, or Cashier.",
-                },
-              ].map((f) => (
-                <div
-                  key={f.title}
-                  className="rounded-2xl border border-line bg-white p-5 transition-all hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <span className="grid h-10 w-10 place-items-center rounded-xl bg-evergreen/8 text-evergreen">
-                    <f.icon className="h-[18px] w-[18px]" />
-                  </span>
-                  <p className="mt-3.5 text-[13.5px] font-bold text-ink">{f.title}</p>
-                  <p className="mt-1 text-[12px] leading-relaxed text-stone">{f.body}</p>
-                </div>
+                "16px base text with larger figures throughout the statement",
+                "Key facts — plan status, effectivity, branch — at the top of the page",
+                "Tables sized for reading, not just for scanning",
+                "Works on the family's phone, tablet, or the office desktop",
+              ].map((p) => (
+                <li key={p} className="flex items-start gap-3 text-[13.5px] text-ink/80">
+                  <Glasses className="mt-0.5 h-4 w-4 shrink-0 text-gold" />
+                  {p}
+                </li>
               ))}
-            </div>
+            </ul>
           </Reveal>
 
           <Reveal delay={0.1}>
-            <div className="relative overflow-hidden rounded-[28px] shadow-xl ring-1 ring-black/5">
-              <img
-                {...RECORDS_IMG}
-                alt="Staff reviewing plan records"
-                loading="lazy"
-                className="h-full max-h-[560px] w-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-evergreen/90 via-evergreen/30 to-transparent" />
-              <div className="absolute inset-x-6 bottom-6 rounded-2xl bg-white/95 p-5 backdrop-blur">
-                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gold">
-                  Needs attention
-                </p>
-                <div className="mt-3 space-y-2">
-                  {[
-                    ["Reyes, Marilou", "90 days late", "text-red-700"],
-                    ["Sarmiento, Erik", "30 days late", "text-amber-700"],
-                    ["Villanueva, Ana", "payment due in 3 days", "text-stone"],
-                  ].map(([n, s, c]) => (
-                    <div
-                      key={n}
-                      className="flex items-center justify-between rounded-xl bg-cream px-3.5 py-2.5"
-                    >
-                      <span className="text-[12.5px] font-semibold text-ink">{n}</span>
-                      <span className={`text-[11.5px] font-bold ${c}`}>{s}</span>
-                    </div>
-                  ))}
-                </div>
+            <div className="rounded-3xl border border-line bg-white p-7 shadow-xl lg:p-9" style={STATEMENT_FONT}>
+              <p className="inline-block bg-evergreen px-4 py-2 text-[13.5px] font-bold uppercase tracking-[0.16em] text-white">
+                Planholder Information
+              </p>
+              <div className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
+                {[
+                  ["Planholder's Name", "Abrasaldo, Clarinz"],
+                  ["Contact Number", "0955 399 1034"],
+                  ["Effectivity Date", "Aug 22, 2026"],
+                  ["Plan Status", "Active"],
+                  ["Assigned Branch", "Malaybalay (Main)"],
+                  ["Birthday", "June 2, 2002"],
+                ].map(([l, v]) => (
+                  <div key={l} className="min-w-0">
+                    <p className="text-[12.5px] font-bold uppercase tracking-[0.08em] text-stone">
+                      {l}
+                    </p>
+                    <p className="mt-2 border-b border-line pb-2 text-[17.5px] leading-snug text-ink">
+                      {l === "Plan Status" ? (
+                        <span className="font-semibold text-emerald-700">{v}</span>
+                      ) : (
+                        v
+                      )}
+                    </p>
+                  </div>
+                ))}
               </div>
+              <p className="mt-6 text-[12.5px] text-stone">
+                Shown exactly as planholders see it — large labels, ruled values, and
+                status in words, not icons.
+              </p>
             </div>
           </Reveal>
+        </div>
+      </section>
+
+      {/* ── Staff portal ── */}
+      <section
+        id="staff-portal"
+        className="scroll-mt-24 border-y border-line bg-cream"
+      >
+        <div className="mx-auto max-w-[1440px] px-6 py-20 lg:px-10 lg:py-28">
+          <div className="grid gap-14 lg:grid-cols-[1fr_1.05fr] lg:items-center">
+            <Reveal>
+              <Eyebrow>Staff portal</Eyebrow>
+              <h2 className="mt-5 font-display text-3xl font-semibold leading-tight text-evergreen lg:text-[42px]">
+                The office workspace, scoped to who you are.
+              </h2>
+              <p className="mt-4 text-[15px] leading-relaxed text-stone">
+                Roles decide what a person can see and do. Branch assignment decides
+                which records they see. A cashier, a branch manager, and the CEO each
+                open a different — and correct — workspace.
+              </p>
+
+              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                {[
+                  {
+                    icon: Users,
+                    title: "Clients & contracts",
+                    body: "Planholder records with beneficiaries, plans, and full histories.",
+                  },
+                  {
+                    icon: CreditCard,
+                    title: "Payments & receipts",
+                    body: "Record collections in five channels and issue numbered O.R.s.",
+                  },
+                  {
+                    icon: BookMarked,
+                    title: "OR series & close register",
+                    body: "Track receipt-book hands per branch and tally the day's cash.",
+                  },
+                  {
+                    icon: LineChart,
+                    title: "Aging & reports",
+                    body: "Delinquency buckets, collections, and per-branch exports.",
+                  },
+                  {
+                    icon: FileSpreadsheet,
+                    title: "Bulk upload",
+                    body: "Load planholders and payments from the office spreadsheet.",
+                  },
+                  {
+                    icon: Palette,
+                    title: "Branding & branches",
+                    body: "One logo everywhere — app, portal, and printed statements.",
+                  },
+                ].map((f) => (
+                  <div
+                    key={f.title}
+                    className="rounded-2xl border border-line bg-white p-5 transition-all hover:-translate-y-0.5 hover:shadow-md"
+                  >
+                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-evergreen/8 text-evergreen">
+                      <f.icon className="h-[18px] w-[18px]" />
+                    </span>
+                    <p className="mt-3.5 text-[13.5px] font-bold text-ink">{f.title}</p>
+                    <p className="mt-1 text-[12px] leading-relaxed text-stone">{f.body}</p>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
+
+            <Reveal delay={0.1}>
+              <div className="relative overflow-hidden rounded-[28px] shadow-xl ring-1 ring-black/5">
+                <img
+                  {...RECORDS_IMG}
+                  alt="Staff reviewing plan records"
+                  loading="lazy"
+                  className="h-full max-h-[560px] w-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-evergreen/90 via-evergreen/30 to-transparent" />
+                <div className="absolute inset-x-6 bottom-6 rounded-2xl bg-white/95 p-5 backdrop-blur">
+                  <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gold">
+                    Needs attention
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {[
+                      ["Reyes, Marilou", "90 days late", "text-red-700"],
+                      ["Sarmiento, Erik", "30 days late", "text-amber-700"],
+                      ["Villanueva, Ana", "payment due in 3 days", "text-stone"],
+                    ].map(([n, s, c]) => (
+                      <div
+                        key={n}
+                        className="flex items-center justify-between rounded-xl bg-cream px-3.5 py-2.5"
+                      >
+                        <span className="text-[12.5px] font-semibold text-ink">{n}</span>
+                        <span className={`text-[11.5px] font-bold ${c}`}>{s}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+          </div>
         </div>
       </section>
 
@@ -819,8 +904,13 @@ export default function Landing() {
           </div>
 
           <Reveal delay={0.1}>
-            <div className="mt-14 grid gap-6 rounded-3xl border border-line bg-white p-8 lg:grid-cols-3 lg:p-10">
+            <div className="mt-14 grid gap-6 rounded-3xl border border-line bg-white p-8 lg:grid-cols-4 lg:p-10">
               {[
+                {
+                  icon: KeyRound,
+                  title: "Email-code sign-in",
+                  body: "No passwords anywhere — staff and planholders sign in with a six-digit code sent to their email.",
+                },
                 {
                   icon: ShieldCheck,
                   title: "Role-based access",
