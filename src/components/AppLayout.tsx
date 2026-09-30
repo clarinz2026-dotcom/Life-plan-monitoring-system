@@ -26,6 +26,7 @@ import {
   Package,
   Building2,
   Palette,
+  KeyRound,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,9 @@ const NAV_ITEMS = [
   { to: "/branches", icon: Building2, label: "Branches", roles: ["super_admin", "ceo"] },
   { to: "/role-management", icon: UserCog, label: "Roles", roles: ["super_admin", "ceo"] },
   { to: "/branding", icon: Palette, label: "Branding", roles: ["super_admin", "ceo"] },
+  // API key management is deliberately Super Admin only: minting credentials
+  // that read the whole ledger is not a CEO-delegable action.
+  { to: "/api-integration", icon: KeyRound, label: "API Integration", roles: ["super_admin"] },
 ];
 
 /** Visual-only grouping of the same nav items (routes/permissions untouched). */
@@ -84,7 +88,7 @@ const NAV_GROUPS: { heading: string; items: typeof NAV_ITEMS }[] = [
   {
     heading: "Management",
     items: NAV_ITEMS.filter((i) =>
-      ["/branches", "/role-management", "/branding"].includes(i.to)
+      ["/branches", "/role-management", "/branding", "/api-integration"].includes(i.to)
     ),
   },
   {

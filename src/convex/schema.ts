@@ -51,6 +51,11 @@ export const PAYMENT_CHANNELS = [
 
 export const OR_STATUSES = ["active", "exhausted", "cancelled"] as const;
 
+// API integration scopes. A key grants read-only access to the listed
+// resources; anything not listed is refused. Write access is intentionally
+// not offered yet — external tools read, the office records.
+export const API_SCOPES = ["clients", "contracts", "payments"] as const;
+
 // ─── Validators ─────────────────────────────────────────────────────────────
 const contractStatusValidator = v.union(
   v.literal("current"),
@@ -224,6 +229,7 @@ const schema = defineSchema(
         v.literal("payment"),
         v.literal("receipt"),
         v.literal("or_series"),
+        v.literal("api_key"),
       ),
       entityId: v.string(),
       userId: v.id("users"),
@@ -462,9 +468,6 @@ const schema = defineSchema(
       .index("by_createdAt", ["createdAt"])
       .index("by_branch", ["branchId"]),
 
-    // Outbound SMS log. One row per recipient per send — a bulk send to a
-    // selection creates one row each, so failures are attributable and the
-    // history answers "did they get the reminder?" without leaving the app.
     sms_messages: defineTable({
       to: v.string(), // E.164 (+639…)
       recipientName: v.optional(v.string()),
@@ -487,6 +490,47 @@ const schema = defineSchema(
       .index("by_createdAt", ["createdAt"])
       .index("by_sentBy", ["sentBy"])
       .index("by_branch", ["branchId"]),
+
+    // ─── API Integration ────────────────────────────────────────────────
+    // Bearer keys that let external tools (the company website, accounting
+    // software, spreadsheets) read office data over a REST endpoint. Only the
+    // Super Admin may mint, view, or revoke keys. The raw key is shown exactly
+    // once at creation and never stored — only its SHA-256 hash is kept, so a
+    // database leak does not leak working credentials. Access is read-only and
+    // scoped per resource; every call is rate-limited and audit-logged.
+    api_keys: defineTable({
+      /** Short human label, e.g. "Company website". */
+      name: v.string(),
+      /** Which resources the key may read. Empty = usable but reads nothing. */
+      scopes: v.array(
+        v.union(
+          v.literal("clients"),
+          v.literal("contracts"),
+          v.literal("payments"),
+        )
+      ),
+      /** SHA-256 hex of "evfs_" + 32 random bytes (64 chars). Raw never stored. */
+      keyHash: v.string(),
+      /** Last 4 chars of the raw key, for identification in the UI. */
+      keyLast4: v.string(),
+      /** Optional expiry timestamp (ms). Absent = does not expire. */
+      expiresAt: v.optional(v.number()),
+      /** Set on revoke; a revoked key is kept for the audit story, not deleted. */
+      revokedAt: v.optional(v.number()),
+      revokedBy: v.optional(v.id("users")),
+      /** Rolling activity counters (throttled writes via requestCount). */
+      requestCount: v.number(),
+      lastUsedAt: v.optional(v.number()),
+      lastUsedIp: v.optional(v.string()),
+      /** Current per-minute rate-limit window (fixed window algorithm). */
+      windowStart: v.optional(v.number()),
+      windowCount: v.optional(v.number()),
+      createdById: v.id("users"),
+      createdByName: v.optional(v.string()),
+      createdAt: v.number(),
+    })
+      .index("by_keyHash", ["keyHash"])
+      .index("by_createdAt", ["createdAt"]),
   },
   {
     schemaValidation: false,

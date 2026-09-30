@@ -38,7 +38,8 @@ export const log = mutation({
       v.literal("contract"),
       v.literal("payment"),
       v.literal("receipt"),
-      v.literal("or_series")
+      v.literal("or_series"),
+      v.literal("api_key")
     ),
     entityId: v.string(),
     description: v.string(),

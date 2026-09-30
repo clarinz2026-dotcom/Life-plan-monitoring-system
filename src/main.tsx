@@ -103,6 +103,7 @@ const AgingReport = lazyRoute("AgingReport", () => import("./pages/AgingReport.t
 const Notifications = lazyRoute("Notifications", () => import("./pages/Notifications.tsx"));
 const RoleManagement = lazyRoute("RoleManagement", () => import("./pages/RoleManagement.tsx"));
 const Branding = lazyRoute("Branding", () => import("./pages/Branding.tsx"));
+const ApiIntegration = lazyRoute("ApiIntegration", () => import("./pages/ApiIntegration.tsx"));
 const SuperAdminSetup = lazyRoute("SuperAdminSetup", () => import("./pages/SuperAdminSetup.tsx"));
 const AccountLinks = lazyRoute("AccountLinks", () => import("./pages/AccountLinks.tsx"));
 const Branches = lazyRoute("Branches", () => import("./pages/Branches.tsx"));
@@ -425,6 +426,17 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <ProtectedRoute>
                     <Branding />
+                  </ProtectedRoute>
+                }
+              />
+              {/* API Integration: key management for external read-only
+                  access. Super Admin only — the page itself also gates, so a
+                  hand-typed URL shows the shield notice rather than data. */}
+              <Route
+                path="/api-integration"
+                element={
+                  <ProtectedRoute>
+                    <ApiIntegration />
                   </ProtectedRoute>
                 }
               />
