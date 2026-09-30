@@ -526,8 +526,8 @@ export default function Landing() {
         <div className="mx-auto max-w-[1440px] px-6 py-20 lg:px-10 lg:py-28">
           <div className="grid gap-14 lg:grid-cols-[1.05fr_1fr] lg:items-center">
             <Reveal>
-              <div className="rounded-3xl border border-line bg-white p-6 shadow-xl lg:p-7" style={STATEMENT_FONT}>
-                <div className="flex items-center justify-between border-b border-line pb-4">
+              <div className="rounded-3xl border border-line bg-white p-4 shadow-xl sm:p-6 lg:p-7" style={STATEMENT_FONT}>
+                <div className="flex items-center justify-between gap-3 border-b border-line pb-4">
                   <div>
                     <p className="text-[17px] font-bold text-ink">Abrasaldo, Clarinz</p>
                     <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-stone">
@@ -539,7 +539,7 @@ export default function Landing() {
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4 pt-5 sm:grid-cols-4">
+                <div className="grid grid-cols-2 gap-x-5 gap-y-4 pt-5 sm:grid-cols-4 sm:gap-x-8">
                   {[
                     ["Effectivity", "Aug 22, 2026"],
                     ["Assigned branch", "Malaybalay"],
@@ -560,7 +560,7 @@ export default function Landing() {
                 <p className="mt-7 text-[12.5px] font-bold uppercase tracking-[0.14em] text-evergreen">
                   Payment history
                 </p>
-                <div className="mt-3 overflow-x-auto">
+                <div className="-mx-4 mt-3 overflow-x-auto px-4 sm:-mx-6 sm:px-6 lg:-mx-7 lg:px-7">
                   <table className="w-full min-w-[520px] text-[12.5px]">
                     <thead>
                       <tr className="border-b border-line text-left">
@@ -698,11 +698,11 @@ export default function Landing() {
           </Reveal>
 
           <Reveal delay={0.1}>
-            <div className="rounded-3xl border border-line bg-white p-7 shadow-xl lg:p-9" style={STATEMENT_FONT}>
+            <div className="rounded-3xl border border-line bg-white p-4 shadow-xl sm:p-7 lg:p-9" style={STATEMENT_FONT}>
               <p className="inline-block bg-evergreen px-4 py-2 text-[13.5px] font-bold uppercase tracking-[0.16em] text-white">
                 Planholder Information
               </p>
-              <div className="mt-6 grid gap-x-10 gap-y-6 sm:grid-cols-2">
+              <div className="mt-6 grid gap-x-6 gap-y-5 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-6">
                 {[
                   ["Planholder's Name", "Abrasaldo, Clarinz"],
                   ["Contact Number", "0955 399 1034"],
