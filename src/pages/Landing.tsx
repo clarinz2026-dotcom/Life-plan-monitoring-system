@@ -383,22 +383,6 @@ function Hero() {
         ))}
       </div>
 
-      <Reveal delay={0.1}>
-        <div className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line lg:grid-cols-4">
-          {[
-            { k: "One record", v: "portal, receipts, and SOA read the same payments" },
-            { k: "30/60/90 + lapsed", v: "aging computed from real payment dates" },
-            { k: "Email-code sign-in", v: "no passwords to forget, on either portal" },
-            { k: "Built for lolo & lola", v: "large-type statement mode in the portal" },
-          ].map((s) => (
-            <div key={s.k} className="bg-white px-5 py-6">
-              <p className="font-display text-[19px] font-semibold text-evergreen">{s.k}</p>
-              <p className="mt-1 text-[12px] leading-relaxed text-stone">{s.v}</p>
-            </div>
-          ))}
-        </div>
-      </Reveal>
-
       <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
         <Button
           className="h-12 rounded-full px-7 text-[14.5px] font-bold"
