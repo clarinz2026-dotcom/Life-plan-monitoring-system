@@ -478,21 +478,25 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="md:hidden h-[60px]" />
 
         {/*
-         * Dashboard header — greeting with the signed-in staff name, the date,
-         * the branch scope, and the quick-access module strip. Scope states
-         * plainly which branch the pages below are showing; the selector stays
-         * for Head Office, and branch staff keep their locked-scope badge.
+         * Dashboard header — greeting, the date, the branch scope, and the
+         * quick-access module strip. Scope states plainly which branch the
+         * pages below are showing; the selector stays for Head Office, and
+         * branch staff keep their locked-scope badge. On mobile the header
+         * sticks below the fixed top bar (top-15 = 60px) and the date line
+         * drops the verbose half so it never wraps to three rows.
          */}
         {canRenderPage && (
-          <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur">
-            <div className="flex items-center justify-between gap-4 px-5 py-4 md:px-8">
+          <header className="sticky top-[60px] z-40 border-b border-line bg-paper/95 backdrop-blur md:top-0">
+            <div className="flex items-center justify-between gap-4 px-4 py-3 md:px-8 md:py-4">
               <div className="min-w-0">
-                <h1 className="font-display text-[26px] font-semibold leading-tight text-evergreen lg:text-[30px]">
+                <h1 className="font-display text-[22px] font-semibold leading-tight text-evergreen md:text-[26px] lg:text-[30px]">
                   {greeting()}.
                 </h1>
-                <p className="mt-0.5 truncate text-[13px] text-stone">
-                  {format(new Date(), "EEEE, MMMM d, yyyy")} · Here's your branch
-                  overview and current operations —{" "}
+                <p className="mt-0.5 truncate text-[12px] text-stone md:text-[13px]">
+                  <span className="hidden sm:inline">
+                    {format(new Date(), "EEEE, MMMM d, yyyy")} · Here's your branch
+                    overview and current operations —{" "}
+                  </span>
                   <span className="font-semibold text-evergreen">{scopeLabel}</span>
                 </p>
               </div>
@@ -508,7 +512,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
             {/* Quick access strip — existing modules, horizontally scrollable on mobile */}
             <div className="border-t border-line/70">
-              <div className="flex gap-2 overflow-x-auto px-5 py-2.5 md:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex gap-2 overflow-x-auto px-4 py-2.5 md:px-8 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {QUICK_ACCESS.filter((q) =>
                   visibleNav.some((n) => n.to === q.to)
                 ).map((q) => (

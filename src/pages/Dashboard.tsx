@@ -153,7 +153,7 @@ export default function Dashboard() {
   const trendData = weeklyTrend ?? [];
 
   return (
-    <div className="space-y-5 p-5 md:p-8">
+    <div className="space-y-4 p-4 md:space-y-5 md:p-8">
       {/* Branch banner → dedicated My Branch card (same existing data) */}
       {isBranchStaff && branch && (
         <Link
@@ -182,17 +182,17 @@ export default function Dashboard() {
       )}
 
       {/* ── Row 1: primary collections + collection progress ── */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-5">
         <Card className="border-0 bg-gradient-to-br from-[#1b4332] to-[#2d6a4f] text-white shadow-sm lg:col-span-2">
-          <CardContent className="p-6 md:p-7">
+          <CardContent className="p-5 md:p-7">
             <div className="mb-3 flex items-center gap-2.5">
               <Banknote className="h-5 w-5 text-white/70" />
               <span className="text-[13px] font-medium uppercase tracking-wider text-white/70">
                 Collected Today
               </span>
             </div>
-            <div className="flex flex-wrap items-end gap-4">
-              <p className="font-figures text-4xl font-bold tracking-tight md:text-5xl">
+            <div className="flex flex-wrap items-end gap-3 md:gap-4">
+              <p className="font-figures text-3xl font-bold tracking-tight md:text-5xl">
                 {formatPHP(summary.todayAmount)}
               </p>
               {dayChangePct !== null && (
@@ -206,12 +206,12 @@ export default function Dashboard() {
                 </span>
               )}
             </div>
-            <p className="mt-2 text-[14px] text-white/70">
+            <p className="mt-2 text-[13px] text-white/70 md:text-[14px]">
               {summary.todayPayments} payment{summary.todayPayments !== 1 ? "s" : ""} recorded today
               {summary.yesterdayAmount > 0 && ` · yesterday: ${formatPHP(summary.yesterdayAmount)}`}
             </p>
 
-            <div className="mt-6 grid grid-cols-2 gap-4 border-t border-white/15 pt-5">
+            <div className="mt-4 grid grid-cols-2 gap-4 border-t border-white/15 pt-4 md:mt-6 md:pt-5">
               <div>
                 <p className="text-[12px] uppercase tracking-wider text-white/60">This Month</p>
                 <p className="font-figures mt-0.5 text-xl font-bold">{formatPHP(summary.monthAmount)}</p>
@@ -260,17 +260,17 @@ export default function Dashboard() {
       </div>
 
       {/* ── Row 2: stat tiles ── */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         <Card className="border-line shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <CardContent className="p-5">
+          <CardContent className="p-4 md:p-5">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[12.5px] font-bold uppercase tracking-[0.1em] text-stone">
+              <div className="min-w-0">
+                <p className="truncate text-[11.5px] font-bold uppercase tracking-[0.1em] text-stone md:text-[12.5px]">
                   Total Clients
                 </p>
-                <p className="font-figures mt-1 text-2xl font-bold">{summary.totalClients}</p>
+                <p className="font-figures mt-1 text-xl font-bold md:text-2xl">{summary.totalClients}</p>
               </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-evergreen/10">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-evergreen/10 md:h-11 md:w-11">
                 <Users className="h-5 w-5 text-evergreen" />
               </div>
             </div>
@@ -282,15 +282,15 @@ export default function Dashboard() {
         </Card>
 
         <Card className="border-line shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <CardContent className="p-5">
+          <CardContent className="p-4 md:p-5">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[12.5px] font-bold uppercase tracking-[0.1em] text-stone">
+              <div className="min-w-0">
+                <p className="truncate text-[11.5px] font-bold uppercase tracking-[0.1em] text-stone md:text-[12.5px]">
                   Active Contracts
                 </p>
-                <p className="font-figures mt-1 text-2xl font-bold">{summary.totalContracts}</p>
+                <p className="font-figures mt-1 text-xl font-bold md:text-2xl">{summary.totalContracts}</p>
               </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-sage/60">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-sage/60 md:h-11 md:w-11">
                 <FileText className="h-5 w-5 text-evergreen" />
               </div>
             </div>
@@ -302,17 +302,17 @@ export default function Dashboard() {
         </Card>
 
         <Card className="border-line shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <CardContent className="p-5">
+          <CardContent className="p-4 md:p-5">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[12.5px] font-bold uppercase tracking-[0.1em] text-stone">
+              <div className="min-w-0">
+                <p className="truncate text-[11.5px] font-bold uppercase tracking-[0.1em] text-stone md:text-[12.5px]">
                   Late Accounts
                 </p>
-                <p className={`font-figures mt-1 text-2xl font-bold ${delinquentCount > 0 ? "text-gold" : ""}`}>
+                <p className={`font-figures mt-1 text-xl font-bold md:text-2xl ${delinquentCount > 0 ? "text-gold" : ""}`}>
                   {delinquentCount}
                 </p>
               </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gold/15">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gold/15 md:h-11 md:w-11">
                 <AlertTriangle className="h-5 w-5 text-gold" />
               </div>
             </div>
@@ -323,15 +323,15 @@ export default function Dashboard() {
         </Card>
 
         <Card className="border-line shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
-          <CardContent className="p-5">
+          <CardContent className="p-4 md:p-5">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[12.5px] font-bold uppercase tracking-[0.1em] text-stone">
+              <div className="min-w-0">
+                <p className="truncate text-[11.5px] font-bold uppercase tracking-[0.1em] text-stone md:text-[12.5px]">
                   Lifetime Collections
                 </p>
-                <p className="font-figures mt-1 text-2xl font-bold">{formatPHP(summary.totalCollected)}</p>
+                <p className="font-figures mt-1 text-xl font-bold md:text-2xl">{formatPHP(summary.totalCollected)}</p>
               </div>
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-evergreen/10">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-evergreen/10 md:h-11 md:w-11">
                 <Wallet className="h-5 w-5 text-evergreen" />
               </div>
             </div>
@@ -343,7 +343,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Row 3: week chart + payment methods ── */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-5">
         <Card className="border-line shadow-sm lg:col-span-2">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2.5 text-[16px]">
@@ -433,7 +433,7 @@ export default function Dashboard() {
       </div>
 
       {/* ── Row 4: recent payments + status/attention stack ── */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-5">
         <Card className="border-line shadow-sm lg:col-span-2">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2.5 text-[16px]">
@@ -553,23 +553,23 @@ export default function Dashboard() {
       </div>
 
       {/* ── Reporting band: existing modules as compact shortcuts ── */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
         {REPORTING_LINKS.map((r) => (
           <Link
             key={r.to}
             to={r.to}
-            className="group rounded-2xl border border-line bg-white p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-evergreen/30 hover:shadow-md"
+            className="group rounded-2xl border border-line bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-evergreen/30 hover:shadow-md md:p-5"
           >
             <div className="flex items-center justify-between">
-              <span className="grid h-10 w-10 place-items-center rounded-xl bg-evergreen/10 text-evergreen">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-evergreen/10 text-evergreen md:h-10 md:w-10">
                 <r.icon className="h-[18px] w-[18px]" />
               </span>
               <ChevronRight className="h-4 w-4 text-line transition-colors group-hover:text-evergreen" />
             </div>
-            <p className="mt-3.5 font-display text-[16px] font-semibold text-evergreen">
+            <p className="mt-3 font-display text-[15px] font-semibold text-evergreen md:text-[16px]">
               {r.label}
             </p>
-            <p className="mt-0.5 text-[12px] text-stone">{r.body}</p>
+            <p className="mt-0.5 hidden text-[12px] text-stone sm:block">{r.body}</p>
           </Link>
         ))}
       </div>
