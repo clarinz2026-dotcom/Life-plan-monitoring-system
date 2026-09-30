@@ -313,7 +313,7 @@ function Hero() {
     <section className="mx-auto max-w-[1440px] px-4 pt-10 sm:px-6 lg:px-10 lg:pt-16">
       <Reveal className="mx-auto max-w-3xl text-center">
         <div className="flex justify-center">
-          <Eyebrow>Pre-need plan records &amp; payments</Eyebrow>
+          <Eyebrow>To God be The Glory</Eyebrow>
         </div>
         <h1 className="mt-6 font-display text-4xl font-semibold leading-[1.08] tracking-tight text-evergreen sm:text-5xl lg:text-[58px]">
           The office ledger and the family portal, finally the same numbers.
