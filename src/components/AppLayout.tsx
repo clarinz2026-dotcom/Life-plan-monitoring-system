@@ -487,9 +487,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur">
             <div className="flex items-center justify-between gap-4 px-5 py-4 md:px-8">
               <div className="min-w-0">
-                <h1 className="truncate font-display text-[26px] font-semibold leading-tight text-evergreen lg:text-[30px]">
-                  {greeting()},{" "}
-                  {(user?.name || user?.email || "Staff").split(" ")[0]}.
+                <h1 className="font-display text-[26px] font-semibold leading-tight text-evergreen lg:text-[30px]">
+                  {greeting()}.
                 </h1>
                 <p className="mt-0.5 truncate text-[13px] text-stone">
                   {format(new Date(), "EEEE, MMMM d, yyyy")} · Here's your branch
