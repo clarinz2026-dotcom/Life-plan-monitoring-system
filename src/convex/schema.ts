@@ -9,6 +9,7 @@ export const ROLES = {
   FINANCE_STAFF: "finance_staff",
   CASHIER: "cashier",
   MANAGER: "manager",
+  COLLECTOR_SUPERVISOR: "collector_supervisor",
 } as const;
 
 export const roleValidator = v.union(
@@ -17,18 +18,21 @@ export const roleValidator = v.union(
   v.literal("finance_staff"),
   v.literal("cashier"),
   v.literal("manager"),
+  v.literal("collector_supervisor"),
 );
 
 export const POSITION_LABELS: Record<string, string> = {
   branch_manager: "Branch Manager",
   collector: "Collector",
   cashier: "Cashier",
+  collector_supervisor: "Collector Supervisor",
 };
 
 const positionValidator = v.union(
   v.literal("branch_manager"),
   v.literal("collector"),
   v.literal("cashier"),
+  v.literal("collector_supervisor"),
 );
 
 // ─── Enum values ────────────────────────────────────────────────────────────
@@ -230,6 +234,7 @@ const schema = defineSchema(
         v.literal("receipt"),
         v.literal("or_series"),
         v.literal("lpa_series"),
+        v.literal("collector_target"),
         v.literal("api_key"),
       ),
       entityId: v.string(),
@@ -391,6 +396,29 @@ const schema = defineSchema(
       .index("by_seriesCode", ["seriesCode"])
       .index("by_status", ["status"])
       .index("by_assignedAt", ["assignedAt"]),
+
+    // ─── Collector targets ───────────────────────────────────────────────
+    // A Collector Supervisor sets a monthly collection quota for each
+    // collector in their branch. One row per collector per month — the target
+    // is a plan, not a result: actual collections are summed from the
+    // payments table at read time so a target can never drift from reality.
+    collector_targets: defineTable({
+      /** The collector (or cashier) working toward this target. */
+      collectorId: v.id("users"),
+      /** Month the target applies to, as the first instant of that month. */
+      month: v.number(),
+      /** Amount expected to be collected in that month, in pesos. */
+      targetAmount: v.number(),
+      /** Branch the collector works in; copied so scoping never depends on the
+       *  collector still being placed in the same branch. */
+      branchId: v.optional(v.id("branches")),
+      notes: v.optional(v.string()),
+      setBy: v.id("users"),
+      setAt: v.number(),
+    })
+      .index("by_collector_month", ["collectorId", "month"])
+      .index("by_branch_month", ["branchId", "month"])
+      .index("by_month", ["month"]),
 
     // ─── NEW: Notifications ──────────────────────────────────────────────
     notifications: defineTable({

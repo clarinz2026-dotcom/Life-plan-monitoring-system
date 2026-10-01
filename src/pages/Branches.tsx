@@ -977,9 +977,11 @@ export default function Branches() {
                         ? ` / ${
                             u.position === "branch_manager"
                               ? "Branch Manager"
-                              : u.position === "collector"
-                                ? "Collector"
-                                : "Cashier"
+                              : u.position === "collector_supervisor"
+                                ? "Collector Supervisor"
+                                : u.position === "collector"
+                                  ? "Collector"
+                                  : "Cashier"
                           }`
                         : ""}
                       {u.branchName ? ` @ ${u.branchName}` : " (unassigned)"}
@@ -1021,6 +1023,7 @@ export default function Branches() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="branch_manager">Branch Manager</SelectItem>
+                  <SelectItem value="collector_supervisor">Collector Supervisor</SelectItem>
                   <SelectItem value="collector">Collector</SelectItem>
                   <SelectItem value="cashier">Cashier</SelectItem>
                 </SelectContent>

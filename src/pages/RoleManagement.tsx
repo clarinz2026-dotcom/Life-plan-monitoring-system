@@ -22,6 +22,7 @@ const ALL_ROLES = [
   { value: "manager", label: "Manager", color: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800" },
   { value: "finance_staff", label: "Finance Staff", color: "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800" },
   { value: "cashier", label: "Cashier", color: "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800" },
+  { value: "collector_supervisor", label: "Collector Supervisor", color: "bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-950/40 dark:text-teal-300 dark:border-teal-800" },
 ] as const;
 
 export default function RoleManagement() {
@@ -176,7 +177,9 @@ export default function RoleManagement() {
                       ? "bg-blue-500"
                       : r.value === "finance_staff"
                         ? "bg-emerald-500"
-                        : "bg-orange-500"
+                        : r.value === "collector_supervisor"
+                          ? "bg-teal-500"
+                          : "bg-orange-500"
               }`}
             />
             <span className="text-xs font-medium">{r.label}</span>
@@ -322,7 +325,9 @@ export default function RoleManagement() {
                                     ? "bg-blue-500"
                                     : r.value === "finance_staff"
                                       ? "bg-emerald-500"
-                                      : "bg-orange-500"
+                                      : r.value === "collector_supervisor"
+                                        ? "bg-teal-500"
+                                        : "bg-orange-500"
                               }`}
                             />
                             {r.label}

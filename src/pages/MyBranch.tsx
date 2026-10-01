@@ -61,6 +61,7 @@ function formatPHP(amount: number) {
 
 const POSITION_OPTIONS = [
   { value: "branch_manager", label: "Branch Manager" },
+  { value: "collector_supervisor", label: "Collector Supervisor" },
   { value: "collector", label: "Collector" },
   { value: "cashier", label: "Cashier" },
 ] as const;

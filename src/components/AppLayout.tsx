@@ -21,6 +21,7 @@ import {
   Bell,
   BookMarked,
   Hash,
+  Target,
   Link2,
   Moon,
   UserCog,
@@ -38,15 +39,15 @@ import { format } from "date-fns";
 
 /** Existing navigation, unchanged — now presented in visual groups. */
 const NAV_ITEMS = [
-  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
+  { to: "/dashboard", icon: LayoutDashboard, label: "Dashboard", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier", "collector_supervisor"] },
   // Every staff account gets its own branch workspace. A Branch Manager uses it
   // to run their branch (roster, settings); Head Office uses it to drill into
   // whichever branch the scope selector points at.
   { to: "/my-branch", icon: Building2, label: "My Branch", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
-  { to: "/clients", icon: Users, label: "Clients", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
-  { to: "/contracts", icon: FileText, label: "Contracts", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
-  { to: "/payments", icon: CreditCard, label: "Payments", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
-  { to: "/receipts", icon: Receipt, label: "Receipts", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
+  { to: "/clients", icon: Users, label: "Clients", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier", "collector_supervisor"] },
+  { to: "/contracts", icon: FileText, label: "Contracts", roles: ["super_admin", "ceo", "manager", "finance_staff", "collector_supervisor"] },
+  { to: "/payments", icon: CreditCard, label: "Payments", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier", "collector_supervisor"] },
+  { to: "/receipts", icon: Receipt, label: "Receipts", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier", "collector_supervisor"] },
   { to: "/plans", icon: Package, label: "Plans", roles: ["super_admin", "ceo"] },
   { to: "/bulk-upload", icon: Upload, label: "Bulk Upload", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
   { to: "/reports", icon: BarChart3, label: "Reports", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
@@ -61,7 +62,10 @@ const NAV_ITEMS = [
   // above. Same visibility rule: Finance sees the company ledger, branch staff
   // see only the series in their own hands (see convex/lpaSeries.ts).
   { to: "/lpa-series", icon: Hash, label: "LPA Control No.", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
-  { to: "/aging-report", icon: AlertTriangle, label: "Aging Report", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
+  { to: "/aging-report", icon: AlertTriangle, label: "Aging Report", roles: ["super_admin", "ceo", "manager", "finance_staff", "collector_supervisor"] },
+  // Collection targets: the supervisor sets and clears each collector's
+  // monthly quota for their branch (see convex/collectorTargets.ts).
+  { to: "/collector-targets", icon: Target, label: "Collector Targets", roles: ["super_admin", "ceo", "manager", "collector_supervisor"] },
   { to: "/account-links", icon: Link2, label: "Account Linking", roles: ["super_admin", "ceo", "manager"] },
   { to: "/notifications", icon: Bell, label: "Notifications", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
   { to: "/branches", icon: Building2, label: "Branches", roles: ["super_admin", "ceo"] },
@@ -87,7 +91,7 @@ const NAV_GROUPS: { heading: string; items: typeof NAV_ITEMS }[] = [
   {
     heading: "Reporting",
     items: NAV_ITEMS.filter((i) =>
-      ["/reports", "/reconciliation", "/aging-report"].includes(i.to)
+      ["/reports", "/reconciliation", "/aging-report", "/collector-targets"].includes(i.to)
     ),
   },
   {

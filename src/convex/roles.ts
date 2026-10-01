@@ -20,15 +20,21 @@ export type Role =
   | "ceo"
   | "manager"
   | "finance_staff"
-  | "cashier";
+  | "cashier"
+  | "collector_supervisor";
 
-export type StaffPosition = "branch_manager" | "collector" | "cashier";
+export type StaffPosition =
+  | "branch_manager"
+  | "collector"
+  | "cashier"
+  | "collector_supervisor";
 
 /** Access level granted by each branch position. */
 export const ROLE_FROM_POSITION: Record<StaffPosition, Role> = {
   branch_manager: "manager",
   collector: "finance_staff",
   cashier: "cashier",
+  collector_supervisor: "collector_supervisor",
 };
 
 export function roleFromPosition(

@@ -369,6 +369,7 @@ export const assignBranch = mutation({
       v.literal("branch_manager"),
       v.literal("collector"),
       v.literal("cashier"),
+      v.literal("collector_supervisor"),
     )),
   },
   handler: async (ctx, args) => {
@@ -436,7 +437,7 @@ export const assignBranch = mutation({
     await ctx.db.patch(args.userId, patch);
 
     // Audit log
-    const positionLabel = args.position === "branch_manager" ? "Branch Manager" : args.position === "collector" ? "Collector" : args.position === "cashier" ? "Cashier" : "none";
+    const positionLabel = args.position === "branch_manager" ? "Branch Manager" : args.position === "collector" ? "Collector" : args.position === "cashier" ? "Cashier" : args.position === "collector_supervisor" ? "Collector Supervisor" : "none";
     await ctx.db.insert("audit_log", {
       action: "status_change",
       entityType: "client",
@@ -494,7 +495,9 @@ export const branchTeam = query({
           ? "Collector"
           : p === "cashier"
             ? "Cashier"
-            : null;
+            : p === "collector_supervisor"
+              ? "Collector Supervisor"
+              : null;
 
     return users
       .map((u) => ({

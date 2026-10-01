@@ -29,6 +29,7 @@ const STAFF_ROLES = [
   "manager",
   "finance_staff",
   "cashier",
+  "collector_supervisor",
 ];
 
 function Auth() {
