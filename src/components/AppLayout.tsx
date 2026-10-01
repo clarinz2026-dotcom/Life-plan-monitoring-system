@@ -277,7 +277,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="staff-shell flex min-h-screen flex-col bg-background overflow-visible md:flex-row">
       {/* Desktop sidebar — fixed 260px, grouped nav, brand at top, account at bottom */}
       <aside
-        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-gradient-to-b from-[#0d4f8b] to-[#062c52] transition-all duration-200 md:flex ${
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-gradient-to-b from-[#1b4332] to-[#0f2a1d] transition-all duration-200 md:flex ${
           collapsed ? "w-[72px]" : "w-[260px]"
         }`}
       >
@@ -391,7 +391,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Mobile top bar */}
-      <div className="fixed left-0 right-0 top-0 z-[99999] flex items-center justify-between border-b border-white/10 bg-gradient-to-r from-[#0d4f8b] to-[#062c52] px-4 py-3.5 md:hidden">
+      <div className="fixed left-0 right-0 top-0 z-[99999] flex items-center justify-between border-b border-white/10 bg-gradient-to-r from-[#1b4332] to-[#0f2a1d] px-4 py-3.5 md:hidden">
         <div className="flex items-center gap-3">
           <BrandLogo className="h-8 w-8 rounded-[9px] ring-1 ring-white/15" />
           <div>
@@ -424,7 +424,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             className="absolute inset-0 bg-black/40"
             onClick={() => setMobileMenuOpen(false)}
           />
-          <div className="absolute top-[60px] left-0 right-0 overflow-y-auto border-b border-white/10 bg-gradient-to-b from-[#0d4f8b] to-[#062c52] shadow-xl max-h-[calc(100vh-60px-64px)]">
+          <div className="absolute top-[60px] left-0 right-0 overflow-y-auto border-b border-white/10 bg-gradient-to-b from-[#1b4332] to-[#0f2a1d] shadow-xl max-h-[calc(100vh-60px-64px)]">
             <nav className="py-3 px-3">
               {navGroups.map((group) => (
                 <div key={group.heading} className="mb-3">
@@ -555,7 +555,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-gradient-to-r from-[#0d4f8b] to-[#062c52] md:hidden">
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-gradient-to-r from-[#1b4332] to-[#0f2a1d] md:hidden">
         <div className="flex items-center justify-around py-2 px-1">
           {bottomNavItems.map((item) => {
             const isActive = location.pathname === item.to || location.pathname.startsWith(item.to + "/");
