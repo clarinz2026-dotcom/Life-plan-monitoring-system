@@ -229,6 +229,7 @@ const schema = defineSchema(
         v.literal("payment"),
         v.literal("receipt"),
         v.literal("or_series"),
+        v.literal("lpa_series"),
         v.literal("api_key"),
       ),
       entityId: v.string(),
@@ -336,6 +337,41 @@ const schema = defineSchema(
       /** Last O.R. number of the block, inclusive. */
       endNumber: v.number(),
       /** The collector / branch manager holding the series. */
+      assignedTo: v.id("users"),
+      /** Branch the series was released against. */
+      branchId: v.optional(v.id("branches")),
+      status: v.union(
+        v.literal("active"),
+        v.literal("consumed"),
+        v.literal("revoked"),
+      ),
+      assignedBy: v.id("users"),
+      assignedAt: v.number(),
+      /** Set when the series is taken back. */
+      returnedAt: v.optional(v.number()),
+      notes: v.optional(v.string()),
+    })
+      .index("by_assignedTo", ["assignedTo"])
+      .index("by_branch", ["branchId"])
+      .index("by_seriesCode", ["seriesCode"])
+      .index("by_status", ["status"])
+      .index("by_assignedAt", ["assignedAt"]),
+
+    // ─── LPA / plan control number series assignation ────────────────────
+    // Same shape as the O.R. book register, but for plan (LPA / EFS control)
+    // numbers. A block of control numbers is released to a branch manager or
+    // cashier, who then issues them one per plan when a contract is opened.
+    // This is the register of who may use which control number.
+    lpa_series: defineTable({
+      /** Printed series code, e.g. "2026-LPA-A". Unique across the company. */
+      seriesCode: v.string(),
+      /** Optional prefix printed before the number, e.g. "LPA". */
+      prefix: v.optional(v.string()),
+      /** First control number of the block, inclusive. */
+      startNumber: v.number(),
+      /** Last control number of the block, inclusive. */
+      endNumber: v.number(),
+      /** The branch manager / cashier holding the series. */
       assignedTo: v.id("users"),
       /** Branch the series was released against. */
       branchId: v.optional(v.id("branches")),

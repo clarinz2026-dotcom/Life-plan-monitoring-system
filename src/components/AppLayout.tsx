@@ -20,6 +20,7 @@ import {
   AlertTriangle,
   Bell,
   BookMarked,
+  Hash,
   Link2,
   Moon,
   UserCog,
@@ -56,6 +57,10 @@ const NAV_ITEMS = [
   // by them; Finance sees the whole company ledger and is one of the roles
   // allowed to assign a new series (see convex/orSeries.ts).
   { to: "/or-series", icon: BookMarked, label: "OR Series", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
+  // Plan control number register — the LPA/EFS counterpart of the O.R. book
+  // above. Same visibility rule: Finance sees the company ledger, branch staff
+  // see only the series in their own hands (see convex/lpaSeries.ts).
+  { to: "/lpa-series", icon: Hash, label: "LPA Control No.", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
   { to: "/aging-report", icon: AlertTriangle, label: "Aging Report", roles: ["super_admin", "ceo", "manager", "finance_staff"] },
   { to: "/account-links", icon: Link2, label: "Account Linking", roles: ["super_admin", "ceo", "manager"] },
   { to: "/notifications", icon: Bell, label: "Notifications", roles: ["super_admin", "ceo", "manager", "finance_staff", "cashier"] },
@@ -76,7 +81,7 @@ const NAV_GROUPS: { heading: string; items: typeof NAV_ITEMS }[] = [
   {
     heading: "Operations",
     items: NAV_ITEMS.filter((i) =>
-      ["/clients", "/contracts", "/payments", "/receipts", "/plans", "/bulk-upload", "/or-series"].includes(i.to)
+      ["/clients", "/contracts", "/payments", "/receipts", "/plans", "/bulk-upload", "/or-series", "/lpa-series"].includes(i.to)
     ),
   },
   {

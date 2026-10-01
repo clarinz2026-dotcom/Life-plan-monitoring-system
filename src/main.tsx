@@ -99,6 +99,7 @@ const BulkUpload = lazyRoute("BulkUpload", () => import("./pages/BulkUpload.tsx"
 const Plans = lazyRoute("Plans", () => import("./pages/Plans.tsx"));
 const Reconciliation = lazyRoute("Reconciliation", () => import("./pages/Reconciliation.tsx"));
 const ORSeries = lazyRoute("ORSeries", () => import("./pages/ORSeries.tsx"));
+const LPASeries = lazyRoute("LPASeries", () => import("./pages/LPASeries.tsx"));
 const AgingReport = lazyRoute("AgingReport", () => import("./pages/AgingReport.tsx"));
 const Notifications = lazyRoute("Notifications", () => import("./pages/Notifications.tsx"));
 const RoleManagement = lazyRoute("RoleManagement", () => import("./pages/RoleManagement.tsx"));
@@ -367,6 +368,14 @@ createRoot(document.getElementById("root")!).render(
                 element={
                   <ProtectedRoute>
                     <ORSeries />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/lpa-series"
+                element={
+                  <ProtectedRoute>
+                    <LPASeries />
                   </ProtectedRoute>
                 }
               />
