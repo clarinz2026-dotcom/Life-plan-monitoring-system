@@ -214,7 +214,7 @@ export default function RoleManagement() {
                 type="checkbox"
                 checked={selectedStaffIds.has(u._id)}
                 onChange={() => toggleStaff(u._id)}
-                className="h-4 w-4 shrink-0 accent-[#1b4332]"
+                className="h-4 w-4 shrink-0 accent-[#0d4f8b]"
                 aria-label={`Select ${u.name || u.email} for SMS`}
               />
 

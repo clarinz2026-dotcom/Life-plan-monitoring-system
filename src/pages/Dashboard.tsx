@@ -64,11 +64,11 @@ const CHANNEL_LABELS: Record<string, string> = {
 };
 
 const CHANNEL_COLORS: Record<string, string> = {
-  cash: "#1b4332",
-  gcash: "#007dfe",
-  maya: "#00c4b4",
-  bank_transfer: "#b45309",
-  check: "#716c60",
+  cash: "#0d4f8b",
+  gcash: "#3b9ae1",
+  maya: "#1b6fb5",
+  bank_transfer: "#c8901f",
+  check: "#5b6f83",
 };
 
 /**
@@ -183,7 +183,7 @@ export default function Dashboard() {
 
       {/* ── Row 1: primary collections + collection progress ── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-5">
-        <Card className="border-0 bg-gradient-to-br from-[#1b4332] to-[#2d6a4f] text-white shadow-sm lg:col-span-2">
+        <Card className="border-0 bg-gradient-to-br from-[#0d4f8b] to-[#1b6fb5] text-white shadow-sm lg:col-span-2">
           <CardContent className="p-5 md:p-7">
             <div className="mb-3 flex items-center gap-2.5">
               <Banknote className="h-5 w-5 text-white/70" />
@@ -355,16 +355,16 @@ export default function Dashboard() {
             {trendData.some((d) => d.amount > 0) ? (
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e6dfd1" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#dbe6f1" vertical={false} />
                   <XAxis
                     dataKey="label"
                     tick={{ fontSize: 13, fontFamily: FIGURES_FONT }}
-                    stroke="#716c60"
+                    stroke="#5b6f83"
                     tickLine={false}
                   />
                   <YAxis
                     tick={{ fontSize: 12, fontFamily: FIGURES_FONT }}
-                    stroke="#716c60"
+                    stroke="#5b6f83"
                     tickLine={false}
                     tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`}
                   />
@@ -379,7 +379,7 @@ export default function Dashboard() {
                       fontFamily: FIGURES_FONT,
                     }}
                   />
-                  <Bar dataKey="amount" fill="#1b4332" radius={[6, 6, 0, 0]} maxBarSize={48} />
+                  <Bar dataKey="amount" fill="#0d4f8b" radius={[6, 6, 0, 0]} maxBarSize={48} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -420,7 +420,7 @@ export default function Dashboard() {
                         className="h-full rounded-full transition-all"
                         style={{
                           width: `${Math.max((ch.amount / maxChannelAmount) * 100, 4)}%`,
-                          backgroundColor: CHANNEL_COLORS[ch.name] || "#716c60",
+                          backgroundColor: CHANNEL_COLORS[ch.name] || "#5b6f83",
                         }}
                       />
                     </div>

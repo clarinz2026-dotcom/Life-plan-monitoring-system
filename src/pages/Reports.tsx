@@ -34,20 +34,20 @@ function formatPHP(amount: number) {
 }
 
 const CHANNEL_COLORS: Record<string, string> = {
-  cash: "#1b4332",
-  gcash: "#007dfe",
-  maya: "#00c4b4",
-  bank_transfer: "#b45309",
-  check: "#716c60",
+  cash: "#0d4f8b",
+  gcash: "#3b9ae1",
+  maya: "#1b6fb5",
+  bank_transfer: "#c8901f",
+  check: "#5b6f83",
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  current: "#16a34a",
-  "30_days": "#b45309",
-  "60_days": "#e67e22",
-  "90_days": "#b91c1c",
-  lapsed: "#7f1d1d",
-  fully_paid: "#16a34a",
+  current: "#15803d",
+  "30_days": "#c8901f",
+  "60_days": "#a9670f",
+  "90_days": "#8c1f2a",
+  lapsed: "#5f1420",
+  fully_paid: "#15803d",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -80,7 +80,7 @@ export default function Reports() {
     name: name.replace(/_/g, " ").toUpperCase(),
     value: data.amount,
     count: data.count,
-    color: CHANNEL_COLORS[name] || "#716c60",
+    color: CHANNEL_COLORS[name] || "#5b6f83",
   }));
 
   const agingData = Object.entries(agingReport)
@@ -89,7 +89,7 @@ export default function Reports() {
       name: STATUS_LABELS[key] || key,
       value: data.amount,
       count: data.count,
-      color: STATUS_COLORS[key] || "#716c60",
+      color: STATUS_COLORS[key] || "#5b6f83",
     }));
 
   const totalReceivables = agingData.reduce((sum, d) => sum + d.value, 0);
@@ -233,15 +233,15 @@ export default function Reports() {
             {dailyCollections && dailyCollections.some((d) => d.amount > 0) ? (
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={dailyCollections}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e6dfd1" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#dbe6f1" />
                   <XAxis
                     dataKey="day"
                     tick={{ fontSize: 12 }}
-                    stroke="#716c60"
+                    stroke="#5b6f83"
                   />
                   <YAxis
                     tick={{ fontSize: 12 }}
-                    stroke="#716c60"
+                    stroke="#5b6f83"
                     tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`}
                   />
                   <Tooltip
@@ -253,7 +253,7 @@ export default function Reports() {
                       fontSize: "14px",
                     }}
                   />
-                  <Bar dataKey="amount" fill="#1b4332" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="amount" fill="#0d4f8b" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : (
@@ -326,18 +326,18 @@ export default function Reports() {
             {monthlyTrend && monthlyTrend.some((m) => m.amount > 0) ? (
               <ResponsiveContainer width="100%" height={270}>
                 <LineChart data={monthlyTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e6dfd1" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#dbe6f1" />
                   <XAxis
                     dataKey="month"
                     tick={{ fontSize: 11 }}
-                    stroke="#716c60"
+                    stroke="#5b6f83"
                     angle={-45}
                     textAnchor="end"
                     height={60}
                   />
                   <YAxis
                     tick={{ fontSize: 12 }}
-                    stroke="#716c60"
+                    stroke="#5b6f83"
                     tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`}
                   />
                   <Tooltip
@@ -352,9 +352,9 @@ export default function Reports() {
                   <Line
                     type="monotone"
                     dataKey="amount"
-                    stroke="#1b4332"
+                    stroke="#0d4f8b"
                     strokeWidth={2}
-                    dot={{ fill: "#1b4332", strokeWidth: 2, r: 4 }}
+                    dot={{ fill: "#0d4f8b", strokeWidth: 2, r: 4 }}
                     activeDot={{ r: 6 }}
                   />
                 </LineChart>

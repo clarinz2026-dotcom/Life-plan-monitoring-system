@@ -60,78 +60,78 @@
 /* ─── Clean Professional Light Theme ─────────────────────────────────────── */
 :root {
   --radius: 0.5rem;
-  --background: #f5f5f0;
-  --foreground: #1c1c1c;
+  --background: #f4f8fc;
+  --foreground: #10202f;
   --card: #ffffff;
-  --card-foreground: #1c1c1c;
+  --card-foreground: #10202f;
   --popover: #ffffff;
-  --popover-foreground: #1c1c1c;
-  --primary: #1b4332;
+  --popover-foreground: #10202f;
+  --primary: #0d4f8b;
   --primary-foreground: #ffffff;
-  --secondary: #e8e6df;
-  --secondary-foreground: #1c1c1c;
-  --muted: #e8e6df;
-  --muted-foreground: #6b6b6b;
-  --accent: #e8e6df;
-  --accent-foreground: #1c1c1c;
-  --destructive: #b91c1c;
-  --border: #d4d2cb;
-  --input: #d4d2cb;
-  --ring: #1b4332;
-  --chart-1: #1b4332;
-  --chart-2: #b45309;
-  --chart-3: #1e40af;
-  --chart-4: #7c3aed;
-  --chart-5: #b91c1c;
-  --sidebar: #1b4332;
+  --secondary: #d6e7f5;
+  --secondary-foreground: #10202f;
+  --muted: #d6e7f5;
+  --muted-foreground: #4a5f75;
+  --accent: #d6e7f5;
+  --accent-foreground: #0d4f8b;
+  --destructive: #9c1c2c;
+  --border: #dbe6f1;
+  --input: #c3d7e8;
+  --ring: #1b6fb5;
+  --chart-1: #0d4f8b;
+  --chart-2: #c8901f;
+  --chart-3: #1b6fb5;
+  --chart-4: #6e1f2b;
+  --chart-5: #5b6f83;
+  --sidebar: #062c52;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #ffffff;
-  --sidebar-primary-foreground: #1b4332;
-  --sidebar-accent: #145a2b;
+  --sidebar-primary-foreground: #062c52;
+  --sidebar-accent: #0d4f8b;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #2d6a4f;
-  --sidebar-ring: #ffffff;
-  --terminal-green: #16a34a;
-  --terminal-amber: #b45309;
-  --terminal-red: #b91c1c;
+  --sidebar-border: #134a7d;
+  --sidebar-ring: #e8c989;
+  --terminal-green: #15803d;
+  --terminal-amber: #c8901f;
+  --terminal-red: #9c1c2c;
 }
 
 /* ─── Clean Professional Dark Theme ──────────────────────────────────────── */
 .dark {
-  --background: #111111;
-  --foreground: #e8e8e8;
-  --card: #1a1a1a;
-  --card-foreground: #e8e8e8;
-  --popover: #1a1a1a;
-  --popover-foreground: #e8e8e8;
-  --primary: #4ade80;
-  --primary-foreground: #111111;
-  --secondary: #262626;
-  --secondary-foreground: #e8e8e8;
-  --muted: #262626;
-  --muted-foreground: #a0a0a0;
-  --accent: #262626;
-  --accent-foreground: #e8e8e8;
-  --destructive: #ef4444;
-  --border: #333333;
-  --input: #333333;
-  --ring: #4ade80;
-  --chart-1: #4ade80;
-  --chart-2: #fbbf24;
-  --chart-3: #60a5fa;
-  --chart-4: #a78bfa;
-  --chart-5: #f87171;
-  --sidebar: #111111;
-  --sidebar-foreground: #e8e8e8;
-  --sidebar-primary: #4ade80;
-  --sidebar-primary-foreground: #111111;
-  --sidebar-accent: #1f1f1f;
-  --sidebar-accent-foreground: #e8e8e8;
-  --sidebar-border: #333333;
-  --sidebar-ring: #4ade80;
+  --background: #08182b;
+  --foreground: #e6eef7;
+  --card: #0e233c;
+  --card-foreground: #e6eef7;
+  --popover: #0e233c;
+  --popover-foreground: #e6eef7;
+  --primary: #7cc0f0;
+  --primary-foreground: #08182b;
+  --secondary: #16304e;
+  --secondary-foreground: #e6eef7;
+  --muted: #16304e;
+  --muted-foreground: #9db3ca;
+  --accent: #16304e;
+  --accent-foreground: #e6eef7;
+  --destructive: #e3707c;
+  --border: #1d3b5c;
+  --input: #1d3b5c;
+  --ring: #7cc0f0;
+  --chart-1: #7cc0f0;
+  --chart-2: #e8c989;
+  --chart-3: #4a9fd8;
+  --chart-4: #c98a96;
+  --chart-5: #9db3ca;
+  --sidebar: #04162a;
+  --sidebar-foreground: #e6eef7;
+  --sidebar-primary: #7cc0f0;
+  --sidebar-primary-foreground: #04162a;
+  --sidebar-accent: #0e233c;
+  --sidebar-accent-foreground: #e6eef7;
+  --sidebar-border: #16304e;
+  --sidebar-ring: #e8c989;
   --terminal-green: #4ade80;
-  --terminal-amber: #fbbf24;
-  --terminal-red: #f87171;
+  --terminal-amber: #e8c989;
+  --terminal-red: #e3707c;
 }
 
 /* ─── Corporate landing page tokens ──────────────────────────────────────── */
@@ -148,22 +148,36 @@
    * logs) — clean, highly legible digits at both display and table sizes.
    */
   --font-figures: Arial, "Helvetica Neue", Helvetica, ui-sans-serif, sans-serif;
-  --color-evergreen: #1b4332;
-  --color-pine: #10291d;
-  --color-moss: #2d6a4f;
-  --color-sage: #dce5dd;
-  --color-gold: #a9874f;
-  --color-gold-soft: #d9c49c;
-  --color-cream: #faf7ef;
-  --color-paper: #fdfcf8;
-  --color-ink: #211f1a;
-  --color-stone: #716c60;
-  --color-line: #e6dfd1;
+  /*
+   * Brand palette, sampled from the company logo.
+   *
+   * The emblem is built from four colours: the deep marine blue of the globe
+   * and its outer ring, the maroon of the cradling hands, the gold of the
+   * looping infinity band, and the white of the doves and the page behind.
+   * Every token below is one of those four, so the app and the logo stay
+   * recognisably the same object rather than merely both being "blue".
+   *
+   * The token names are kept as-is (they predate the logo) so none of the
+   * hundreds of call sites that reference them need to change.
+   */
+  --color-evergreen: #0d4f8b; /* globe blue — primary */
+  --color-pine: #062c52; /* deep ocean navy — sidebar */
+  --color-moss: #1b6fb5; /* ring blue — interactive accent */
+  --color-sage: #d6e7f5; /* pale sky — tinted surfaces */
+  --color-gold: #c8901f; /* infinity band gold */
+  --color-gold-soft: #e8c989; /* light gold for text on navy */
+  --color-maroon: #6e1f2b; /* cradling hands */
+  --color-maroon-soft: #f3dfe2; /* maroon tint */
+  --color-cream: #f4f8fc; /* dove white, page ground */
+  --color-paper: #ffffff; /* dove white, raised surfaces */
+  --color-ink: #10202f; /* near-black navy — text */
+  --color-stone: #5b6f83; /* muted blue-grey — secondary text */
+  --color-line: #dbe6f1; /* hairline rules and borders */
 }
 
 @layer base {
   .landing-bg {
-    background-color: #faf8f3;
+    background-color: #f4f8fc;
   }
 }
 
@@ -199,26 +213,34 @@
   }
 }
 
-/* ─── Status indicator classes ───────────────────────────────────────────── */
+/*
+ * Status indicator classes.
+ *
+ * These are signals, not decoration: green reads as "current/paid", the warm
+ * gold as "delinquent", and the logo's maroon as "lapsed/claim". The two warm
+ * tones are drawn from the logo's own gold band and maroon hands so the badges
+ * sit inside the brand palette, while green is left functional — it carries
+ * meaning that has to stay unmistakable in a collections ledger.
+ */
 @layer utilities {
   .terminal-status-current {
-    color: #16a34a;
+    color: #15803d;
     background: #dcfce7;
     border: 1px solid #86efac;
   }
   .terminal-status-delinquent {
-    color: #b45309;
-    background: #fef3c7;
-    border: 1px solid #fcd34d;
+    color: #855c0f;
+    background: #fdf3d9;
+    border: 1px solid #e8c989;
   }
   .terminal-status-lapsed,
   .terminal-status-claim {
-    color: #b91c1c;
-    background: #fee2e2;
-    border: 1px solid #fca5a5;
+    color: #8c1f2a;
+    background: #f8e4e6;
+    border: 1px solid #d9a3aa;
   }
   .terminal-status-paid {
-    color: #16a34a;
+    color: #15803d;
     background: #dcfce7;
     border: 1px solid #86efac;
   }
@@ -228,15 +250,15 @@
     border: 1px solid #166534;
   }
   .dark .terminal-status-delinquent {
-    color: #fbbf24;
-    background: #451a03;
-    border: 1px solid #92400e;
+    color: #e8c989;
+    background: #3a2c08;
+    border: 1px solid #7a5c1a;
   }
   .dark .terminal-status-lapsed,
   .dark .terminal-status-claim {
-    color: #f87171;
-    background: #450a0a;
-    border: 1px solid #991b1b;
+    color: #e59aa2;
+    background: #3d1216;
+    border: 1px solid #7a2b34;
   }
   .dark .terminal-status-paid {
     color: #4ade80;
@@ -254,63 +276,63 @@
  */
 .staff-shell {
   --radius: 0.75rem;
-  --background: #faf8f3;
-  --foreground: #211f1a;
-  --card: #fdfcf8;
-  --card-foreground: #211f1a;
-  --popover: #fdfcf8;
-  --popover-foreground: #211f1a;
-  --primary: #1b4332;
+  --background: #f4f8fc;
+  --foreground: #10202f;
+  --card: #ffffff;
+  --card-foreground: #10202f;
+  --popover: #ffffff;
+  --popover-foreground: #10202f;
+  --primary: #0d4f8b;
   --primary-foreground: #ffffff;
-  --secondary: #efe9dc;
-  --secondary-foreground: #211f1a;
-  --muted: #efe9dc;
-  --muted-foreground: #716c60;
-  --accent: #efe9dc;
-  --accent-foreground: #1b4332;
-  --destructive: #b91c1c;
-  --border: #e6dfd1;
-  --input: #d9d1bf;
-  --ring: #2d6a4f;
-  --chart-1: #1b4332;
-  --chart-2: #a9874f;
-  --chart-3: #2d6a4f;
-  --chart-4: #4a6fa5;
-  --chart-5: #b91c1c;
-  --sidebar: #10291d;
-  --sidebar-foreground: #f6f3ea;
-  --sidebar-primary: #f6f3ea;
-  --sidebar-primary-foreground: #10291d;
-  --sidebar-accent: #1b4332;
+  --secondary: #d6e7f5;
+  --secondary-foreground: #10202f;
+  --muted: #d6e7f5;
+  --muted-foreground: #4a5f75;
+  --accent: #d6e7f5;
+  --accent-foreground: #0d4f8b;
+  --destructive: #9c1c2c;
+  --border: #dbe6f1;
+  --input: #c3d7e8;
+  --ring: #1b6fb5;
+  --chart-1: #0d4f8b;
+  --chart-2: #c8901f;
+  --chart-3: #1b6fb5;
+  --chart-4: #6e1f2b;
+  --chart-5: #5b6f83;
+  --sidebar: #062c52;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ffffff;
+  --sidebar-primary-foreground: #062c52;
+  --sidebar-accent: #0d4f8b;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #23472f;
-  --sidebar-ring: #d9c49c;
-  /* Soft warm shadow instead of the default neutral one. */
-  --shadow-color: 33 31 26;
+  --sidebar-border: #134a7d;
+  --sidebar-ring: #e8c989;
+  /* Soft cool shadow instead of the default neutral one. */
+  --shadow-color: 16 32 47;
 }
 
 .dark .staff-shell {
-  --background: #14130f;
-  --foreground: #ece7dd;
-  --card: #1c1a15;
-  --card-foreground: #ece7dd;
-  --popover: #1c1a15;
-  --popover-foreground: #ece7dd;
-  --primary: #74d3a0;
-  --primary-foreground: #14130f;
-  --secondary: #262320;
-  --secondary-foreground: #ece7dd;
-  --muted: #262320;
-  --muted-foreground: #a49d8e;
-  --accent: #262320;
-  --accent-foreground: #ece7dd;
-  --border: #322e26;
-  --input: #322e26;
-  --ring: #74d3a0;
-  --sidebar: #10291d;
-  --sidebar-foreground: #f6f3ea;
-  --sidebar-accent: #1b4332;
-  --sidebar-border: #23472f;
+  --background: #08182b;
+  --foreground: #e6eef7;
+  --card: #0e233c;
+  --card-foreground: #e6eef7;
+  --popover: #0e233c;
+  --popover-foreground: #e6eef7;
+  --primary: #7cc0f0;
+  --primary-foreground: #08182b;
+  --secondary: #16304e;
+  --secondary-foreground: #e6eef7;
+  --muted: #16304e;
+  --muted-foreground: #9db3ca;
+  --accent: #16304e;
+  --accent-foreground: #e6eef7;
+  --border: #1d3b5c;
+  --input: #1d3b5c;
+  --ring: #7cc0f0;
+  --sidebar: #04162a;
+  --sidebar-foreground: #e6eef7;
+  --sidebar-accent: #0e233c;
+  --sidebar-border: #16304e;
 }  /*
    * The whole app — client portal and staff area — is set in Arial, as
    * requested by the office. `.portal-shell` and `.staff-shell` wrap every
@@ -343,15 +365,15 @@
     letter-spacing: -0.015em;
   }
 
-  /* Page titles take the brand green, like the portal's page headings. */
+  /* Page titles take the brand blue, like the portal's page headings. */
   .staff-shell h1 {
     font-weight: 600;
     letter-spacing: -0.02em;
-    color: #1b4332;
+    color: #0d4f8b;
   }
 
   .dark .staff-shell h1 {
-    color: #ece7dd;
+    color: #e6eef7;
   }
 
   /* Headline figures keep their tight tracking so the big amounts still read
@@ -373,7 +395,7 @@
   }
 
   :where(.staff-shell) [data-slot="card"] {
-    box-shadow: 0 1px 2px rgba(33, 31, 26, 0.04), 0 8px 24px -18px rgba(33, 31, 26, 0.35);
+    box-shadow: 0 1px 2px rgba(16, 32, 47, 0.05), 0 8px 24px -18px rgba(16, 32, 47, 0.38);
   }
 
   /* Elevation, for the surfaces that aren't shadcn Cards — plain bordered rows
@@ -381,14 +403,14 @@
      the same warm shadow keeps a page that mixes both from showing two
      different elevations. */
   :where(.staff-shell) .shadow-sm {
-    box-shadow: 0 1px 2px rgba(33, 31, 26, 0.04), 0 8px 24px -18px rgba(33, 31, 26, 0.35);
+    box-shadow: 0 1px 2px rgba(16, 32, 47, 0.05), 0 8px 24px -18px rgba(16, 32, 47, 0.38);
   }
 
   /* Tables carry the ledger treatment of the client portal's payment history:
      micro-label headers on warm paper, instead of bold default `th` text. */
   .staff-shell [data-slot="table-head"] {
-    background: #f3f0e7;
-    color: #716c60;
+    background: #eaf2fa;
+    color: #5b6f83;
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -398,12 +420,12 @@
   }
 
   .staff-shell [data-slot="table-header"] {
-    border-bottom: 1px solid #e6dfd1;
+    border-bottom: 1px solid #dbe6f1;
   }
 
   .dark .staff-shell [data-slot="table-head"] {
-    background: #221f19;
-    color: #a49d8e;
+    background: #132c49;
+    color: #9db3ca;
   }
 
   /*
