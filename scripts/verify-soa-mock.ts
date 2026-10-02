@@ -1,6 +1,6 @@
 /**
  * Structural probe for the redesigned SOA: dumps rendered text order, checks
- * the seven payment columns line up with their headers, and confirms the
+ * the ten payment columns line up with their headers, and confirms the
  * mock's section flow. Read-only.
  */
 import { chromium } from "playwright";
@@ -86,7 +86,7 @@ console.log("PHP money format present:", report.moneyFormat);
 const ok =
   report.bars.join("|") === "Account Information|Payment History|Account Summary" &&
   report.headers.join("|") ===
-    "Pay Class|O.R. Date|O.R. No.|Amount|Installment No.|Balance|Remarks" &&
+    "Payment Date|LPA Number|Effectivity Date|Due Date|Amount|Aging|Installment No.|O.R. No.|Balance|Remarks" &&
   report.summary.join("|") ===
     "PHP 30,000.00|PHP 2,500.00|PHP 27,500.00|Advanced" &&
   report.moneyFormat === true;

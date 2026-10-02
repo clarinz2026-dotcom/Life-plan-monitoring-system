@@ -223,7 +223,7 @@ const COMPANY_ADDRESS =
  * The layout follows the office's statement template: a centered letterhead
  * with the company name and address, a centered STATEMENT OF ACCOUNT title,
  * then full-width brand-green section bars over a two-column ruled-field
- * Account Information grid, the seven-column Payment History table, and the
+ * Account Information grid, the ten-column Payment History table, and the
  * four-cell Account Summary strip with large figures at the foot.
  */
 const SOA_STYLES = `
@@ -259,17 +259,20 @@ const SOA_STYLES = `
   /* html2canvas ignores <colgroup> entirely, so column widths are declared
      directly on the header cells. Every bordered table then spans the full
      content width in both the on-screen preview and the PDF. */
-  /* Payment-history columns — the seven widths sum to exactly 100%, which
+  /* Payment-history columns — the ten widths sum to exactly 100%, which
      table-layout: fixed requires to keep every column at its designed size
      (an over-100 total gets silently rescaled, and html2canvas rescales it
      again differently, which is what knocked the printed table out of line). */
-  table.soa-grid th.wp1 { width: 12%; }
-  table.soa-grid th.wp2 { width: 13%; }
-  table.soa-grid th.wp3 { width: 12%; }
-  table.soa-grid th.wp4 { width: 15%; }
-  table.soa-grid th.wp5 { width: 14%; }
-  table.soa-grid th.wp6 { width: 17%; }
-  table.soa-grid th.wp7 { width: 17%; }
+  table.soa-grid th.wp1 { width: 10%; }  /* Payment Date */
+  table.soa-grid th.wp2 { width: 8%; }   /* LPA Number */
+  table.soa-grid th.wp3 { width: 10%; }  /* Effectivity Date */
+  table.soa-grid th.wp4 { width: 10%; }  /* Due Date */
+  table.soa-grid th.wp5 { width: 11%; }  /* Amount */
+  table.soa-grid th.wp6 { width: 8%; }   /* Aging */
+  table.soa-grid th.wp7 { width: 9%; }   /* Installment No. */
+  table.soa-grid th.wp8 { width: 8%; }   /* O.R. No. */
+  table.soa-grid th.wp9 { width: 13%; }  /* Balance */
+  table.soa-grid th.wp10 { width: 13%; } /* Remarks */
 
   /* ── Letterhead ─────────────────────────────────────────────────────── */
   .lh { text-align: center; }
@@ -464,11 +467,14 @@ export function generateSOAHTML(data: SOAData): string {
           const payClass = agingCell(due, p.paymentDate);
           return `
         <tr>
-          <td class="c">${esc(payClass)}</td>
           <td class="c">${esc(fmtDateShort(p.paymentDate))}</td>
-          <td class="c">${p.orNumber ? esc(p.orNumber) : ""}</td>
+          <td class="c">${esc(c.contractNumber)}</td>
+          <td class="c">${esc(fmtDateShort(c.startDate))}</td>
+          <td class="c">${due === null ? "—" : esc(fmtDateShort(due))}</td>
           <td class="c">${esc(php(p.amount))}</td>
+          <td class="c">${esc(payClass)}</td>
           <td class="c">${installmentCounter}</td>
+          <td class="c">${p.orNumber ? esc(p.orNumber) : ""}</td>
           <td class="c">${esc(php(runningBalance))}</td>
           <td class="c">${esc(remark)}</td>
         </tr>`;
@@ -529,19 +535,22 @@ export function generateSOAHTML(data: SOAData): string {
         <table class="soa-grid">
           <thead>
             <tr>
-              <th class="wp1">Pay Class</th>
-              <th class="wp2">O.R. Date</th>
-              <th class="wp3">O.R. No.</th>
-              <th class="wp4">Amount</th>
-              <th class="wp5">Installment No.</th>
-              <th class="wp6">Balance</th>
-              <th class="wp7">Remarks</th>
+              <th class="wp1">Payment Date</th>
+              <th class="wp2">LPA Number</th>
+              <th class="wp3">Effectivity Date</th>
+              <th class="wp4">Due Date</th>
+              <th class="wp5">Amount</th>
+              <th class="wp6">Aging</th>
+              <th class="wp7">Installment No.</th>
+              <th class="wp8">O.R. No.</th>
+              <th class="wp9">Balance</th>
+              <th class="wp10">Remarks</th>
             </tr>
           </thead>
           <tbody>
             ${
               ledgerRows ||
-              `<tr><td colspan="7" class="empty">No payments recorded</td></tr>`
+              `<tr><td colspan="10" class="empty">No payments recorded</td></tr>`
             }
           </tbody>
         </table>
