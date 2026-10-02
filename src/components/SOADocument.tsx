@@ -94,6 +94,21 @@ function fmtDateLong(ts: number) {
   return format(new Date(ts), "MMMM d, yyyy");
 }
 
+/**
+ * Plan Status as the office reports it on a statement: a lapsed plan has
+ * forfeited, while every other standing — current, behind but still curable,
+ * reinstated, settled — is Active.
+ *
+ * Two words only, deliberately: the portal's Plan Status field and the REST
+ * API's `statusWord` both read "lapsed → Forfeited, otherwise Active", so a
+ * family comparing the screen, the API and the paper sees one answer. The
+ * delinquency bucket is a separate fact and is reported in the Payment
+ * History's Aging column.
+ */
+export function planStatus(contractStatus: string): "Active" | "Forfeited" {
+  return contractStatus === "lapsed" ? "Forfeited" : "Active";
+}
+
 const MS_PER_DAY = 86_400_000;
 
 /**
@@ -578,6 +593,10 @@ export function generateSOAHTML(data: SOAData): string {
           <tr>
             <td colspan="2"></td>
             ${fld("Next Due Date:", nextDue, "narrow")}
+          </tr>
+          <tr>
+            <td colspan="2"></td>
+            ${fld("Plan Status:", planStatus(c.contractStatus), "narrow")}
           </tr>
         </table>
 

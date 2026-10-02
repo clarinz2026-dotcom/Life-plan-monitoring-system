@@ -3,6 +3,7 @@ import {
   agingCell,
   installmentDueDate,
   isAdvancedStatus,
+  planStatus,
   splitAddressEmail,
 } from "../src/components/SOADocument";
 
@@ -148,5 +149,24 @@ describe("splitAddressEmail", () => {
 
   it("returns a dash and no email for an empty address", () => {
     expect(splitAddressEmail("")).toEqual({ address: "—", email: "" });
+  });
+});
+
+describe("planStatus", () => {
+  it("reads a lapsed plan as forfeited", () => {
+    expect(planStatus("lapsed")).toBe("Forfeited");
+  });
+
+  it("keeps every other standing active — behind is curable, settled is not forfeited", () => {
+    for (const status of [
+      "current",
+      "reinstated",
+      "delinquent_30",
+      "delinquent_60",
+      "delinquent_90",
+      "fully_paid",
+    ]) {
+      expect(planStatus(status)).toBe("Active");
+    }
   });
 });
