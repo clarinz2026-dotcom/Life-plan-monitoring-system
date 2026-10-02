@@ -482,6 +482,30 @@ export function generateSOAHTML(data: SOAData): string {
         .join("");
 
       const outstanding = Math.max(0, c.planAmount - c.totalPaid);
+
+      /*
+       * Next Due Date — the installment the planholder still has to settle.
+       * Payments are numbered chronologically against the schedule, so the one
+       * after the `contractPayments.length` already recorded is the next line
+       * on the account: a plan paid ahead of schedule shows the date its next
+       * installment falls due, a plan behind shows the date it is already
+       * late for, and a plan with nothing recorded shows its first due date.
+       * Nothing is due once the plan value is fully settled.
+       */
+      const nextDueDate =
+        outstanding > 0
+          ? installmentDueDate(c.startDate, contractPayments.length + 1)
+          : null;
+      const nextDue =
+        nextDueDate === null
+          ? "Fully paid"
+          : Number.isFinite(c.startDate)
+            ? fmtDateShort(nextDueDate)
+            : "—";
+      const effectivity = Number.isFinite(c.startDate)
+        ? fmtDateShort(c.startDate)
+        : "—";
+
       /*
        * Payment status on the printed statement mirrors the portal: a
        * planholder paying ahead of schedule reads "Advanced", fully paid stays
@@ -528,6 +552,16 @@ export function generateSOAHTML(data: SOAData): string {
           <tr>
             ${fld("Sales Agent:", data.salesAgent ?? "", "wide")}
             ${fld("Installment Amount:", php(c.monthlyAmortization), "narrow")}
+          </tr>
+          <tr>
+            <!-- The left half of these two rows stays blank: they carry plan
+                 dates, which belong with the plan figures on the right. -->
+            <td colspan="2"></td>
+            ${fld("Effectivity Date:", effectivity, "narrow")}
+          </tr>
+          <tr>
+            <td colspan="2"></td>
+            ${fld("Next Due Date:", nextDue, "narrow")}
           </tr>
         </table>
 
