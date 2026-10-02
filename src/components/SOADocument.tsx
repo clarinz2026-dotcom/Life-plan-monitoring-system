@@ -85,6 +85,15 @@ function fmtDateShort(ts: number) {
   return format(new Date(ts), "MM/dd/yyyy");
 }
 
+/**
+ * `September 1, 2026` — the long date used for the account's own dates
+ * (effectivity and next due), so they read as dates in prose rather than as
+ * the tabular `MM/DD/YYYY` of the payment history.
+ */
+function fmtDateLong(ts: number) {
+  return format(new Date(ts), "MMMM d, yyyy");
+}
+
 const MS_PER_DAY = 86_400_000;
 
 /**
@@ -500,10 +509,10 @@ export function generateSOAHTML(data: SOAData): string {
         nextDueDate === null
           ? "Fully paid"
           : Number.isFinite(c.startDate)
-            ? fmtDateShort(nextDueDate)
+            ? fmtDateLong(nextDueDate)
             : "—";
       const effectivity = Number.isFinite(c.startDate)
-        ? fmtDateShort(c.startDate)
+        ? fmtDateLong(c.startDate)
         : "—";
 
       /*
