@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { parsePaymentUpload, parseUploadDate, matchContractNumber } from "@/lib/parsePaymentUpload";
+import { formulatedValues } from "@/lib/planFormulation";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { useState, useCallback, useEffect, useMemo } from "react";
@@ -238,6 +239,16 @@ export default function ClientDetail() {
     contractStatus: "current",
   });
   const [savingContract, setSavingContract] = useState(false);
+
+  /*
+   * The office's plan formulation fixes a plan type's value and monthly rate
+   * (Isidore ₱30,000 / ₱500, Gabriel ₱39,000 / ₱650, Raphael ₱51,000 / ₱850,
+   * Michael ₱57,000 / ₱950), so typing a formulated plan name fills both money
+   * fields. The server applies the same pair again on save, which keeps the
+   * stored contract in step however the form was filled in.
+   */
+  const createFormulation = formulatedValues(contractForm.planType);
+  const editFormulation = formulatedValues(editContractForm.planType);
 
   const fullName = client?.middleName
     ? `${client.lastName}, ${client.firstName} ${client.middleName}`
@@ -1184,10 +1195,24 @@ export default function ClientDetail() {
                 <Label className="text-xs">Plan Type *</Label>
                 <Input
                   value={contractForm.planType}
-                  onChange={(e) =>
-                    setContractForm({ ...contractForm, planType: e.target.value })
-                  }
-                  placeholder="e.g. Memorial Plan A"
+                  onChange={(e) => {
+                    const planType = e.target.value;
+                    const formulated = formulatedValues(planType);
+                    setContractForm({
+                      ...contractForm,
+                      planType,
+                      // A formulated plan name fills the pair of money fields.
+                      ...(formulated
+                        ? {
+                            planAmount: String(formulated.planAmount),
+                            monthlyAmortization: String(
+                              formulated.monthlyAmortization
+                            ),
+                          }
+                        : {}),
+                    });
+                  }}
+                  placeholder="e.g. Isidore, Gabriel, Raphael, Michael"
                   className="text-sm"
                   required
                 />
@@ -1221,6 +1246,14 @@ export default function ClientDetail() {
                   />
                 </div>
               </div>
+              {createFormulation && (
+                <p className="-mt-1 text-[11px] text-muted-foreground">
+                  Formulation: {formatPHP(createFormulation.planAmount)} plan
+                  value ·{" "}
+                  {formatPHP(createFormulation.monthlyAmortization)} monthly,
+                  filled in automatically.
+                </p>
+              )}
               <div>
                 <Label className="text-xs">Start Date *</Label>
                 <Input
@@ -1270,13 +1303,24 @@ export default function ClientDetail() {
                 <Label className="text-xs">Plan Type *</Label>
                 <Input
                   value={editContractForm.planType}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const planType = e.target.value;
+                    const formulated = formulatedValues(planType);
                     setEditContractForm({
                       ...editContractForm,
-                      planType: e.target.value,
-                    })
-                  }
-                  placeholder="e.g. Memorial Plan A"
+                      planType,
+                      // Retyping a formulated plan name refills the pair.
+                      ...(formulated
+                        ? {
+                            planAmount: String(formulated.planAmount),
+                            monthlyAmortization: String(
+                              formulated.monthlyAmortization
+                            ),
+                          }
+                        : {}),
+                    });
+                  }}
+                  placeholder="e.g. Isidore, Gabriel, Raphael, Michael"
                   className="text-sm"
                   required
                 />
@@ -1317,6 +1361,12 @@ export default function ClientDetail() {
                   />
                 </div>
               </div>
+              {editFormulation && (
+                <p className="-mt-1 text-[11px] text-muted-foreground">
+                  Formulation: {formatPHP(editFormulation.planAmount)} plan value
+                  · {formatPHP(editFormulation.monthlyAmortization)} monthly.
+                </p>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Effectivity Date *</Label>

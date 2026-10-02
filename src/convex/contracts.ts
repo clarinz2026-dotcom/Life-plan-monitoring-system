@@ -7,6 +7,7 @@ import {
   getViewer,
   resolveBranchFilter,
 } from "./access";
+import { formulatedValues } from "../lib/planFormulation";
 
 function formatPHP(amount: number) {
   return new Intl.NumberFormat("en-PH", {
@@ -131,6 +132,15 @@ export const create = mutation({
     // Branch staff may only create contracts for clients of their own branch.
     await assertCanAccessRecord(ctx, clientBranchId ?? branchId);
 
+    // The formulation fixes a plan type's value and monthly rate (Isidore
+    // ₱30,000 / ₱500, Gabriel ₱39,000 / ₱650, Raphael ₱51,000 / ₱850,
+    // Michael ₱57,000 / ₱950). The contract is stored with that pair whatever
+    // was typed into the form, so a statement can never quote figures that
+    // contradict the plan the planholder bought. Plans the office has not
+    // formulated keep the numbers entered for them.
+    const formulated = formulatedValues(args.planType);
+    if (formulated) args = { ...args, ...formulated };
+
     const contractId = await ctx.db.insert("contracts", {
       ...args,
       branchId: branchId ?? clientBranchId ?? undefined,
@@ -206,6 +216,12 @@ export const update = mutation({
     if (!contract) throw new Error("Contract not found");
     // Branch staff in the allowed roles may still only touch their own branch.
     await assertCanAccessRecord(ctx, contract.branchId);
+
+    // Retyping a formulated plan name pulls the value and monthly rate back
+    // onto the formulated pair. The diff below then records the correction in
+    // the audit log like any other edit.
+    const formulated = formulatedValues(args.planType);
+    if (formulated) args = { ...args, ...formulated };
 
     if (args.planAmount < 0 || args.monthlyAmortization < 0) {
       throw new Error("Plan value and monthly amortization cannot be negative.");
