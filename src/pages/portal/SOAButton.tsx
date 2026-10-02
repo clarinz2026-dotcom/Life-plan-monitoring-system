@@ -79,7 +79,7 @@ function addressFields(client: Doc<"clients">): Pick<SOAData, "clientAddress" | 
  * Build SOA data for a SINGLE contract (per-plan SOA).
  */
 /** The statement is a fixed-width document; this is its printed width. */
-const SOA_DOC_WIDTH = 774;
+const SOA_DOC_WIDTH = 880;
 
 export function buildSingleContractSOA(
   group: PortalRecordGroup,
@@ -262,7 +262,7 @@ export function SOAButton({
   /**
    * Scale the preview to fit, instead of letting it reflow.
    *
-   * The statement is a fixed 774px-wide document — the same one that prints
+   * The statement is a fixed 880px-wide document — the same one that prints
    * and downloads. Letting the frame size itself meant a narrow dialog
    * squeezed all ten payment columns into a few hundred pixels, breaking every
    * header mid-word. Instead the frame stays at the document's real width and
@@ -413,10 +413,10 @@ export function SOAButton({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           className="sm:max-w-none [grid-template-columns:minmax(0,1fr)]"
-          // 774px statement + 2×24px dialog padding = 822px: the dialog hugs
+          // 880px statement + 2×24px dialog padding = 928px: the dialog hugs
           // the document at 1:1 on desktop, and 94vw keeps it on-screen below
           // that, where the box's scale-to-fit shrinks the frame instead.
-          style={{ width: "min(94vw, 822px)" }}
+          style={{ width: "min(94vw, 928px)" }}
         >
           <DialogHeader>
             <DialogTitle>Statement of Account</DialogTitle>
@@ -431,7 +431,7 @@ export function SOAButton({
                   ref={frameRef}
                   title="Statement of Account"
                   srcDoc={generateSOAHTML(data)}
-                  className="h-full w-[774px] max-w-none border-0"
+                  className="h-full w-[880px] max-w-none border-0"
                   style={{
                     // The frame is taller than the box by 1/scale, so the whole
                     // document width fits once scaled while the visible area

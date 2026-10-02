@@ -3,7 +3,7 @@
  * the stock Radix DialogContent CSS (fixed/centered, w-full, grid, p-6, the
  * max-w-[calc(100%-2rem)] cap) plus the caller's width and grid-template
  * overrides, the dialog's 24px padding (p-6 — inlined because this probe runs
- * without the app stylesheet), the h-[62vh] box, and the scaled 774px iframe. Then measures the
+ * without the app stylesheet), the h-[62vh] box, and the scaled 880px iframe. Then measures the
  * statement's rendered right edge against the viewport: cropped = right edge
  * wider than the viewport. Read-only.
  */
@@ -42,7 +42,7 @@ const data: SOAData = {
   })),
 };
 
-const DOC = 774;
+const DOC = 880;
 const browser = await chromium.launch();
 
 // Stock DialogContent classes minus the caller's sm:max-w-none, plus the
@@ -57,7 +57,7 @@ for (const viewport of [380, 640, 768, 1024, 1440]) {
   const page = await browser.newPage({ viewport: { width: viewport, height: 900 } });
   await page.setContent(`<!DOCTYPE html><html><body style="margin:0">
     <div id="content" class="${CONTENT}"
-      style="width:min(94vw,822px);padding:24px;box-sizing:border-box;grid-template-columns:minmax(0,1fr)">
+      style="width:min(94vw,928px);padding:24px;box-sizing:border-box;grid-template-columns:minmax(0,1fr)">
       <div id="box" style="height:62vh;width:100%;min-width:0;overflow:hidden;border-radius:12px;border:1px solid #ddd;background:#fff">
         <iframe id="frame" title="Statement of Account"
           style="height:100%;width:${DOC}px;max-width:none;border:0;display:block"></iframe>

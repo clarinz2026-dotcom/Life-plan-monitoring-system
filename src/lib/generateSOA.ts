@@ -184,7 +184,7 @@ export async function generateSOAPDFBlob(data: SOAData): Promise<PreparedSOAPDF>
   container.style.position = "fixed";
   container.style.top = "0";
   container.style.left = "0";
-  container.style.width = "794px"; // A4 width at 96 DPI
+  container.style.width = "900px"; // 880px statement + 10px each side
   container.style.background = "white";
   container.style.zIndex = "-1";
   container.style.pointerEvents = "none";
@@ -200,8 +200,11 @@ export async function generateSOAPDFBlob(data: SOAData): Promise<PreparedSOAPDF>
       useCORS: true,
       logging: false,
       backgroundColor: "#ffffff",
-      width: 794,
-      windowWidth: 794,
+      // Match the container: the statement is 880px wide, and capturing any
+      // narrower crops its right-hand columns (REMARKS). jsPDF then scales
+      // the raster to the page's 198mm content width, so the PDF stays A4.
+      width: 900,
+      windowWidth: 900,
       scrollX: 0,
       scrollY: 0,
     });

@@ -36,7 +36,7 @@ const data: SOAData = {
 };
 
 const browser = await chromium.launch();
-const page = await browser.newPage({ viewport: { width: 794, height: 1123 } });
+const page = await browser.newPage({ viewport: { width: 900, height: 1123 } });
 await page.setContent(generateSOAHTML(data), { waitUntil: "networkidle" });
 
 const report = await page.evaluate(() => {

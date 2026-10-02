@@ -259,7 +259,7 @@ const SOA_STYLES = `
   #soa {
     position: relative;
     width: 100%;
-    max-width: 774px;
+    max-width: 880px;
     margin: 0 auto;
     padding: 4px 0 4px;
     overflow: hidden;
@@ -271,17 +271,21 @@ const SOA_STYLES = `
   /* Payment-history columns — the ten widths sum to exactly 100%, which
      table-layout: fixed requires to keep every column at its designed size
      (an over-100 total gets silently rescaled, and html2canvas rescales it
-     again differently, which is what knocked the printed table out of line). */
-  table.soa-grid th.wp1 { width: 10%; }  /* Payment Date */
-  table.soa-grid th.wp2 { width: 8%; }   /* LPA Number */
-  table.soa-grid th.wp3 { width: 10%; }  /* Effectivity Date */
-  table.soa-grid th.wp4 { width: 10%; }  /* Due Date */
-  table.soa-grid th.wp5 { width: 11%; }  /* Amount */
-  table.soa-grid th.wp6 { width: 8%; }   /* Aging */
-  table.soa-grid th.wp7 { width: 9%; }   /* Installment No. */
-  table.soa-grid th.wp8 { width: 8%; }   /* O.R. No. */
-  table.soa-grid th.wp9 { width: 13%; }  /* Balance */
-  table.soa-grid th.wp10 { width: 13%; } /* Remarks */
+     again differently, which is what knocked the printed table out of line).
+     The shares come from measuring each column's natural, no-wrap width at
+     the document's 880px: PAYMENT DATE, EFFECTIVITY DATE and INSTALLMENT NO.
+     need 90/108/105px on one line, and every share below clears its column's
+     need — so no header breaks and no cell has to hyphenate. */
+  table.soa-grid th.wp1 { width: 10.7%; }  /* Payment Date */
+  table.soa-grid th.wp2 { width: 9.4%; }   /* LPA Number */
+  table.soa-grid th.wp3 { width: 12.7%; }  /* Effectivity Date */
+  table.soa-grid th.wp4 { width: 8.1%; }   /* Due Date */
+  table.soa-grid th.wp5 { width: 8.5%; }   /* Amount */
+  table.soa-grid th.wp6 { width: 7.3%; }   /* Aging */
+  table.soa-grid th.wp7 { width: 12.4%; }  /* Installment No. */
+  table.soa-grid th.wp8 { width: 6.6%; }   /* O.R. No. */
+  table.soa-grid th.wp9 { width: 10.2%; }  /* Balance */
+  table.soa-grid th.wp10 { width: 14.1%; } /* Remarks */
 
   /* ── Letterhead ─────────────────────────────────────────────────────── */
   .lh { text-align: center; }
@@ -374,6 +378,9 @@ const SOA_STYLES = `
     line-height: 1.25;
     text-transform: uppercase;
     text-align: center;
+    /* Columns are sized to hold these labels, so a header never breaks —
+       "INSTALLMENT NO." reads as one line rather than "INSTALLME NT NO.". */
+    white-space: nowrap;
     overflow-wrap: break-word;
   }
   table.soa-grid td.c { text-align: center; }

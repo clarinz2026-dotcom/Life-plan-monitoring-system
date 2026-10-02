@@ -1,6 +1,6 @@
 /**
  * SOA preview fit probe — reproduces the dialog's scaled preview frame
- * (fixed 774px document width, transform: scale to fit the box) at several
+ * (fixed 880px document width, transform: scale to fit the box) at several
  * dialog widths, and reports whether the document is cropped, squeezed, or
  * breaks payment-history headers mid-word. Read-only; generates no data.
  */
@@ -38,7 +38,7 @@ const data: SOAData = {
   })),
 };
 
-const DOC = 774;
+const DOC = 880;
 const browser = await chromium.launch();
 
 for (const boxWidth of [380, 576, 848]) {
@@ -66,7 +66,7 @@ for (const boxWidth of [380, 576, 848]) {
     const doc = f.contentDocument;
     const soa = doc?.getElementById("soa") as HTMLElement | null;
     const table = Array.from(doc?.querySelectorAll("table.soa-grid") ?? []).find((t) =>
-      /pay class/i.test(t.textContent || ""),
+      /payment date/i.test(t.textContent || ""),
     ) as HTMLElement | undefined;
     const ths = table
       ? (Array.from(table.querySelectorAll("thead th")) as HTMLElement[])
