@@ -20,7 +20,7 @@ export default defineConfig({
   },
   test: {
     environment: "edge-runtime",
-    include: ["tests/**/*.test.ts"],
+    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     /*
      * Each test builds its own `convexTest` instance against the shared
      * `modules` map, so the database is already isolated per test. Running the

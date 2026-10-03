@@ -29,6 +29,7 @@ import {
   Building2,
   Palette,
   KeyRound,
+  ShieldCheck,
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
@@ -71,6 +72,9 @@ const NAV_ITEMS = [
   { to: "/branches", icon: Building2, label: "Branches", roles: ["super_admin", "ceo"] },
   { to: "/role-management", icon: UserCog, label: "Roles", roles: ["super_admin", "ceo"] },
   { to: "/branding", icon: Palette, label: "Branding", roles: ["super_admin", "ceo"] },
+  // Data subject requests ("delete my data"). Managers work their own
+  // branch's queue, Head Office sees them all (see convex/privacy.ts).
+  { to: "/privacy-requests", icon: ShieldCheck, label: "Privacy Requests", roles: ["super_admin", "ceo", "manager"] },
   // API key management is deliberately Super Admin only: minting credentials
   // that read the whole ledger is not a CEO-delegable action.
   { to: "/api-integration", icon: KeyRound, label: "API Integration", roles: ["super_admin"] },
@@ -103,7 +107,7 @@ const NAV_GROUPS: { heading: string; items: typeof NAV_ITEMS }[] = [
   {
     heading: "System",
     items: NAV_ITEMS.filter((i) =>
-      ["/account-links", "/notifications", "/audit"].includes(i.to)
+      ["/account-links", "/notifications", "/audit", "/privacy-requests"].includes(i.to)
     ),
   },
 ];
@@ -129,6 +133,16 @@ const ROLE_LABELS: Record<string, string> = {
 
 /** Roles that may use the staff area. Anything else is a client-portal account. */
 const STAFF_ROLES = ["super_admin", "ceo", "manager", "finance_staff", "cashier"];
+
+/** Policies reachable from inside the workspace (same set as the website). */
+const POLICY_LINKS = [
+  { to: "/legal/privacy", label: "Privacy Policy" },
+  { to: "/legal/terms", label: "Terms of Use" },
+  { to: "/legal/refunds", label: "Refund Policy" },
+  { to: "/legal/cookies", label: "Cookie Policy" },
+  { to: "/legal/accessibility", label: "Accessibility" },
+  { to: "/privacy-request", label: "Data request" },
+];
 
 function greeting() {
   const h = new Date().getHours();
@@ -275,6 +289,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="staff-shell flex min-h-screen flex-col bg-background overflow-visible md:flex-row">
+      {/* First tab stop: jump past the sidebar straight to the page. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100000] focus:rounded-full focus:bg-evergreen focus:px-5 focus:py-2.5 focus:text-[14px] focus:font-bold focus:text-white"
+      >
+        Skip to the main content
+      </a>
       {/* Desktop sidebar — fixed 260px, grouped nav, brand at top, account at bottom */}
       <aside
         className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-gradient-to-b from-[#1b4332] to-[#0f2a1d] transition-all duration-200 md:flex ${
@@ -549,9 +570,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </header>
         )}
 
-        <main className="mx-auto w-full max-w-[1500px] flex-1 pb-20 md:pb-10">
+        <main
+          id="main-content"
+          className="mx-auto w-full max-w-[1500px] flex-1 pb-20 md:pb-10"
+        >
           {canRenderPage ? children : null}
         </main>
+
+        {/*
+          Footer. The policies are the same links the public site carries: a
+          planholder who is told "read the privacy policy" must be able to find
+          it from inside the staff portal too.
+        */}
+        <footer className="hidden border-t border-line px-8 py-5 text-[12.5px] text-stone md:block">
+          <div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-3">
+            <p>© 2026 Evangelist Funeral Services, Inc.</p>
+            <nav aria-label="Policies">
+              <ul className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+                {POLICY_LINKS.map((link) => (
+                  <li key={link.to}>
+                    <NavLink
+                      to={link.to}
+                      className="underline underline-offset-2 transition-colors hover:text-evergreen"
+                    >
+                      {link.label}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          </div>
+        </footer>
       </div>
 
       {/* Mobile bottom nav */}

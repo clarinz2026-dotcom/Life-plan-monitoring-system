@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
-import { useState, type ReactNode } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState, type ReactNode } from "react";
+import { Link, useNavigate } from "react-router";
 import { BrandLogo } from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,17 +9,14 @@ import {
   BarChart3,
   BookMarked,
   Building2,
-  Calculator,
   Check,
   ChevronDown,
   Clock,
   CreditCard,
-  Facebook,
   FileHeart,
   FileSpreadsheet,
   FileText,
   Glasses,
-  Instagram,
   KeyRound,
   LayoutDashboard,
   LineChart,
@@ -31,12 +28,17 @@ import {
   Phone,
   Receipt,
   ShieldCheck,
-  UserCog,
   Users,
   Wallet,
   X,
-  Youtube,
 } from "lucide-react";
+import {
+  AGE_CONSENT_LABEL,
+  DATA_REQUEST_PATH,
+  LEGAL_DOCS,
+  NO_HIDDEN_FEES_STATEMENT,
+  PRIVACY_CONSENT_LABEL,
+} from "@/lib/legal";
 
 const MOTTO = "To Care And To Serve!";
 const COMPANY = "Evangelist Funeral Services";
@@ -135,11 +137,22 @@ const NAV_LINKS = [
   { label: "For the office", href: "#staff-portal" },
   { label: "Senior-friendly", href: "#readability" },
   { label: "Payment monitoring", href: "#payments" },
+  { label: "Your data", href: "#your-data" },
 ];
 
 function NavHeader() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+
+  // Keyboard: Escape closes the mobile menu, as a menu is expected to do.
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-paper/95 backdrop-blur-md">
@@ -178,6 +191,8 @@ function NavHeader() {
             type="button"
             onClick={() => setOpen((v) => !v)}
             aria-label={open ? "Close menu" : "Open menu"}
+            aria-expanded={open}
+            aria-controls="mobile-menu"
             className="grid h-10 w-10 place-items-center rounded-full border border-line text-evergreen lg:hidden"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -186,7 +201,10 @@ function NavHeader() {
       </div>
 
       {open && (
-        <div className="border-t border-line bg-paper px-4 py-3 lg:hidden">
+        <div
+          id="mobile-menu"
+          className="border-t border-line bg-paper px-4 py-3 lg:hidden"
+        >
           {NAV_LINKS.map((l) => (
             <a
               key={l.href}
@@ -331,7 +349,7 @@ function Hero() {
         {[
           {
             img: PORTAL_IMG,
-            alt: "A family reviewing their memorial plan",
+            alt: "Two people sitting together at a table with paperwork and a phone",
             eyebrow: "For planholders & families",
             title: "Client portal",
             pitch:
@@ -341,7 +359,7 @@ function Hero() {
           },
           {
             img: STAFF_IMG,
-            alt: "Staff office managing plan records",
+            alt: "A records clerk working at a desk with a computer and stacked files",
             eyebrow: "For records & branch staff",
             title: "Staff portal",
             pitch:
@@ -490,7 +508,7 @@ export default function Landing() {
             <div className="relative overflow-hidden rounded-[28px] shadow-xl ring-1 ring-black/5">
               <img
                 {...LEDGER_IMG}
-                alt="Ledger and payment records"
+                alt="An open ledger book with columns of payment figures on a desk"
                 loading="lazy"
                 className="h-full max-h-[420px] w-full object-cover"
               />
@@ -559,6 +577,9 @@ export default function Landing() {
 
                 <p className="mt-7 text-[12.5px] font-bold uppercase tracking-[0.14em] text-evergreen">
                   Payment history
+                  <span className="ml-2 font-sans text-[11px] font-normal normal-case tracking-normal text-stone">
+                    (illustrative figures — not a real account)
+                  </span>
                 </p>
                 <div className="-mx-4 mt-3 overflow-x-auto px-4 sm:-mx-6 sm:px-6 lg:-mx-7 lg:px-7">
                   <table className="w-full min-w-[520px] text-[12.5px]">
@@ -596,6 +617,11 @@ export default function Landing() {
                 </div>
 
                 <div className="mt-5 flex flex-wrap items-center gap-2.5">
+                  <span className="text-[11.5px] leading-relaxed text-stone">
+                    Illustrative example — not a real planholder&rsquo;s account.
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap items-center gap-2.5">
                   <span className="inline-flex items-center gap-2 rounded-full bg-evergreen px-4 py-2 text-[12px] font-bold text-white">
                     <FileText className="h-3.5 w-3.5" />
                     Statement of Account
@@ -727,7 +753,8 @@ export default function Landing() {
               </div>
               <p className="mt-6 text-[12.5px] text-stone">
                 Shown exactly as planholders see it — large labels, ruled values, and
-                status in words, not icons.
+                status in words, not icons. Illustrative example, not a real
+                planholder&rsquo;s record.
               </p>
             </div>
           </Reveal>
@@ -803,7 +830,7 @@ export default function Landing() {
               <div className="relative overflow-hidden rounded-[28px] shadow-xl ring-1 ring-black/5">
                 <img
                   {...RECORDS_IMG}
-                  alt="Staff reviewing plan records"
+                  alt="Staff members comparing plan records over a shared desk"
                   loading="lazy"
                   className="h-full max-h-[560px] w-full object-cover"
                 />
@@ -811,6 +838,9 @@ export default function Landing() {
                 <div className="absolute inset-x-6 bottom-6 rounded-2xl bg-white/95 p-5 backdrop-blur">
                   <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gold">
                     Needs attention
+                    <span className="mt-1 block font-sans text-[10.5px] font-normal normal-case tracking-normal text-stone">
+                      Illustrative list, not real accounts
+                    </span>
                   </p>
                   <div className="mt-3 space-y-2">
                     {[
@@ -851,31 +881,33 @@ export default function Landing() {
           </Reveal>
 
           <div className="mt-14 grid gap-6 lg:grid-cols-3">
-            {[
-              {
-                img: MONITOR_IMG,
-                title: "Collections & reconciliation",
-                body: "Each cashier closes the day against what was physically counted, and any variance is recorded — not quietly edited away.",
-              },
-              {
-                img: LEDGER_IMG,
-                title: "Delinquency ageing",
-                body: "Contracts bucket themselves into current, 30, 60, 90 days, and lapsed from their real payment dates.",
-              },
-              {
-                img: RECORDS_IMG,
-                title: "Reports & audit trail",
-                body: "Filter by branch and period, then export the exact figures — with a log of who recorded or changed what.",
-              },
-            ].map((c, i) => (
-              <Reveal key={c.title} delay={i * 0.07}>
-                <div className="h-full overflow-hidden rounded-3xl border border-line bg-white shadow-sm">
-                  <img
-                    {...c.img}
-                    alt={c.title}
-                    loading="lazy"
-                    className="h-44 w-full object-cover"
-                  />
+            {[{
+                  img: MONITOR_IMG,
+                  title: "Collections & reconciliation",
+                  alt: "A cashier's desk at the end of a trading day, with a till and a notebook of receipts",
+                  body: "Each cashier closes the day against what was physically counted, and any variance is recorded — not quietly edited away.",
+                },
+                {
+                  img: LEDGER_IMG,
+                  title: "Delinquency ageing",
+                  alt: "Printed ledger pages with columns of figures, the kind the office reconciles by hand",
+                  body: "Contracts bucket themselves into current, 30, 60, 90 days, and lapsed from their real payment dates.",
+                },
+                {
+                  img: RECORDS_IMG,
+                  title: "Reports & audit trail",
+                  alt: "Filed plan records stacked on a desk in a branch office",
+                  body: "Filter by branch and period, then export the exact figures — with a log of who recorded or changed what.",
+                },
+              ].map((c, i) => (
+                <Reveal key={c.title} delay={i * 0.07}>
+                  <div className="h-full overflow-hidden rounded-3xl border border-line bg-white shadow-sm">
+                    <img
+                      {...c.img}
+                      alt={c.alt}
+                      loading="lazy"
+                      className="h-44 w-full object-cover"
+                    />
                   <div className="p-6">
                     <h3 className="font-display text-[20px] font-semibold text-evergreen">
                       {c.title}
@@ -938,6 +970,9 @@ export default function Landing() {
             <div className="rounded-3xl border border-line bg-white p-7 shadow-xl">
               <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gold">
                 Sample planholder record
+                <span className="mt-1 block font-sans text-[10.5px] font-normal normal-case tracking-normal text-stone">
+                  Illustrative example — not a real person
+                </span>
               </p>
               <p className="mt-3 font-display text-[24px] font-semibold text-evergreen">
                 Dela Cruz, Juan P.
@@ -1008,6 +1043,103 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* ── Your data, in plain words ── */}
+      <section
+        id="your-data"
+        className="scroll-mt-24 border-t border-line bg-paper"
+      >
+        <div className="mx-auto max-w-[1440px] px-6 py-20 lg:px-10 lg:py-24">
+          <div className="grid gap-12 lg:grid-cols-[1.05fr_1fr] lg:items-start">
+            <Reveal>
+              <Eyebrow>Your data</Eyebrow>
+              <h2 className="mt-5 font-display text-3xl font-semibold leading-tight text-evergreen lg:text-[40px]">
+                What we hold, what it costs, and how to get it back.
+              </h2>
+              <p className="mt-4 text-[15px] leading-relaxed text-stone">
+                A plan is a long relationship, so we would rather tell you plainly
+                what we do with the information you give us. Everything below is
+                written down in the policies, and the policies are one click away
+                in the footer of every page.
+              </p>
+
+              <ul className="mt-8 space-y-4">
+                {[
+                  {
+                    title: "No hidden fees",
+                    body: NO_HIDDEN_FEES_STATEMENT,
+                  },
+                  {
+                    title: "Consent at the counter",
+                    body: PRIVACY_CONSENT_LABEL,
+                  },
+                  {
+                    title: "Under-18 planholders",
+                    body: AGE_CONSENT_LABEL,
+                  },
+                ].map((item) => (
+                  <li key={item.title} className="flex gap-4">
+                    <span
+                      aria-hidden="true"
+                      className="mt-0.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-evergreen text-white"
+                    >
+                      <Check className="h-[18px] w-[18px]" />
+                    </span>
+                    <div>
+                      <p className="text-[14.5px] font-bold text-ink">{item.title}</p>
+                      <p className="mt-0.5 text-[13px] leading-relaxed text-stone">
+                        {item.body}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+
+            <Reveal delay={0.1}>
+              <div className="rounded-3xl border border-line bg-white p-7 shadow-sm lg:p-8">
+                <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gold">
+                  Your policies
+                </p>
+                <ul className="mt-5 space-y-3">
+                  {LEGAL_DOCS.map((doc) => (
+                    <li key={doc.to}>
+                      <Link
+                        to={doc.to}
+                        className="group flex items-start gap-3 rounded-2xl border border-line px-4 py-3.5 transition-colors hover:border-evergreen/35 hover:bg-cream"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[14.5px] font-bold text-evergreen">
+                            {doc.title}
+                          </span>
+                          <span className="mt-0.5 block text-[12.5px] leading-relaxed text-stone">
+                            {doc.summary}
+                          </span>
+                        </span>
+                        <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-evergreen transition-transform group-hover:translate-x-0.5" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  to={DATA_REQUEST_PATH}
+                  className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-evergreen px-5 py-4 text-white transition-colors hover:bg-pine"
+                >
+                  <span>
+                    <span className="block text-[15px] font-bold">
+                      Ask to see, correct, or delete your data
+                    </span>
+                    <span className="mt-0.5 block text-[12.5px] text-white/85">
+                      No account needed. We answer within fifteen days.
+                    </span>
+                  </span>
+                  <ArrowRight className="h-5 w-5 shrink-0" />
+                </Link>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
       {/* ── Final call to action ── */}
       <section className="bg-paper">
         <div className="mx-auto max-w-[1440px] px-6 py-16 lg:px-10 lg:py-20">
@@ -1059,38 +1191,24 @@ export default function Landing() {
           <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1.2fr]">
             <div>
               <BrandBlock light />
-              <p className="mt-5 max-w-xs text-[13px] leading-relaxed text-white/55">
+              <p className="mt-5 max-w-xs text-[13px] leading-relaxed text-white/75">
                 A family-owned DeathCare company offering pre-need memorial life plans
                 and 24/7 memorial chapel services, guided by our promise — {MOTTO}
               </p>
-              <div className="mt-6 flex gap-3">
-                {[
-                  { icon: Facebook, label: "Facebook" },
-                  { icon: Instagram, label: "Instagram" },
-                  { icon: Youtube, label: "YouTube" },
-                ].map((s) => (
-                  <a
-                    key={s.label}
-                    href="#contact"
-                    aria-label={s.label}
-                    onClick={(e) => e.preventDefault()}
-                    className="grid h-10 w-10 place-items-center rounded-full border border-white/15 text-white/70 transition-all hover:border-gold-soft hover:bg-gold hover:text-pine"
-                  >
-                    <s.icon className="h-[18px] w-[18px]" />
-                  </a>
-                ))}
-              </div>
-              <div className="mt-7 flex items-start gap-3.5">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-white/5 text-gold-soft ring-1 ring-white/10">
-                  <ShieldCheck className="h-5 w-5" />
-                </span>
-                <div>
-                  <p className="text-[13px] font-bold text-white">DTI Trust Mark</p>
-                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-white/50">
-                    Registered online business — a trusted, verified merchant.
-                  </p>
-                </div>
-              </div>
+              {/*
+                We do not show social badges we cannot link to. A dead social
+                button (or a trustmark claim we cannot evidence) is worse than
+                saying nothing: it reads as a claim the office cannot stand
+                behind. The office's own contact details are the next block.
+              */}
+              <p className="mt-6 text-[12.5px] leading-relaxed text-white/75">
+                <span className="font-bold text-white">Business:</span>{" "}
+                {COMPANY}, Inc. — pre-need deathcare and memorial life plans.
+              </p>
+              <p className="mt-1.5 text-[12.5px] leading-relaxed text-white/75">
+                <span className="font-bold text-white">Main office:</span> 2nd
+                Floor, Gabrinez Bldg, Fortich St., Malaybalay City, Bukidnon 8700.
+              </p>
             </div>
 
             <div>
@@ -1159,48 +1277,55 @@ export default function Landing() {
                 Policies &amp; Support
               </p>
               <ul className="mt-5 space-y-3 text-[13px]">
-                {[
-                  "Privacy Policy",
-                  "Terms of Use",
-                  "Data Privacy Notice",
-                  "Fair Collection Notice",
-                  "FAQs",
-                ].map((l) => (
-                  <li key={l}>
-                    <a
-                      href="#contact"
-                      onClick={(e) => e.preventDefault()}
+                {LEGAL_DOCS.map((doc) => (
+                  <li key={doc.to}>
+                    <Link
+                      to={doc.to}
                       className="inline-flex items-center gap-2 transition-colors hover:text-gold-soft"
                     >
                       <span className="h-1 w-1 rounded-full bg-gold-soft/60" />
-                      {l}
-                    </a>
+                      {doc.short}
+                    </Link>
                   </li>
                 ))}
+                <li>
+                  <Link
+                    to={DATA_REQUEST_PATH}
+                    className="inline-flex items-center gap-2 font-semibold text-gold-soft transition-colors hover:text-white"
+                  >
+                    <span className="h-1 w-1 rounded-full bg-gold-soft/60" />
+                    See, correct, or delete my data
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
 
-          <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-7 text-[12px] text-white/45 lg:flex-row">
+          <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t border-white/10 pt-7 text-[12.5px] text-white/70 lg:flex-row">
             <p>
               © 2026 {COMPANY}, Inc. All rights reserved. · Pre-Need DeathCare Plan
               Management
             </p>
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
-              {["Privacy Policy", "Terms of Use", "Data Privacy", "Accessibility"].map(
-                (l) => (
-                  <a
-                    key={l}
-                    href="#contact"
-                    onClick={(e) => e.preventDefault()}
-                    className="transition-colors hover:text-gold-soft"
-                  >
-                    {l}
-                  </a>
-                )
-              )}
-            </div>
+            <nav aria-label="Policies">
+              <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2">
+                {LEGAL_DOCS.map((doc) => (
+                  <li key={doc.to}>
+                    <Link
+                      to={doc.to}
+                      className="transition-colors hover:text-gold-soft"
+                    >
+                      {doc.short}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
           </div>
+          <p className="mt-4 text-[11.5px] leading-relaxed text-white/60">
+            Photographs on this page are served by Unsplash under the Unsplash
+            Licence. This website is a record of our system, not a government
+            service.
+          </p>
         </div>
       </footer>
     </div>

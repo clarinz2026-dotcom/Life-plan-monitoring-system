@@ -2,7 +2,8 @@ import { BrandLogo } from "@/components/BrandLogo";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { FileHeart, Link2, Loader2, LogOut, Phone } from "lucide-react";
-import { NavLink, Outlet, useNavigate } from "react-router";
+import { NavLink, Link, Outlet, useNavigate } from "react-router";
+import { LEGAL_DOCS, DATA_REQUEST_PATH } from "@/lib/legal";
 
 const NAV = [
   { to: "/portal/plans", label: "My Plans", icon: FileHeart, end: false },
@@ -34,6 +35,12 @@ export default function PortalLayout() {
 
   return (
     <div className="portal-shell flex min-h-screen flex-col bg-cream text-ink antialiased">
+      <a
+        href="#portal-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[100000] focus:rounded-full focus:bg-evergreen focus:px-5 focus:py-2.5 focus:text-[14px] focus:font-bold focus:text-white"
+      >
+        Skip to the main content
+      </a>
       {/* ── Header ── */}
       <header className="sticky top-0 z-40 border-b border-line bg-paper/95 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
@@ -96,9 +103,45 @@ export default function PortalLayout() {
       </header>
 
       {/* ── Content ── */}
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 pb-32 sm:px-8 lg:py-10 lg:pb-16">
+      <main
+        id="portal-content"
+        className="mx-auto w-full max-w-7xl flex-1 px-4 py-8 pb-32 sm:px-8 lg:py-10 lg:pb-16"
+      >
         <Outlet />
       </main>
+
+      {/* Same policy links as the public site — a planholder should not have to
+          leave the portal to find out what we do with their data. */}
+      /* `pb-24` on mobile clears the fixed bottom nav, which is a sibling that
+         overlays whatever sits under it — the footer would otherwise sit
+         underneath it. */
+      <footer className="border-t border-line bg-paper/80 px-4 py-6 pb-24 text-[12.5px] text-stone sm:px-8 lg:pb-6">
+        <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <p>© 2026 Evangelist Funeral Services, Inc.</p>
+          <nav aria-label="Policies">
+            <ul className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+              {LEGAL_DOCS.map((doc) => (
+                <li key={doc.to}>
+                  <Link
+                    to={doc.to}
+                    className="underline underline-offset-2 transition-colors hover:text-evergreen"
+                  >
+                    {doc.short}
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link
+                  to={DATA_REQUEST_PATH}
+                  className="font-semibold text-evergreen underline underline-offset-2"
+                >
+                  Ask about my data
+                </Link>
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </footer>
 
       {/* ── Mobile bottom nav ── */}
       <nav

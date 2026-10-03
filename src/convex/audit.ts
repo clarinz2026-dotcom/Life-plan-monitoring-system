@@ -41,7 +41,9 @@ export const log = mutation({
       v.literal("or_series"),
       v.literal("lpa_series"),
       v.literal("collector_target"),
-      v.literal("api_key")
+      v.literal("api_key"),
+      v.literal("consent"),
+      v.literal("privacy_request")
     ),
     entityId: v.string(),
     description: v.string(),

@@ -49,6 +49,13 @@ import { toast } from "sonner";
 import { useBranch } from "@/hooks/use-branch";
 import { Archive, ArchiveRestore, MessageSquare } from "lucide-react";
 import { SMSDialog, type SmsRecipient } from "@/components/SMSDialog";
+import ConsentCheckbox, { PolicyLink } from "@/components/ConsentCheckbox";
+import {
+  AGE_CONSENT_LABEL,
+  GUARDIAN_CONSENT_LABEL,
+  PRIVACY_CONSENT_LABEL,
+  isMinor,
+} from "@/lib/legal";
 
 /**
  * The office works with three payment statuses — Good Payer, Lapsed,
@@ -165,6 +172,26 @@ export default function Clients() {
   });
 
   const createClient = useMutation(api.clients.create);
+
+  /*
+   * Consent on the New Client form.
+   *
+   * A planholder record is personal data, so the office has to be able to show
+   * that consent was taken and who gave it. The box is stored on the record
+   * (with the wording version) and in the audit log, and the server refuses the
+   * create without it — so this is not a box that can be quietly skipped.
+   *
+   * The planholder's date of birth drives the age rule: under 18, the person at
+   * the counter is acting as parent or guardian and their name goes on file.
+   */
+  const [privacyConsent, setPrivacyConsent] = useState(false);
+  const [ageConsent, setAgeConsent] = useState(false);
+  const [guardianName, setGuardianName] = useState("");
+  const [consentError, setConsentError] = useState<string | null>(null);
+  const planholderIsMinor = useMemo(
+    () => !!form.dateOfBirth && isMinor(new Date(form.dateOfBirth).getTime()),
+    [form.dateOfBirth]
+  );
 
   const toggleClient = (clientId: string) => {
     setSelectedIds((prev) => {
@@ -333,6 +360,17 @@ export default function Clients() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!privacyConsent || !ageConsent) {
+      setConsentError(
+        "Both boxes must be ticked before a planholder record can be opened."
+      );
+      return;
+    }
+    if (planholderIsMinor && !guardianName.trim()) {
+      setConsentError("Enter the parent or guardian's name for a planholder under 18.");
+      return;
+    }
+    setConsentError(null);
     await createClient({
       ...form,
       dateOfBirth: form.dateOfBirth
@@ -342,8 +380,17 @@ export default function Clients() {
       email: form.email || undefined,
       occupation: form.occupation || undefined,
       beneficiaryContact: form.beneficiaryContact || undefined,
+      consent: {
+        privacy: true,
+        role: planholderIsMinor ? ("guardian" as const) : ("planholder" as const),
+        guardianName: planholderIsMinor ? guardianName.trim() : undefined,
+      },
     });
     setDialogOpen(false);
+    setPrivacyConsent(false);
+    setAgeConsent(false);
+    setGuardianName("");
+    setConsentError(null);
     setForm({
       firstName: "",
       lastName: "",
@@ -553,6 +600,59 @@ export default function Clients() {
                     />
                   </div>
                 </div>
+              </div>
+
+              {/* ── Consent ── */}
+              <div className="space-y-3">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                  Consent
+                </p>
+                <ConsentCheckbox
+                  id="client-privacy-consent"
+                  checked={privacyConsent}
+                  onChange={(next) => {
+                    setPrivacyConsent(next);
+                    if (next) setConsentError(null);
+                  }}
+                  error={consentError}
+                >
+                  {PRIVACY_CONSENT_LABEL} Read the{" "}
+                  <PolicyLink to="/legal/privacy">Privacy Policy</PolicyLink> with
+                  them if they ask what we do with their details.
+                </ConsentCheckbox>
+
+                <ConsentCheckbox
+                  id="client-age-consent"
+                  checked={ageConsent}
+                  onChange={(next) => {
+                    setAgeConsent(next);
+                    if (next) setConsentError(null);
+                  }}
+                >
+                  {AGE_CONSENT_LABEL}
+                  {planholderIsMinor && (
+                    <span className="mt-2 block font-semibold text-amber-800">
+                      {GUARDIAN_CONSENT_LABEL}
+                    </span>
+                  )}
+                </ConsentCheckbox>
+
+                {planholderIsMinor && (
+                  <div>
+                    <Label className="text-[14px]">
+                      Parent / legal guardian&rsquo;s name *
+                    </Label>
+                    <Input
+                      value={guardianName}
+                      onChange={(e) => {
+                        setGuardianName(e.target.value);
+                        if (e.target.value.trim()) setConsentError(null);
+                      }}
+                      className={inputClass}
+                      placeholder="As it should appear on the record"
+                    />
+                  </div>
+                )}
               </div>
 
               <Button type="submit" className="w-full h-12 text-[15px] font-semibold">

@@ -7,6 +7,7 @@ import { Check, FileHeart, Loader2, Send, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
+import ConsentCheckbox, { PolicyLink } from "@/components/ConsentCheckbox";
 import {
   Card,
   PortalShell,
@@ -37,6 +38,9 @@ export default function LinkAccount() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  // A linking request carries personal data, so it carries consent too.
+  const [consent, setConsent] = useState(false);
+  const [consentError, setConsentError] = useState<string | null>(null);
 
   // Prefill from the planholder record (when one is already matched) and the
   // signed-in auth account.
@@ -66,6 +70,13 @@ export default function LinkAccount() {
       setError("Please provide your name and a contact number.");
       return;
     }
+    if (!consent) {
+      setConsentError(
+        "Please confirm the last box before we can look for your plan."
+      );
+      return;
+    }
+    setConsentError(null);
     setSubmitting(true);
     try {
       await submit({
@@ -80,6 +91,7 @@ export default function LinkAccount() {
           "Our records team will verify your details and link your plan during office hours.",
       });
       setMessage("");
+      setConsent(false);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Something went wrong. Try again."
@@ -282,6 +294,22 @@ export default function LinkAccount() {
                     {error}
                   </p>
                 )}
+
+                <ConsentCheckbox
+                  id="link-consent"
+                  checked={consent}
+                  onChange={(next) => {
+                    setConsent(next);
+                    if (next) setConsentError(null);
+                  }}
+                  error={consentError}
+                >
+                  I am the planholder, or I am their parent, guardian, or
+                  authorised representative. I agree that the office may check
+                  the details above against its records to find and link my plan,
+                  as explained in the{" "}
+                  <PolicyLink to="/legal/privacy">Privacy Policy</PolicyLink>.
+                </ConsentCheckbox>
 
                 <div className="flex flex-wrap items-center gap-3">
                   <Button

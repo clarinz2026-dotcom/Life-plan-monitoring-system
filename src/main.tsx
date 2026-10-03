@@ -1,5 +1,6 @@
 import "@vly-ai/integrations";
 import { Toaster } from "@/components/ui/sonner";
+import CookieNotice from "@/components/CookieNotice";
 import { RequireAuth } from "@/components/RequireAuth";
 import { BranchScopeProvider } from "@/hooks/use-branch";
 import { RouteProgress } from "@/components/RouteProgress";
@@ -114,6 +115,16 @@ const PortalPlans = lazyRoute("PortalPlans", () => import("./pages/portal/Plans.
 const PortalLinkAccount = lazyRoute("PortalLinkAccount", () => import("./pages/portal/LinkAccount.tsx"));
 const SystemDeck = lazyRoute("SystemDeck", () => import("./pages/SystemDeck.tsx"));
 const NotFound = lazyRoute("NotFound", () => import("./pages/NotFound.tsx"));
+
+// Public policy pages. A planholder asking what we do with their data should
+// not have to sign in to find out, so none of these sit behind RequireAuth.
+const Privacy = lazyRoute("LegalPrivacy", () => import("./pages/legal/Privacy.tsx"));
+const Terms = lazyRoute("LegalTerms", () => import("./pages/legal/Terms.tsx"));
+const Refunds = lazyRoute("LegalRefunds", () => import("./pages/legal/Refunds.tsx"));
+const Cookies = lazyRoute("LegalCookies", () => import("./pages/legal/Cookies.tsx"));
+const Accessibility = lazyRoute("LegalAccessibility", () => import("./pages/legal/Accessibility.tsx"));
+const PrivacyRequest = lazyRoute("PrivacyRequest", () => import("./pages/legal/PrivacyRequest.tsx"));
+const PrivacyRequests = lazyRoute("PrivacyRequests", () => import("./pages/PrivacyRequests.tsx"));
 
 /**
  * Fallback while a lazily-loaded route chunk is in flight. The Suspense boundary
@@ -266,6 +277,14 @@ createRoot(document.getElementById("root")!).render(
               {/* Proposal deck. Public on purpose: it is opened from whatever
                   device is being used to present, and carries no client data. */}
               <Route path="/deck" element={<SystemDeck />} />
+
+              {/* Policies and the data request form — public on purpose. */}
+              <Route path="/legal/privacy" element={<Privacy />} />
+              <Route path="/legal/terms" element={<Terms />} />
+              <Route path="/legal/refunds" element={<Refunds />} />
+              <Route path="/legal/cookies" element={<Cookies />} />
+              <Route path="/legal/accessibility" element={<Accessibility />} />
+              <Route path="/privacy-request" element={<PrivacyRequest />} />
 
               {/* Protected routes with AppLayout */}
               <Route
@@ -451,6 +470,14 @@ createRoot(document.getElementById("root")!).render(
                   access. Super Admin only — the page itself also gates, so a
                   hand-typed URL shows the shield notice rather than data. */}
               <Route
+                path="/privacy-requests"
+                element={
+                  <ProtectedRoute>
+                    <PrivacyRequests />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
                 path="/api-integration"
                 element={
                   <ProtectedRoute>
@@ -482,6 +509,7 @@ createRoot(document.getElementById("root")!).render(
           </Suspense>
         </BrowserRouter>
         <Toaster />
+        <CookieNotice />
       </ConvexAuthProvider>
     </RootErrorBoundary>
   </StrictMode>

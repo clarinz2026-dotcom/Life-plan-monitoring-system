@@ -12,6 +12,7 @@ import {
 } from "./access";
 import { effectiveRole } from "./roles";
 import { lastLivePaymentDate } from "./paymentLedger";
+import { CONSENT_VERSION } from "../lib/legal";
 
 /**
  * Compute delinquency status based on days since last payment.
@@ -139,21 +140,80 @@ export const create = mutation({
     beneficiaryRelationship: v.string(),
     beneficiaryContact: v.optional(v.string()),
     notes: v.optional(v.string()),
+    /*
+     * Consent (see src/lib/legal.ts). The client form cannot be trusted to
+     * have collected it, so the server refuses to create a record without it:
+     * privacy consent is a hard requirement, and a planholder under 18 needs
+     * the parent/guardian attestation and that guardian's name on file.
+     */
+    consent: v.object({
+      privacy: v.boolean(),
+      /** "planholder" — signing for yourself; "guardian" — for a minor. */
+      role: v.union(v.literal("planholder"), v.literal("guardian")),
+      guardianName: v.optional(v.string()),
+    }),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId) throw new Error("Not authenticated");
 
+    const { consent, ...fields } = args;
+
+    // Data minimisation + age rule. A record is never opened without the
+    // privacy consent being given, whatever the form says.
+    if (!consent.privacy) {
+      throw new Error(
+        "Consent is required: tell the planholder how their data will be used and recorded before opening a plan."
+      );
+    }
+    if (consent.role === "guardian" && !consent.guardianName?.trim()) {
+      throw new Error(
+        "A planholder under 18 needs the parent or legal guardian's name on the record."
+      );
+    }
+
     // Auto-assign branchId from the current user's profile
     const currentUserDoc = await ctx.db.get(userId);
     const branchId = currentUserDoc?.branchId;
 
-    return await ctx.db.insert("clients", {
-      ...args,
+    const clientId = await ctx.db.insert("clients", {
+      ...fields,
+      consent: {
+        privacy: consent.privacy,
+        version: CONSENT_VERSION,
+        recordedAt: Date.now(),
+        recordedBy: userId,
+        recordedByRole: consent.role,
+        guardianName: consent.guardianName?.trim() || undefined,
+      },
       branchId,
       createdAt: Date.now(),
       createdBy: userId,
     });
+
+    // The consent is evidence in its own right, so it is in the audit trail as
+    // well as on the record.
+    await ctx.db.insert("audit_log", {
+      action: "create",
+      entityType: "consent",
+      entityId: clientId,
+      userId,
+      userName: currentUserDoc?.name || currentUserDoc?.email || "Unknown",
+      description: `Privacy consent ${
+        consent.role === "guardian"
+          ? `given by guardian ${consent.guardianName?.trim()}`
+          : "given by planholder"
+      } (version ${CONSENT_VERSION})`,
+      newValues: {
+        privacy: true,
+        role: consent.role,
+        guardianName: consent.guardianName?.trim() || null,
+      },
+      branchId,
+      timestamp: Date.now(),
+    });
+
+    return clientId;
   },
 });
 

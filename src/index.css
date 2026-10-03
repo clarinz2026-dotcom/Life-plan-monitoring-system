@@ -151,7 +151,9 @@
   --color-pine: #10291d;
   --color-moss: #2d6a4f;
   --color-sage: #dce5dd;
-  --color-gold: #a9874f;
+  /* Darkened from #a9874f, which only reached ~3.2:1 on paper. Gold is used
+     for small uppercase labels, so it has to clear 4.5:1 like body text. */
+  --color-gold: #8a6a2f;
   --color-gold-soft: #d9c49c;
   --color-cream: #faf7ef;
   --color-paper: #fdfcf8;
@@ -195,6 +197,31 @@
   table {
     border-collapse: separate;
     border-spacing: 0;
+  }
+  /*
+   * Keyboard focus. Nothing may remove an element's outline without replacing
+   * it with something at least this visible: `:focus-visible` only paints for
+   * keyboard users, so pointer users are not given a ring they did not ask for.
+   */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  /*
+   * Respect a request for less motion. Framer Motion still animates on this
+   * build's hero, but the CSS-driven movement (hover lifts, gradients that
+   * scroll) is dropped rather than overridden with a hidden animation.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 

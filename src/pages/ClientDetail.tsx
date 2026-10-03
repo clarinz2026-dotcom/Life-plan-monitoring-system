@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/select";
 
 import { useBranch } from "@/hooks/use-branch";
+import ConsentCheckbox from "@/components/ConsentCheckbox";
 
 const STATUS_COLORS: Record<string, string> = {
   current: "terminal-status-current",
@@ -213,6 +214,8 @@ export default function ClientDetail() {
 
   const createContract = useMutation(api.contracts.create);
   const updateContract = useMutation(api.contracts.update);
+  const [contractConsent, setContractConsent] = useState(false);
+  const [contractConsentError, setContractConsentError] = useState<string | null>(null);
   const [contractDialogOpen, setContractDialogOpen] = useState(false);
   const [contractForm, setContractForm] = useState({
     contractNumber: "",
@@ -304,6 +307,8 @@ export default function ClientDetail() {
 
   // ── Add payment dialog ───────────────────────────────────────────────
   const recordPayment = useMutation(api.payments.record);
+  const [paymentConsent, setPaymentConsent] = useState(false);
+  const [paymentConsentError, setPaymentConsentError] = useState<string | null>(null);
   const [addPaymentOpen, setAddPaymentOpen] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     contractId: "",
@@ -342,6 +347,13 @@ export default function ClientDetail() {
       toast.error("Choose the contract this payment is for.");
       return;
     }
+    if (!paymentConsent) {
+      setPaymentConsentError(
+        "Confirm the planholder was told this payment will be recorded on their plan."
+      );
+      return;
+    }
+    setPaymentConsentError(null);
     try {
       const result = await recordPayment({
         contractId: paymentForm.contractId as any,
@@ -358,6 +370,7 @@ export default function ClientDetail() {
       });
       toast.success(`Payment recorded! Receipt: ${result.receiptNumber}`);
       setAddPaymentOpen(false);
+      setPaymentConsent(false);
       setPaymentForm({
         contractId: paymentForm.contractId,
         amount: "",
@@ -485,6 +498,13 @@ export default function ClientDetail() {
   const handleContractSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clientId) return;
+    if (!contractConsent) {
+      setContractConsentError(
+        "Confirm the planholder agreed to the plan terms before saving."
+      );
+      return;
+    }
+    setContractConsentError(null);
     await createContract({
       clientId: clientId as any,
       contractNumber: contractForm.contractNumber,
@@ -496,6 +516,7 @@ export default function ClientDetail() {
         : Date.now(),
     });
     setContractDialogOpen(false);
+    setContractConsent(false);
     setContractForm({
       contractNumber: "",
       planType: "",
@@ -1266,6 +1287,20 @@ export default function ClientDetail() {
                   required
                 />
               </div>
+              {/* A plan is a contract, so the office confirms the person at the
+                  counter actually agreed to the terms before the record is made. */}
+              <ConsentCheckbox
+                id="contract-consent"
+                checked={contractConsent}
+                onChange={(next) => {
+                  setContractConsent(next);
+                  if (next) setContractConsentError(null);
+                }}
+                error={contractConsentError}
+              >
+                The planholder has read and agreed to the plan terms, and has
+                confirmed the plan value and the monthly amount shown above.
+              </ConsentCheckbox>
               <Button type="submit" className="w-full">
                 Create Contract
               </Button>
@@ -1634,6 +1669,19 @@ export default function ClientDetail() {
                   <Label className="text-[14px]">Remarks</Label>
                   <Input value={paymentForm.remarks} onChange={(e) => setPaymentForm({ ...paymentForm, remarks: e.target.value })} placeholder="Optional notes…" className="h-11 text-base" />
                 </div>
+                <ConsentCheckbox
+                  id="payment-consent"
+                  checked={paymentConsent}
+                  onChange={(next) => {
+                    setPaymentConsent(next);
+                    if (next) setPaymentConsentError(null);
+                  }}
+                  error={paymentConsentError}
+                >
+                  This payment was made by the planholder or their representative,
+                  and they have been told it will be recorded against their plan
+                  and shown on their statement and receipt.
+                </ConsentCheckbox>
                 <Button type="submit" className="w-full h-12 text-[15px] font-semibold">Record Payment & Issue Receipt</Button>
               </form>
             </DialogContent>

@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import { API_RATE_LIMIT } from "./apiKeys";
 import { looksLikeApiKey, sha256Hex } from "../lib/apiKeys";
 import type { ApiKeyScope } from "../lib/apiKeys";
+import { submitRequest } from "./privacy";
 
 /**
  * Public read-only REST API.
@@ -415,6 +416,22 @@ http.route({
   handler: httpActionGeneric(async (ctx, request) =>
     handleListPayments(ctx, request)
   ),
+});
+
+/*
+ * Public data subject requests (delete / access / correct / stop-messages).
+ * Deliberately NOT under /api/v1 and NOT key-authenticated: a planholder
+ * asking to be forgotten has no API key and cannot be asked to sign in. It is
+ * POST-only, writes through an internal mutation, and is rate-limited per
+ * hashed IP — see src/convex/privacy.ts.
+ */
+http.route({
+  path: "/privacy-request",
+  method: "POST",
+  // The router hands us a GenericActionCtx; the action itself only ever calls
+  // runMutation, so the widening is safe and keeps the action usable directly
+  // from a test harness.
+  handler: httpActionGeneric(submitRequest),
 });
 
 // 404 for anything else under /api — keeps the API self-describing.

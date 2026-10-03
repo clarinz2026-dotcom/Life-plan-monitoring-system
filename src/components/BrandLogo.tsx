@@ -36,7 +36,7 @@ export function BrandLogo({ className = "h-8 w-8", onClick, title }: BrandLogoPr
   return (
     <img
       src={logoUrl}
-      alt="Logo"
+      alt={title ?? "Evangelist Funeral Services logo"}
       title={title}
       onClick={onClick}
       className={`object-contain ${className}`}

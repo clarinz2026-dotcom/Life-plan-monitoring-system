@@ -135,6 +135,28 @@ const schema = defineSchema(
         )
       ),
       notes: v.optional(v.string()),
+      /*
+       * Consent. Written by `clients.create` from the ticked boxes on the New
+       * Client form, never from free text: the version ties the record to the
+       * wording that was actually shown (CONSENT_VERSION in src/lib/legal.ts),
+       * and `recordedBy` names the staff member who took the consent and
+       * `recordedByRole` records whether they were signing for the planholder
+       * or as the planholder's parent/guardian.
+       */
+      consent: v.optional(
+        v.object({
+          privacy: v.boolean(),
+          version: v.string(),
+          recordedAt: v.number(),
+          recordedBy: v.id("users"),
+          recordedByRole: v.union(
+            v.literal("planholder"),
+            v.literal("guardian"),
+          ),
+          /** Guardian name — required whenever recordedByRole is "guardian". */
+          guardianName: v.optional(v.string()),
+        })
+      ),
       branchId: v.optional(v.id("branches")),
       // Soft delete. Business and financial history is never hard-deleted: a
       // removed planholder is archived, hidden from the working lists, and can
@@ -236,6 +258,9 @@ const schema = defineSchema(
         v.literal("lpa_series"),
         v.literal("collector_target"),
         v.literal("api_key"),
+        // Consent captured on a record, and a data subject request handled.
+        v.literal("consent"),
+        v.literal("privacy_request"),
       ),
       entityId: v.string(),
       userId: v.id("users"),
@@ -595,6 +620,66 @@ const schema = defineSchema(
     })
       .index("by_keyHash", ["keyHash"])
       .index("by_createdAt", ["createdAt"]),
+
+    // ─── Privacy requests from planholders and families ──────────────────
+    // A data subject request: delete my data, show me what you hold, correct
+    // a detail, or stop non-essential messages. The form is public, so the
+    // endpoint that writes here is an httpAction with its own rate limit
+    // (see convex/privacy.ts) — never a bare mutation anyone can call.
+    //
+    // Nothing is deleted from this table when a request is fulfilled: it is
+    // the evidence that the request arrived, who handled it, and what was
+    // done. `resolution` records the outcome in words.
+    privacy_requests: defineTable({
+      /** "delete" | "access" | "correct" | "stop_messages". */
+      kind: v.union(
+        v.literal("delete"),
+        v.literal("access"),
+        v.literal("correct"),
+        v.literal("stop_messages")
+      ),
+      /** As written by the person making the request. */
+      name: v.string(),
+      email: v.string(),
+      contactNumber: v.optional(v.string()),
+      /** Plan / LPA number, if the requester quoted one. */
+      planNumber: v.optional(v.string()),
+      /** Free-text branch named by the requester. */
+      branch: v.optional(v.string()),
+      details: v.optional(v.string()),
+      /** Branch the request was routed to, chosen by staff on review. */
+      branchId: v.optional(v.id("branches")),
+      /** Matching client record, once a member of staff has identified it. */
+      clientId: v.optional(v.id("clients")),
+      status: v.union(
+        v.literal("submitted"),
+        v.literal("in_progress"),
+        v.literal("completed"),
+        v.literal("refused")
+      ),
+      /**
+       * SHA-256 of the submitting IP plus the request hour. Stored instead of
+       * the address so the rate-limit counter never holds an IP address; it
+       * also proves a repeat submission came from the same device.
+       */
+      submitterHash: v.string(),
+      submittedAt: v.number(),
+      handledBy: v.optional(v.id("users")),
+      handledAt: v.optional(v.number()),
+      resolution: v.optional(v.string()),
+    })
+      .index("by_status", ["status"])
+      .index("by_submittedAt", ["submittedAt"])
+      .index("by_branch", ["branchId"])
+      .index("by_email", ["email"]),
+
+    // Rolling hourly submit counter for the public request form, keyed by the
+    // hashed IP + hour. Cleared by the endpoint itself once it is stale.
+    privacy_request_limits: defineTable({
+      key: v.string(), // "<ipHash>:<hourBucket>"
+      count: v.number(),
+      updatedAt: v.number(),
+    }).index("by_updatedAt", ["updatedAt"]),
   },
   {
     schemaValidation: false,
