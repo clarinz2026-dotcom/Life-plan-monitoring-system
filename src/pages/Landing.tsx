@@ -547,7 +547,9 @@ export default function Landing() {
               <div className="rounded-3xl border border-line bg-white p-4 shadow-xl sm:p-6 lg:p-7" style={STATEMENT_FONT}>
                 <div className="flex items-center justify-between gap-3 border-b border-line pb-4">
                   <div>
-                    <p className="text-[17px] font-bold text-ink">Abrasaldo, Clarinz</p>
+                    <p className="text-[17px] font-bold text-ink">
+                      Dela Cruz, Juanita M.
+                    </p>
                     <p className="mt-0.5 text-[11px] font-bold uppercase tracking-[0.14em] text-stone">
                       St. Isidore · Plan No. 0012345
                     </p>
@@ -559,7 +561,7 @@ export default function Landing() {
 
                 <div className="grid grid-cols-2 gap-x-5 gap-y-4 pt-5 sm:grid-cols-4 sm:gap-x-8">
                   {[
-                    ["Effectivity", "Aug 22, 2026"],
+                    ["Effectivity", "Jan 6, 2026"],
                     ["Assigned branch", "Malaybalay"],
                     ["Plan value", "₱39,000"],
                     ["Outstanding", "₱36,400"],
@@ -730,12 +732,12 @@ export default function Landing() {
               </p>
               <div className="mt-6 grid gap-x-6 gap-y-5 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-6">
                 {[
-                  ["Planholder's Name", "Abrasaldo, Clarinz"],
-                  ["Contact Number", "0955 399 1034"],
-                  ["Effectivity Date", "Aug 22, 2026"],
+                  ["Planholder's Name", "Dela Cruz, Juanita M."],
+                  ["Contact Number", "0917 000 0000"],
+                  ["Effectivity Date", "Jan 6, 2026"],
                   ["Plan Status", "Active"],
                   ["Assigned Branch", "Malaybalay (Main)"],
-                  ["Birthday", "June 2, 2002"],
+                  ["Birthday", "January 1, 1980"],
                 ].map(([l, v]) => (
                   <div key={l} className="min-w-0">
                     <p className="text-[12.5px] font-bold uppercase tracking-[0.08em] text-stone">

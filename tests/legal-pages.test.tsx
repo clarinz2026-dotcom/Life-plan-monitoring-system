@@ -174,4 +174,15 @@ describe("the public site does not make claims it cannot back", () => {
       expect(image).toMatch(/alt="[^"]+"/);
     }
   });
+
+  test("the sample records are fictional, not a real planholder's data", () => {
+    // A real planholder's name or date of birth must never appear on a public
+    // page — the cards are demos, so they carry placeholder people only.
+    expect(html).not.toContain("Abrasaldo");
+    expect(html).not.toContain("Clarinz");
+    expect(html).not.toContain("June 2, 2002");
+    expect(html).not.toContain("Aug 22, 2026");
+    // The placeholder that replaced it.
+    expect(html).toContain("Dela Cruz, Juanita M.");
+  });
 });
