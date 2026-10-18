@@ -507,9 +507,15 @@ createRoot(document.getElementById("root")!).render(
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>
+          {/* CookieNotice renders a react-router <Link> to the cookie policy,
+              so it must be a descendant of BrowserRouter — mounted beside the
+              router it crashed the whole app on first paint with
+              "Cannot destructure property 'basename' of useContext(...) as it
+              is null". It sits outside <Suspense> so a slow route chunk never
+              takes the notice down with it. */}
+          <CookieNotice />
         </BrowserRouter>
         <Toaster />
-        <CookieNotice />
       </ConvexAuthProvider>
     </RootErrorBoundary>
   </StrictMode>
